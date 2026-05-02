@@ -12,9 +12,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <VoiceProvider>
-      <div className="grid h-screen w-screen grid-cols-[248px_1fr] overflow-hidden bg-bg text-ink">
+      <div className="grid h-screen w-screen grid-cols-1 overflow-hidden bg-bg text-ink md:grid-cols-[248px_1fr]">
         {children}
-        <div className="pointer-events-none absolute bottom-[22px] left-1/2 z-50 -translate-x-1/2">
+        <div className="pointer-events-none fixed bottom-[16px] left-1/2 z-50 -translate-x-1/2 md:bottom-[22px]">
           <div className="pointer-events-auto">
             <VoiceHUD />
           </div>

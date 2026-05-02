@@ -51,60 +51,95 @@ const PRIO_CLASS: Record<'alta' | 'media' | 'baja', string> = {
 
 export function CasesTable({ rows }: { rows: CaseTableRow[] }) {
   return (
-    <div className="surface overflow-hidden">
-      <table className="w-full border-collapse">
-        <thead>
-          <tr className="border-b border-line bg-bg-sunken">
-            <Th className="w-[36%]">Caso</Th>
-            <Th>Materia</Th>
-            <Th>Etapa</Th>
-            <Th>Próxima fecha</Th>
-            <Th>Owner</Th>
-            <Th className="text-right">Pendientes</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((c) => (
-            <tr key={c.id} className="border-b border-line last:border-0 hover:bg-bg-sunken">
-              <Td>
-                <Link href={`/casos/${c.id}`} className="flex items-center gap-[10px]">
-                  <span
-                    className={cn('h-[6px] w-[6px] flex-none rounded-full', PRIO_CLASS[c.prioridad])}
-                    title={c.prioridad}
-                  />
-                  <div className="min-w-0">
-                    <div className="text-[13.5px] font-semibold -tracking-[0.01em]">{c.titulo}</div>
-                    <div className="text-[11.5px] muted">
-                      {c.tribunal} · Exp. {c.expediente}
-                    </div>
-                  </div>
-                </Link>
-              </Td>
-              <Td>
-                <span className={cn('chip', MATERIA_CLASS[c.materia] ?? '')}>{c.materia}</span>
-              </Td>
-              <Td>
-                <span className="text-[12.5px] muted">{c.etapa}</span>
-              </Td>
-              <Td>
-                <div className="text-[12.5px]">{c.proxima}</div>
-                <div className="text-[11px] muted">{c.proxima_tipo}</div>
-              </Td>
-              <Td>
-                <span className="text-[12.5px] muted">{c.owner.replace('Lic. ', '')}</span>
-              </Td>
-              <Td className="text-right">
-                {c.pendientes > 0 ? (
-                  <span className="chip chip-amber">{c.pendientes}</span>
-                ) : (
-                  <span className="muted">—</span>
-                )}
-              </Td>
+    <>
+      {/* Mobile · stacked cards */}
+      <div className="surface flex flex-col divide-y divide-line md:hidden">
+        {rows.map((c) => (
+          <Link
+            key={c.id}
+            href={`/casos/${c.id}`}
+            className="flex flex-col gap-1 p-[var(--pad-card)] hover:bg-bg-sunken"
+          >
+            <div className="flex items-center gap-2">
+              <span
+                className={cn('h-[6px] w-[6px] flex-none rounded-full', PRIO_CLASS[c.prioridad])}
+                title={c.prioridad}
+              />
+              <span className={cn('chip text-[10.5px]', MATERIA_CLASS[c.materia] ?? '')}>{c.materia}</span>
+              {c.pendientes > 0 && (
+                <span className="chip chip-amber ml-auto text-[10.5px]">{c.pendientes} pend.</span>
+              )}
+            </div>
+            <div className="text-[14px] font-semibold -tracking-[0.01em]">{c.titulo}</div>
+            <div className="text-[11.5px] muted">{c.tribunal} · Exp. {c.expediente}</div>
+            <div className="mt-1 flex items-center gap-2 text-[11.5px] muted">
+              <span>{c.etapa}</span>
+              <span>·</span>
+              <span>{c.proxima}</span>
+            </div>
+          </Link>
+        ))}
+        {rows.length === 0 && (
+          <div className="p-[var(--pad-card)] text-[12px] muted">Sin casos.</div>
+        )}
+      </div>
+
+      {/* Desktop · table */}
+      <div className="surface hidden overflow-x-auto md:block">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="border-b border-line bg-bg-sunken">
+              <Th className="w-[36%]">Caso</Th>
+              <Th>Materia</Th>
+              <Th>Etapa</Th>
+              <Th>Próxima fecha</Th>
+              <Th>Owner</Th>
+              <Th className="text-right">Pendientes</Th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {rows.map((c) => (
+              <tr key={c.id} className="border-b border-line last:border-0 hover:bg-bg-sunken">
+                <Td>
+                  <Link href={`/casos/${c.id}`} className="flex items-center gap-[10px]">
+                    <span
+                      className={cn('h-[6px] w-[6px] flex-none rounded-full', PRIO_CLASS[c.prioridad])}
+                      title={c.prioridad}
+                    />
+                    <div className="min-w-0">
+                      <div className="text-[13.5px] font-semibold -tracking-[0.01em]">{c.titulo}</div>
+                      <div className="text-[11.5px] muted">
+                        {c.tribunal} · Exp. {c.expediente}
+                      </div>
+                    </div>
+                  </Link>
+                </Td>
+                <Td>
+                  <span className={cn('chip', MATERIA_CLASS[c.materia] ?? '')}>{c.materia}</span>
+                </Td>
+                <Td>
+                  <span className="text-[12.5px] muted">{c.etapa}</span>
+                </Td>
+                <Td>
+                  <div className="text-[12.5px]">{c.proxima}</div>
+                  <div className="text-[11px] muted">{c.proxima_tipo}</div>
+                </Td>
+                <Td>
+                  <span className="text-[12.5px] muted">{c.owner.replace('Lic. ', '')}</span>
+                </Td>
+                <Td className="text-right">
+                  {c.pendientes > 0 ? (
+                    <span className="chip chip-amber">{c.pendientes}</span>
+                  ) : (
+                    <span className="muted">—</span>
+                  )}
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 

@@ -47,38 +47,62 @@ export default async function SettingsDespacho() {
           <div className="mx-auto flex max-w-5xl flex-col gap-5">
             <section className="surface p-[var(--pad-card)]">
               <h3 className="serif m-0 text-[16px] font-semibold">Miembros del despacho</h3>
-              <table className="mt-3 w-full">
-                <thead>
-                  <tr className="text-left text-[11px] uppercase tracking-wider muted">
-                    <th className="py-2">Nombre</th>
-                    <th className="py-2">Email</th>
-                    <th className="py-2">Tarjeta profesional</th>
-                    <th className="py-2">Rol</th>
-                    <th className="py-2">MFA</th>
-                    <th className="py-2 text-right">Último login</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((u) => (
-                    <tr key={u.id} className="border-t border-line text-[13px]">
-                      <td className="py-2.5 font-semibold">{u.full_name}</td>
-                      <td className="py-2.5 muted">{u.email}</td>
-                      <td className="py-2.5 mono text-[11.5px]">{u.cedula_profesional ?? '—'}</td>
-                      <td className="py-2.5">
-                        <span className={`chip ${u.role === 'admin' ? 'chip-purple' : ''}`}>{u.role}</span>
-                      </td>
-                      <td className="py-2.5">
-                        {u.mfa_enrolled
-                          ? <span className="chip chip-green"><span className="dot"/>activa</span>
-                          : <span className="chip chip-amber"><span className="dot"/>pendiente</span>}
-                      </td>
-                      <td className="py-2.5 text-right text-[11.5px] muted">
-                        {u.last_login_at ? formatRelative(u.last_login_at) : 'nunca'}
-                      </td>
+
+              {/* Mobile · cards */}
+              <div className="mt-3 flex flex-col divide-y divide-line md:hidden">
+                {users.map((u) => (
+                  <div key={u.id} className="flex flex-col gap-1 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[13.5px] font-semibold">{u.full_name}</span>
+                      <span className={`chip ml-auto text-[10.5px] ${u.role === 'admin' ? 'chip-purple' : ''}`}>{u.role}</span>
+                    </div>
+                    <div className="text-[12px] muted break-all">{u.email}</div>
+                    <div className="mono text-[11px] muted">{u.cedula_profesional ?? '—'}</div>
+                    <div className="mt-1 flex items-center gap-2 text-[11px] muted">
+                      {u.mfa_enrolled
+                        ? <span className="chip chip-green text-[10.5px]"><span className="dot"/>MFA</span>
+                        : <span className="chip chip-amber text-[10.5px]"><span className="dot"/>sin MFA</span>}
+                      <span className="ml-auto">{u.last_login_at ? formatRelative(u.last_login_at) : 'nunca'}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop · table */}
+              <div className="mt-3 hidden overflow-x-auto md:block">
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left text-[11px] uppercase tracking-wider muted">
+                      <th className="py-2">Nombre</th>
+                      <th className="py-2">Email</th>
+                      <th className="py-2">Tarjeta profesional</th>
+                      <th className="py-2">Rol</th>
+                      <th className="py-2">MFA</th>
+                      <th className="py-2 text-right">Último login</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {users.map((u) => (
+                      <tr key={u.id} className="border-t border-line text-[13px]">
+                        <td className="py-2.5 font-semibold">{u.full_name}</td>
+                        <td className="py-2.5 muted">{u.email}</td>
+                        <td className="py-2.5 mono text-[11.5px]">{u.cedula_profesional ?? '—'}</td>
+                        <td className="py-2.5">
+                          <span className={`chip ${u.role === 'admin' ? 'chip-purple' : ''}`}>{u.role}</span>
+                        </td>
+                        <td className="py-2.5">
+                          {u.mfa_enrolled
+                            ? <span className="chip chip-green"><span className="dot"/>activa</span>
+                            : <span className="chip chip-amber"><span className="dot"/>pendiente</span>}
+                        </td>
+                        <td className="py-2.5 text-right text-[11.5px] muted">
+                          {u.last_login_at ? formatRelative(u.last_login_at) : 'nunca'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </section>
 
             <section className="surface p-[var(--pad-card)]">

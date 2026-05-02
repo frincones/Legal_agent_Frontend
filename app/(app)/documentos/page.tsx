@@ -68,47 +68,69 @@ export default async function DocumentosPage() {
           {docs.length === 0 ? (
             <div className="surface p-12 text-center muted">No hay documentos cargados aún.</div>
           ) : (
-            <div className="surface overflow-hidden">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="border-b border-line bg-bg-sunken">
-                    <th className="px-4 py-2 text-left text-[11px] uppercase tracking-wider muted">Documento</th>
-                    <th className="px-4 py-2 text-left text-[11px] uppercase tracking-wider muted">Tipo</th>
-                    <th className="px-4 py-2 text-left text-[11px] uppercase tracking-wider muted">Páginas</th>
-                    <th className="px-4 py-2 text-left text-[11px] uppercase tracking-wider muted">Estado</th>
-                    <th className="px-4 py-2 text-right text-[11px] uppercase tracking-wider muted">Subido</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {docs.map((d) => (
-                    <tr key={d.id} className="border-b border-line last:border-0 hover:bg-bg-sunken">
-                      <td className="px-4 py-2.5">
-                        <Link href={`/casos/${d.matter_id}`} className="block">
-                          <div className="text-[13px] font-semibold">{d.titulo}</div>
-                          {d.resumen_ia && (
-                            <div className="line-clamp-1 text-[11.5px] muted">{d.resumen_ia}</div>
-                          )}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <span className={`chip ${KIND_CHIP[d.kind] ?? ''}`}>
-                          {KIND_LABEL[d.kind] ?? d.kind}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2.5 text-[12.5px] muted tabular">{d.pages ?? '—'}</td>
-                      <td className="px-4 py-2.5">
-                        <span className={`chip ${d.status === 'completed' ? 'chip-green' : d.status === 'processing' ? 'chip-amber' : ''}`}>
-                          {d.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2.5 text-right text-[12px] muted">
-                        {formatRelative(d.created_at)}
-                      </td>
+            <>
+              {/* Mobile · cards */}
+              <div className="surface flex flex-col divide-y divide-line md:hidden">
+                {docs.map((d) => (
+                  <Link key={d.id} href={`/casos/${d.matter_id}`} className="flex flex-col gap-1 p-[var(--pad-card)] hover:bg-bg-sunken">
+                    <div className="flex items-center gap-2">
+                      <span className={`chip text-[10.5px] ${KIND_CHIP[d.kind] ?? ''}`}>{KIND_LABEL[d.kind] ?? d.kind}</span>
+                      <span className={`chip ml-auto text-[10.5px] ${d.status === 'completed' ? 'chip-green' : d.status === 'processing' ? 'chip-amber' : ''}`}>{d.status}</span>
+                    </div>
+                    <div className="text-[13.5px] font-semibold">{d.titulo}</div>
+                    {d.resumen_ia && (
+                      <div className="line-clamp-2 text-[11.5px] muted">{d.resumen_ia}</div>
+                    )}
+                    <div className="mt-1 text-[11px] muted">
+                      {d.pages ?? '—'} págs · {formatRelative(d.created_at)}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+
+              {/* Desktop · table */}
+              <div className="surface hidden overflow-x-auto md:block">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b border-line bg-bg-sunken">
+                      <th className="px-4 py-2 text-left text-[11px] uppercase tracking-wider muted">Documento</th>
+                      <th className="px-4 py-2 text-left text-[11px] uppercase tracking-wider muted">Tipo</th>
+                      <th className="px-4 py-2 text-left text-[11px] uppercase tracking-wider muted">Páginas</th>
+                      <th className="px-4 py-2 text-left text-[11px] uppercase tracking-wider muted">Estado</th>
+                      <th className="px-4 py-2 text-right text-[11px] uppercase tracking-wider muted">Subido</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {docs.map((d) => (
+                      <tr key={d.id} className="border-b border-line last:border-0 hover:bg-bg-sunken">
+                        <td className="px-4 py-2.5">
+                          <Link href={`/casos/${d.matter_id}`} className="block">
+                            <div className="text-[13px] font-semibold">{d.titulo}</div>
+                            {d.resumen_ia && (
+                              <div className="line-clamp-1 text-[11.5px] muted">{d.resumen_ia}</div>
+                            )}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <span className={`chip ${KIND_CHIP[d.kind] ?? ''}`}>
+                            {KIND_LABEL[d.kind] ?? d.kind}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 text-[12.5px] muted tabular">{d.pages ?? '—'}</td>
+                        <td className="px-4 py-2.5">
+                          <span className={`chip ${d.status === 'completed' ? 'chip-green' : d.status === 'processing' ? 'chip-amber' : ''}`}>
+                            {d.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 text-right text-[12px] muted">
+                          {formatRelative(d.created_at)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </main>

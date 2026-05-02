@@ -58,10 +58,13 @@ export function VoiceHUD({ compact = false }: { compact?: boolean }) {
       animate={{ y: 0, opacity: 1 }}
       transition={{ type: 'spring', stiffness: 380, damping: 30 }}
       className={cn(
-        'glass flex items-center gap-3 rounded-full border border-line shadow-hud',
+        'glass flex items-center gap-2 rounded-full border border-line shadow-hud md:gap-3',
+        // Mobile: tight pill (~max 92vw), no enforced min so the orb-only state shrinks gracefully.
+        // Desktop: original sizing.
+        'h-[56px] max-w-[92vw] px-3 md:h-[64px] md:px-3',
         compact
-          ? 'h-[52px] min-w-[360px] px-3'
-          : 'h-[64px] min-w-[520px] max-w-[720px] px-3',
+          ? 'md:h-[52px] md:min-w-[360px]'
+          : 'md:min-w-[520px] md:max-w-[720px]',
       )}
     >
       <button
@@ -84,22 +87,22 @@ export function VoiceHUD({ compact = false }: { compact?: boolean }) {
       >
         <Orb state={state} compact={compact} />
       </button>
-      <div className="flex min-w-[110px] flex-col gap-[1px]">
-        <div className={cn('text-[13px] font-semibold -tracking-[0.01em]', meta.color)}>
+      <div className="flex min-w-0 flex-col gap-[1px] md:min-w-[110px]">
+        <div className={cn('truncate text-[12.5px] font-semibold -tracking-[0.01em] md:text-[13px]', meta.color)}>
           {meta.label}
         </div>
         {(captionOverride || meta.caption) && (
-          <div className="text-[11.5px] leading-tight muted">
+          <div className="hidden text-[11.5px] leading-tight muted md:block">
             {captionOverride || meta.caption}
           </div>
         )}
       </div>
       {showText && (
-        <div className="ml-auto flex-1 min-w-0 truncate rounded-[12px] bg-bg-sunken px-[10px] py-[6px] text-[12.5px] text-ink-2">
+        <div className="ml-auto hidden min-w-0 flex-1 truncate rounded-[12px] bg-bg-sunken px-[10px] py-[6px] text-[12.5px] text-ink-2 md:block">
           {showText}
         </div>
       )}
-      <div className="flex shrink-0 items-center gap-1.5">
+      <div className="hidden shrink-0 items-center gap-1.5 md:flex">
         <span className="kbd">␣</span>
         <button className="btn btn-icon btn-ghost btn-sm" title="Configuración" aria-label="Configuración">
           {Ic.dots}

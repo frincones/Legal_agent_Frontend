@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Logo } from '@/components/atoms/Logo';
 import { Ic } from '@/components/atoms/icons';
 import { SidebarSearchTrigger } from '@/components/shell/SidebarSearchTrigger';
+import { SidebarCloseButton } from '@/components/shell/SidebarCloseButton';
 import { cn } from '@/lib/utils';
 
 export type SidebarKey =
@@ -45,12 +46,13 @@ export function Sidebar({
     { id: 'inbox', href: '/notificaciones', icon: 'inbox', label: 'Notificaciones', count: counts.inbox ?? null },
   ];
   return (
-    <aside className="flex h-full min-h-0 flex-col gap-[6px] border-r border-line bg-bg p-[14px_12px_12px]">
+    <div className="flex h-full min-h-0 flex-col gap-[6px] overflow-y-auto border-r border-line bg-bg p-[14px_12px_12px]">
       <div className="flex flex-col px-1 pb-2 pt-1">
         <div className="flex items-center gap-2">
           <Logo size={15} />
           <div className="ml-[2px] text-[11.5px] font-medium text-ink-3">{firmName}</div>
-          <button className="btn btn-icon btn-ghost btn-sm ml-auto" aria-label="Más">
+          <SidebarCloseButton />
+          <button className="btn btn-icon btn-ghost btn-sm ml-auto hidden md:inline-flex" aria-label="Más">
             {Ic.dots}
           </button>
         </div>
@@ -124,6 +126,6 @@ export function Sidebar({
           </Link>
         </div>
       </div>
-    </aside>
+    </div>
   );
 }

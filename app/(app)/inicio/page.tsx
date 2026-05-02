@@ -84,7 +84,7 @@ export default async function InicioPage() {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-[1.4fr_1fr]">
             <section className="surface p-[var(--pad-card)]">
               <SectionHead title="Acciones rápidas" right="5 plantillas core" />
-              <div className="mt-[14px] grid grid-cols-2 gap-2">
+              <div className="mt-[14px] grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <QuickActionButton
                   href="/liquidacion"
                   icon={Ic.scales}

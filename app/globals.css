@@ -34,6 +34,14 @@
     --pad-screen: 28px;
   }
 
+  /* Mobile: tighter padding so 16px gutters don't waste space at 375px. */
+  @media (max-width: 767px) {
+    :root {
+      --pad-card: 14px;
+      --pad-screen: 16px;
+    }
+  }
+
   [data-density='compacta'] {
     --row-h: 32px;
     --pad-card: 14px;

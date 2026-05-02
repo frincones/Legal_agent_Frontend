@@ -15,6 +15,7 @@ export const Ic = {
   arrowL: ico(<path d="M19 12H5m5-5-5 5 5 5" />),
   check: ico(<path d="m5 12 5 5 9-11" />),
   x: ico(<path d="M6 6l12 12M18 6 6 18" />),
+  menu: ico(<path d="M4 7h16M4 12h16M4 17h16" />),
   dots: ico(<><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" /><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none" /></>),
   cmd: ico(<path d="M9 6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3z" />),
   scales: ico(<path d="M12 4v16M5 8h14M3 14l3-7 3 7M15 14l3-7 3 7M3 14a3 3 0 0 0 6 0M15 14a3 3 0 0 0 6 0M8 20h8" />),
