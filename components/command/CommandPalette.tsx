@@ -4,6 +4,7 @@ import { Command } from 'cmdk';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Ic } from '@/components/atoms/icons';
+import { CMDK_OPEN_EVENT } from '@/components/shell/SidebarSearchTrigger';
 
 type SearchResult = {
   matters: Array<{ id: string; display_id: string; titulo: string; materia: string; expediente: string | null }>;
@@ -27,8 +28,13 @@ export function CommandPalette() {
         setOpen((p) => !p);
       }
     };
+    const onOpen = () => setOpen(true);
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener(CMDK_OPEN_EVENT, onOpen);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener(CMDK_OPEN_EVENT, onOpen);
+    };
   }, []);
 
   // Debounced search

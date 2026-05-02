@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Logo } from '@/components/atoms/Logo';
 import { Ic } from '@/components/atoms/icons';
+import { SidebarSearchTrigger } from '@/components/shell/SidebarSearchTrigger';
 import { cn } from '@/lib/utils';
 
 export type SidebarKey =
@@ -53,14 +54,7 @@ export function Sidebar({
             {Ic.dots}
           </button>
         </div>
-        <button className="btn btn-sm mt-3 w-full justify-between">
-          <span className="inline-flex items-center gap-2">
-            {Ic.search} Buscar o ejecutar
-          </span>
-          <span>
-            <span className="kbd">⌘</span> <span className="kbd">K</span>
-          </span>
-        </button>
+        <SidebarSearchTrigger />
       </div>
 
       <nav className="flex flex-col gap-px py-1">
