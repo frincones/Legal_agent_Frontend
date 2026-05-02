@@ -121,6 +121,8 @@ export function CommandPalette() {
                 <Item value="action-juris" icon={Ic.scales} title="Buscar jurisprudencia" sub="Por voz · Corte Const. · Suprema · Consejo Estado" k="⌘ J" onSelect={startJurisSearch} />
                 <Item value="action-upload" icon={Ic.upload} title="Subir documento" sub="PDF · OCR automático" k="⌘ U" onSelect={() => go('/documentos')} />
                 <Item value="action-liquidacion" icon={Ic.scales} title="Calculadora de liquidación" sub="CST + Ley 50/1990 + Ley 789/2002" k="⌘ L" onSelect={() => go('/liquidacion')} />
+                <Item value="action-prescripcion" icon={Ic.cal} title="Cálculo de prescripción" sub="CC + C.Co. + CST + CGP · interrupción CGP 94" onSelect={() => go('/calc/prescripcion')} />
+                <Item value="action-intereses" icon={Ic.scales} title="Intereses moratorios" sub="Decreto 519/2007 · 1.5× corriente · simple/compuesto" onSelect={() => go('/calc/intereses')} />
                 <Item value="action-calendario" icon={Ic.cal} title="Calendario y plazos" sub="Audiencias y vencimientos" k="⌘ G" onSelect={() => go('/calendario')} />
                 <Item value="action-notif" icon={Ic.bell} title="Notificaciones" sub="HITL · Bandeja · DOF" k="⌘ N" onSelect={() => go('/notificaciones')} />
               </Group>

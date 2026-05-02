@@ -36,7 +36,7 @@ export async function AppShell({
             casos: counts.matters,
             clientes: counts.clients,
             calendario: counts.deadlines7d,
-            inbox: counts.hitl,
+            inbox: counts.hitl + counts.judicial,
           }}
         />
       </SidebarShell>

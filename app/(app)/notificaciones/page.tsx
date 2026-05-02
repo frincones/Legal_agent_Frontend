@@ -4,6 +4,7 @@ import { fetchHITLPending } from '@/lib/api/rsc-fetchers';
 import { createClient } from '@/lib/supabase/server';
 import { formatRelative } from '@/lib/utils';
 import { Ic } from '@/components/atoms/icons';
+import { JudicialInbox, type JudicialNotif } from '@/components/notificaciones/JudicialInbox';
 
 export const revalidate = 30;
 
@@ -21,11 +22,20 @@ export default async function NotificacionesPage() {
   const pending = await fetchHITLPending();
 
   const supabase = createClient();
-  const { data: recentRuns } = await supabase
-    .from('agent_runs')
-    .select('id, intent, user_input, started_at, citations_count, citations_verified_count')
-    .order('started_at', { ascending: false })
-    .limit(10);
+  const [runsRes, judicialRes] = await Promise.all([
+    supabase
+      .from('agent_runs')
+      .select('id, intent, user_input, started_at, citations_count, citations_verified_count')
+      .order('started_at', { ascending: false })
+      .limit(10),
+    supabase
+      .from('judicial_notifications')
+      .select('id, matter_id, fuente, titulo, resumen, url_oficial, fecha_publicacion, fecha_actuacion, expediente, juzgado, tipo, severidad, status, created_at, read_at')
+      .order('created_at', { ascending: false })
+      .limit(50),
+  ]);
+  const recentRuns = runsRes.data;
+  const judicialItems = (judicialRes.data ?? []) as JudicialNotif[];
 
   return (
     <AppShell active="inbox">
@@ -36,6 +46,10 @@ export default async function NotificacionesPage() {
           subtitle={`${pending.length} confirmaciones pendientes · actividad LexAI`}
         />
         <div className="flex-1 overflow-auto p-[var(--pad-screen)]">
+          <div className="mb-6">
+            <JudicialInbox items={judicialItems} />
+          </div>
+
           <section className="mb-6">
             <h3 className="serif mb-2 text-[16px] font-semibold">
               Aprobaciones pendientes (HITL)

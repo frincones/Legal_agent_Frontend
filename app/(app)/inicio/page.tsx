@@ -83,31 +83,31 @@ export default async function InicioPage() {
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-[1.4fr_1fr]">
             <section className="surface p-[var(--pad-card)]">
-              <SectionHead title="Acciones rápidas" right="5 plantillas core" />
+              <SectionHead title="Calculadoras" right="3 deterministas" />
               <div className="mt-[14px] grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <QuickActionButton
                   href="/liquidacion"
                   icon={Ic.scales}
-                  title="Demanda ordinaria laboral"
-                  sub="despido sin justa causa / liquidación CST"
+                  title="Liquidación laboral"
+                  sub="CST + Ley 50/1990 + Ley 789/2002"
+                />
+                <QuickActionButton
+                  href="/calc/prescripcion"
+                  icon={Ic.cal}
+                  title="Prescripción"
+                  sub="CC · C.Co. · CST · CGP · CPP"
+                />
+                <QuickActionButton
+                  href="/calc/intereses"
+                  icon={Ic.scales}
+                  title="Intereses moratorios"
+                  sub="Decreto 519/2007 · 1.5× corriente"
                 />
                 <QuickActionButton
                   href="/casos?materia=tutela"
                   icon={Ic.doc}
                   title="Tutela"
                   sub="Art. 86 CP · estabilidad reforzada"
-                />
-                <QuickActionButton
-                  href="/casos?materia=civil"
-                  icon={Ic.send}
-                  title="Carta de cobro"
-                  sub="cartera / desocupación"
-                />
-                <QuickActionButton
-                  href="/casos?materia=administrativo"
-                  icon={Ic.shield}
-                  title="Acción de nulidad"
-                  sub="contra acto administrativo"
                 />
               </div>
             </section>

@@ -22,14 +22,14 @@ type CachedFirm = {
 export async function getCachedShellData(): Promise<{
   firm: CachedFirm | null;
   nsm: { documentos: number; meta: number; deltaPct: number; voiceWeek: number; horasMes: number };
-  counts: { matters: number; clients: number; hitl: number; deadlines7d: number };
+  counts: { matters: number; clients: number; hitl: number; deadlines7d: number; judicial: number };
 }> {
   const principal = await getSessionPrincipal();
   if (!principal || !principal.firm_id) {
     return {
       firm: null,
       nsm: { documentos: 0, meta: 40, deltaPct: 0, voiceWeek: 0, horasMes: 0 },
-      counts: { matters: 0, clients: 0, hitl: 0, deadlines7d: 0 },
+      counts: { matters: 0, clients: 0, hitl: 0, deadlines7d: 0, judicial: 0 },
     };
   }
   return _shellDataCached(principal.user_id, principal.firm_id);
@@ -45,7 +45,7 @@ const _shellDataCached = unstable_cache(
     const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 3600 * 1000).toISOString().slice(0, 10);
     const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
 
-    const [profileRes, firmRes, thisMonth, lastMonth, weekData, mattersC, clientsC, hitlC, deadlinesC] =
+    const [profileRes, firmRes, thisMonth, lastMonth, weekData, mattersC, clientsC, hitlC, deadlinesC, judicialC] =
       await Promise.all([
         supabase.from('users').select('full_name, cedula_profesional, role').eq('id', userId).single(),
         supabase.from('firms').select('razon_social').eq('id', firmId).single(),
@@ -56,6 +56,7 @@ const _shellDataCached = unstable_cache(
         supabase.from('clients').select('*', { count: 'exact', head: true }).eq('firm_id', firmId),
         supabase.from('hitl_interrupts').select('*', { count: 'exact', head: true }).eq('firm_id', firmId).eq('decision', 'pending'),
         supabase.from('matter_deadlines').select('*', { count: 'exact', head: true }).eq('firm_id', firmId).eq('completado', false).lte('fecha', sevenDaysFromNow),
+        supabase.from('judicial_notifications').select('*', { count: 'exact', head: true }).eq('firm_id', firmId).eq('status', 'unread'),
       ]);
 
     const profile = profileRes.data as { full_name: string; cedula_profesional: string | null; role: string } | null;
@@ -89,9 +90,10 @@ const _shellDataCached = unstable_cache(
         clients: clientsC.count ?? 0,
         hitl: hitlC.count ?? 0,
         deadlines7d: deadlinesC.count ?? 0,
+        judicial: judicialC.count ?? 0,
       },
     };
   },
-  ['shell-data-v2'],
+  ['shell-data-v3'],
   { revalidate: 60, tags: ['shell-data'] },
 );

@@ -58,6 +58,25 @@ export function NewMatterForm({ clients }: { clients: ClientOption[] }) {
       }
       const data = (await res.json()) as { id: string; display_id: string };
       toast.success(`Caso ${data.display_id} creado`);
+
+      // Auto-suscribir el caso al poller judicial si tiene expediente.
+      if (expediente.trim().length > 0) {
+        try {
+          await fetch('/api/notifications/judicial/subscribe', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              matter_id: data.id,
+              expediente: expediente.trim(),
+              juzgado: tribunal.trim() || undefined,
+              fuente: 'rama_judicial_demo',
+            }),
+          });
+        } catch {
+          // best-effort; no bloquear navegación
+        }
+      }
+
       router.push(`/casos/${data.id}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Error creando caso');
