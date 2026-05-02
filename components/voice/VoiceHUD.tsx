@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Ic } from '@/components/atoms/icons';
 import { useVoiceStore, type VoiceState } from '@/lib/stores/voice-store';
 import { useVoice } from '@/components/voice/VoiceProvider';
+import { VoiceMenu } from '@/components/voice/VoiceMenu';
 import { cn } from '@/lib/utils';
 
 const STATE_META: Record<VoiceState, { color: string; label: string; caption: string }> = {
@@ -104,9 +105,7 @@ export function VoiceHUD({ compact = false }: { compact?: boolean }) {
       )}
       <div className="hidden shrink-0 items-center gap-1.5 md:flex">
         <span className="kbd">␣</span>
-        <button className="btn btn-icon btn-ghost btn-sm" title="Configuración" aria-label="Configuración">
-          {Ic.dots}
-        </button>
+        <VoiceMenu />
       </div>
     </motion.div>
   );

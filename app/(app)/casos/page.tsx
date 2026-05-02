@@ -2,6 +2,7 @@ import { AppShell } from '@/components/shell/AppShell';
 import { TopBar } from '@/components/shell/TopBar';
 import { Ic } from '@/components/atoms/icons';
 import { CasesTable } from '@/components/cases/CasesTable';
+import { CasosTopActions } from '@/components/casos/CasosActions';
 import { fetchMatters, type Matter } from '@/lib/api/rsc-fetchers';
 import { cn } from '@/lib/utils';
 
@@ -53,22 +54,10 @@ export default async function CasosPage({
               {matters.length} activos · {vencimientos} vencen esta semana · {audiencias} audiencia{audiencias !== 1 ? 's' : ''} próxima{audiencias !== 1 ? 's' : ''}
             </>
           }
-          actions={
-            <>
-              <button className="btn">
-                <span className="inline-flex">{Ic.filter}</span> Filtros
-              </button>
-              <button className="btn">
-                <span className="inline-flex">{Ic.mic}</span> &ldquo;Casos laborales con audiencia&rdquo;
-              </button>
-              <button className="btn btn-primary">
-                <span className="inline-flex">{Ic.plus}</span> Nuevo caso
-              </button>
-            </>
-          }
+          actions={<CasosTopActions />}
         />
 
-        <div className="flex items-center gap-2 border-b border-line px-[var(--pad-screen)] pt-3">
+        <div id="casos-tabs" className="flex items-center gap-2 overflow-x-auto border-b border-line px-[var(--pad-screen)] pt-3">
           {tabsWithCount.map((t) => (
             <a
               key={t.key}

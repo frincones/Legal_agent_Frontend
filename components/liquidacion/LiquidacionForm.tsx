@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Ic } from '@/components/atoms/icons';
 import { formatCOP } from '@/lib/utils';
@@ -25,7 +26,31 @@ type Result = {
   desglose_legible: string;
 };
 
+function downloadDesglose(result: Result, trabajadorNombre: string) {
+  const lines = [
+    `LIQUIDACIÓN LABORAL · ${trabajadorNombre || 'Sin nombre'}`,
+    `Generado por LexAI · cálculo determinista CST + Ley 50/1990 + Ley 789/2002`,
+    '',
+    result.desglose_legible,
+    '',
+    '— Disclaimer —',
+    'Documento generado por IA. Validado por abogado titulado del despacho con tarjeta',
+    'profesional vigente antes de presentar ante autoridad o contraparte.',
+  ];
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const stamp = new Date().toISOString().slice(0, 10);
+  a.download = `liquidacion_${(trabajadorNombre || 'sin-nombre').replace(/\s+/g, '_')}_${stamp}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export function LiquidacionForm({ matterId }: { matterId?: string }) {
+  const router = useRouter();
   const [trabajadorNombre, setTrabajadorNombre] = useState('');
   const [fechaIngreso, setFechaIngreso] = useState('');
   const [fechaTerminacion, setFechaTerminacion] = useState('');
@@ -70,6 +95,24 @@ export function LiquidacionForm({ matterId }: { matterId?: string }) {
     } finally {
       setBusy(false);
     }
+  }
+
+  function onExport() {
+    if (!result) return;
+    downloadDesglose(result, trabajadorNombre);
+    toast.success('Desglose descargado');
+  }
+
+  async function onAdjuntar() {
+    if (!result) return;
+    if (matterId) {
+      router.push(`/casos/${matterId}`);
+      toast.success('Liquidación vinculada al caso');
+      return;
+    }
+    // Sin matterId: dejar al usuario elegir un caso.
+    router.push(`/casos?adjuntar=${result.id}`);
+    toast.info('Selecciona el caso al que se adjuntará la liquidación');
   }
 
   return (
@@ -192,8 +235,12 @@ export function LiquidacionForm({ matterId }: { matterId?: string }) {
               ))}
             </ul>
             <div className="mt-2 flex gap-2">
-              <button className="btn btn-sm">{Ic.download} Exportar a Word</button>
-              <button className="btn btn-sm btn-primary">Adjuntar a demanda</button>
+              <button type="button" onClick={onExport} className="btn btn-sm">
+                {Ic.download} Exportar a Word
+              </button>
+              <button type="button" onClick={() => void onAdjuntar()} className="btn btn-sm btn-primary">
+                Adjuntar a demanda
+              </button>
             </div>
           </div>
         )}

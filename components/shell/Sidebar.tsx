@@ -39,7 +39,7 @@ export function Sidebar({
   const items: SidebarItem[] = [
     { id: 'inicio', href: '/inicio', icon: 'home', label: 'Inicio' },
     { id: 'casos', href: '/casos', icon: 'folder', label: 'Casos', count: counts.casos ?? null },
-    { id: 'canvas', href: '/casos', icon: 'bolt', label: 'Live Canvas', accent: true },
+    { id: 'canvas', href: '/canvas', icon: 'bolt', label: 'Live Canvas', accent: true },
     { id: 'clientes', href: '/clientes', icon: 'users', label: 'Clientes', count: counts.clientes ?? null },
     { id: 'calendario', href: '/calendario', icon: 'cal', label: 'Calendario', count: counts.calendario ?? null },
     { id: 'documentos', href: '/documentos', icon: 'doc', label: 'Documentos' },

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { AppShell } from '@/components/shell/AppShell';
 import { TopBar } from '@/components/shell/TopBar';
-import { Ic } from '@/components/atoms/icons';
+import { ClientesTopActions } from '@/components/clientes/ClientesActions';
 import { fetchClients } from '@/lib/api/rsc-fetchers';
 import { createClient } from '@/lib/supabase/server';
 
@@ -38,12 +38,7 @@ export default async function ClientesPage() {
               {clients.length} clientes · {Object.keys(matterCounts).length} con caso abierto · {conConsentimiento} con Habeas Data al día
             </>
           }
-          actions={
-            <>
-              <button className="btn">{Ic.search} Buscar</button>
-              <button className="btn btn-primary">{Ic.plus} Nuevo cliente</button>
-            </>
-          }
+          actions={<ClientesTopActions />}
         />
         <div className="flex-1 overflow-auto p-[var(--pad-screen)]">
           {clients.length === 0 ? (

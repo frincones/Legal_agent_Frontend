@@ -3,8 +3,10 @@
 import { Command } from 'cmdk';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { Ic } from '@/components/atoms/icons';
 import { CMDK_OPEN_EVENT } from '@/components/shell/SidebarSearchTrigger';
+import { useVoice } from '@/components/voice/VoiceProvider';
 
 type SearchResult = {
   matters: Array<{ id: string; display_id: string; titulo: string; materia: string; expediente: string | null }>;
@@ -17,6 +19,7 @@ const EMPTY: SearchResult = { matters: [], clients: [], documents: [], sentencia
 
 export function CommandPalette() {
   const router = useRouter();
+  const { toggle: toggleVoice } = useVoice();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult>(EMPTY);
@@ -66,6 +69,31 @@ export function CommandPalette() {
     router.push(href);
   };
 
+  const close = () => {
+    setOpen(false);
+    setQuery('');
+  };
+
+  const startDictation = async () => {
+    close();
+    try {
+      await toggleVoice();
+      toast.success('Dictado activo · habla normal o pulsa Espacio');
+    } catch {
+      toast.error('No se pudo activar el dictado');
+    }
+  };
+
+  const startJurisSearch = async () => {
+    close();
+    try {
+      await toggleVoice();
+      toast.info('Pídeme: "Busca jurisprudencia sobre..."');
+    } catch {
+      toast.error('No se pudo activar el buscador por voz');
+    }
+  };
+
   return (
     <Command.Dialog
       open={open}
@@ -89,15 +117,17 @@ export function CommandPalette() {
           {query.length < 2 ? (
             <>
               <Group heading="Acciones rápidas">
-                <Item value="action-dictado" icon={Ic.bolt} title="Nuevo dictado" sub="Voice + Live Canvas" k="⌘ D" onSelect={() => go('/inicio')} />
-                <Item value="action-juris" icon={Ic.scales} title="Buscar jurisprudencia" sub="Corte Const. · Suprema · Consejo Estado" k="⌘ J" onSelect={() => go('/casos')} />
+                <Item value="action-dictado" icon={Ic.bolt} title="Nuevo dictado" sub="Activa el agente de voz" k="⌘ D" onSelect={startDictation} />
+                <Item value="action-juris" icon={Ic.scales} title="Buscar jurisprudencia" sub="Por voz · Corte Const. · Suprema · Consejo Estado" k="⌘ J" onSelect={startJurisSearch} />
                 <Item value="action-upload" icon={Ic.upload} title="Subir documento" sub="PDF · OCR automático" k="⌘ U" onSelect={() => go('/documentos')} />
-                <Item value="action-export" icon={Ic.download} title="Exportar a Word" sub="con disclaimer + SHA-256" k="⌘ E" onSelect={() => go('/documentos')} />
+                <Item value="action-liquidacion" icon={Ic.scales} title="Calculadora de liquidación" sub="CST + Ley 50/1990 + Ley 789/2002" k="⌘ L" onSelect={() => go('/liquidacion')} />
+                <Item value="action-calendario" icon={Ic.cal} title="Calendario y plazos" sub="Audiencias y vencimientos" k="⌘ G" onSelect={() => go('/calendario')} />
+                <Item value="action-notif" icon={Ic.bell} title="Notificaciones" sub="HITL · Bandeja · DOF" k="⌘ N" onSelect={() => go('/notificaciones')} />
               </Group>
               <Group heading="Configuración">
                 <Item value="cfg-despacho" icon={Ic.users} title="Despacho" onSelect={() => go('/settings/despacho')} />
                 <Item value="cfg-privacy" icon={Ic.shield} title="Habeas Data · ARCO" onSelect={() => go('/settings/privacidad')} />
-                <Item value="cfg-audit" icon={Ic.badge} title="Audit log" onSelect={() => go('/settings/despacho')} />
+                <Item value="cfg-audit" icon={Ic.badge} title="Audit log" onSelect={() => go('/settings/despacho#audit')} />
               </Group>
             </>
           ) : (
