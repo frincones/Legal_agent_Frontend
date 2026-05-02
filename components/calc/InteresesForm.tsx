@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Ic } from '@/components/atoms/icons';
 import { formatCOP } from '@/lib/utils';
+import { uiCommandBus } from '@/lib/voice/ui-command-bus';
 
 type LineItem = {
   concepto: string;
@@ -37,6 +38,7 @@ const TIPO_LABEL: Record<string, string> = {
 
 export function InteresesForm({ matterId }: { matterId?: string }) {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement | null>(null);
   const [caseLabel, setCaseLabel] = useState('');
   const [tipoInteres, setTipoInteres] = useState<string>('comercial_moratorio');
   const [capital, setCapital] = useState<number>(0);
@@ -47,6 +49,25 @@ export function InteresesForm({ matterId }: { matterId?: string }) {
   const [metodo, setMetodo] = useState<'simple' | 'compuesto'>('simple');
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
+
+  // F1 · prefill API
+  useEffect(() => {
+    return uiCommandBus.registerForm('intereses', {
+      setValues: (partial) => {
+        if (typeof partial.caseLabel === 'string') setCaseLabel(partial.caseLabel);
+        if (typeof partial.tipoInteres === 'string') setTipoInteres(partial.tipoInteres);
+        if (typeof partial.capital === 'number') setCapital(partial.capital);
+        else if (typeof partial.capital === 'string' && partial.capital) setCapital(Number(partial.capital));
+        if (typeof partial.fechaInicio === 'string') setFechaInicio(partial.fechaInicio);
+        if (typeof partial.fechaFin === 'string') setFechaFin(partial.fechaFin);
+        if (typeof partial.tasaAnual === 'number') setTasaAnual(partial.tasaAnual);
+        if (typeof partial.base === 'number' && (partial.base === 360 || partial.base === 365)) setBase(partial.base);
+        if (typeof partial.metodo === 'string' && (partial.metodo === 'simple' || partial.metodo === 'compuesto'))
+          setMetodo(partial.metodo);
+      },
+      submit: () => formRef.current?.requestSubmit(),
+    });
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -92,7 +113,7 @@ export function InteresesForm({ matterId }: { matterId?: string }) {
 
   return (
     <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_1fr]">
-      <form onSubmit={submit} className="surface flex flex-col gap-4 p-[var(--pad-card)]">
+      <form ref={formRef} onSubmit={submit} className="surface flex flex-col gap-4 p-[var(--pad-card)]">
         <h3 className="serif m-0 text-[16px] font-semibold">Datos del cálculo</h3>
 
         <Field label="Etiqueta (opcional)">

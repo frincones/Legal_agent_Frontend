@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Ic } from '@/components/atoms/icons';
+import { uiCommandBus } from '@/lib/voice/ui-command-bus';
 
 const FINALIDADES = [
   'representacion_legal',
@@ -23,6 +24,7 @@ const FINALIDAD_LABEL: Record<(typeof FINALIDADES)[number], string> = {
 
 export function NewClientForm() {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement | null>(null);
   const [tipo, setTipo] = useState<'persona_natural' | 'persona_juridica'>('persona_natural');
   const [nombre, setNombre] = useState('');
   const [taxId, setTaxId] = useState('');
@@ -36,6 +38,23 @@ export function NewClientForm() {
   );
   const [voiceRecording, setVoiceRecording] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  // F1 · prefill API
+  useEffect(() => {
+    return uiCommandBus.registerForm('new_client', {
+      setValues: (partial) => {
+        if (typeof partial.tipo === 'string' && ['persona_natural', 'persona_juridica'].includes(partial.tipo))
+          setTipo(partial.tipo as 'persona_natural' | 'persona_juridica');
+        if (typeof partial.nombre === 'string') setNombre(partial.nombre);
+        if (typeof partial.taxId === 'string') setTaxId(partial.taxId);
+        if (typeof partial.personalId === 'string') setPersonalId(partial.personalId);
+        if (typeof partial.email === 'string') setEmail(partial.email);
+        if (typeof partial.telefono === 'string') setTelefono(partial.telefono);
+        if (typeof partial.vip === 'boolean') setVip(partial.vip);
+      },
+      submit: () => formRef.current?.requestSubmit(),
+    });
+  }, []);
 
   function toggleFinalidad(f: string) {
     setFinalidades((prev) => {
@@ -93,7 +112,7 @@ export function NewClientForm() {
   }
 
   return (
-    <form onSubmit={submit} className="surface flex flex-col gap-4 p-[var(--pad-card)]">
+    <form ref={formRef} onSubmit={submit} className="surface flex flex-col gap-4 p-[var(--pad-card)]">
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <Field label="Tipo de persona">
           <select

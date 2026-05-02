@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Ic } from '@/components/atoms/icons';
+import { uiCommandBus } from '@/lib/voice/ui-command-bus';
 
 type ClientOption = { id: string; nombre: string; tax_id: string | null };
 
@@ -20,6 +21,7 @@ const MATERIAS = [
 
 export function NewMatterForm({ clients }: { clients: ClientOption[] }) {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement | null>(null);
   const [clientId, setClientId] = useState(clients[0]?.id ?? '');
   const [titulo, setTitulo] = useState('');
   const [materia, setMateria] = useState<(typeof MATERIAS)[number]>('laboral');
@@ -27,6 +29,23 @@ export function NewMatterForm({ clients }: { clients: ClientOption[] }) {
   const [expediente, setExpediente] = useState('');
   const [priority, setPriority] = useState<'alta' | 'media' | 'baja'>('media');
   const [busy, setBusy] = useState(false);
+
+  // F1 · prefill API
+  useEffect(() => {
+    return uiCommandBus.registerForm('new_matter', {
+      setValues: (partial) => {
+        if (typeof partial.clientId === 'string') setClientId(partial.clientId);
+        if (typeof partial.titulo === 'string') setTitulo(partial.titulo);
+        if (typeof partial.materia === 'string' && (MATERIAS as readonly string[]).includes(partial.materia))
+          setMateria(partial.materia as (typeof MATERIAS)[number]);
+        if (typeof partial.tribunal === 'string') setTribunal(partial.tribunal);
+        if (typeof partial.expediente === 'string') setExpediente(partial.expediente);
+        if (typeof partial.priority === 'string' && ['alta', 'media', 'baja'].includes(partial.priority))
+          setPriority(partial.priority as 'alta' | 'media' | 'baja');
+      },
+      submit: () => formRef.current?.requestSubmit(),
+    });
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -95,7 +114,7 @@ export function NewMatterForm({ clients }: { clients: ClientOption[] }) {
   }
 
   return (
-    <form onSubmit={submit} className="surface flex flex-col gap-4 p-[var(--pad-card)]">
+    <form ref={formRef} onSubmit={submit} className="surface flex flex-col gap-4 p-[var(--pad-card)]">
       <Field label="Cliente">
         <select value={clientId} onChange={(e) => setClientId(e.target.value)} className="w-full bg-transparent outline-none">
           {clients.map((c) => (

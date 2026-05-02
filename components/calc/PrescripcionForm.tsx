@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Ic } from '@/components/atoms/icons';
+import { uiCommandBus } from '@/lib/voice/ui-command-bus';
 
 type LineItem = {
   concepto: string;
@@ -41,12 +42,26 @@ const TIPO_LABEL: Record<string, string> = {
 
 export function PrescripcionForm({ matterId }: { matterId?: string }) {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement | null>(null);
   const [caseLabel, setCaseLabel] = useState('');
   const [tipoAccion, setTipoAccion] = useState<string>('civil_ordinaria');
   const [fechaExigibilidad, setFechaExigibilidad] = useState('');
   const [fechaInterrupcion, setFechaInterrupcion] = useState('');
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
+
+  // F1 · prefill API
+  useEffect(() => {
+    return uiCommandBus.registerForm('prescripcion', {
+      setValues: (partial) => {
+        if (typeof partial.caseLabel === 'string') setCaseLabel(partial.caseLabel);
+        if (typeof partial.tipoAccion === 'string') setTipoAccion(partial.tipoAccion);
+        if (typeof partial.fechaExigibilidad === 'string') setFechaExigibilidad(partial.fechaExigibilidad);
+        if (typeof partial.fechaInterrupcion === 'string') setFechaInterrupcion(partial.fechaInterrupcion);
+      },
+      submit: () => formRef.current?.requestSubmit(),
+    });
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -88,7 +103,7 @@ export function PrescripcionForm({ matterId }: { matterId?: string }) {
 
   return (
     <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_1fr]">
-      <form onSubmit={submit} className="surface flex flex-col gap-4 p-[var(--pad-card)]">
+      <form ref={formRef} onSubmit={submit} className="surface flex flex-col gap-4 p-[var(--pad-card)]">
         <h3 className="serif m-0 text-[16px] font-semibold">Datos de la acción</h3>
 
         <Field label="Etiqueta del cálculo (opcional)">

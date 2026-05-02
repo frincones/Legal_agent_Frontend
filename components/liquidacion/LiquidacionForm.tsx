@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Ic } from '@/components/atoms/icons';
 import { formatCOP } from '@/lib/utils';
+import { uiCommandBus } from '@/lib/voice/ui-command-bus';
 
 type Causa = 'injustificado' | 'justa_causa' | 'renuncia' | 'mutuo_acuerdo' | 'terminacion_contrato' | 'fin_obra';
 type TipoContrato = 'indefinido' | 'fijo' | 'obra_labor' | 'aprendizaje';
@@ -51,6 +52,7 @@ function downloadDesglose(result: Result, trabajadorNombre: string) {
 
 export function LiquidacionForm({ matterId }: { matterId?: string }) {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement | null>(null);
   const [trabajadorNombre, setTrabajadorNombre] = useState('');
   const [fechaIngreso, setFechaIngreso] = useState('');
   const [fechaTerminacion, setFechaTerminacion] = useState('');
@@ -60,6 +62,27 @@ export function LiquidacionForm({ matterId }: { matterId?: string }) {
   const [salarioIntegral, setSalarioIntegral] = useState(false);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
+
+  // F1 · expose prefill API to UICommandBus so the voice agent can fill the form.
+  useEffect(() => {
+    const unregister = uiCommandBus.registerForm('liquidacion', {
+      setValues: (partial) => {
+        if (typeof partial.trabajadorNombre === 'string') setTrabajadorNombre(partial.trabajadorNombre);
+        if (typeof partial.fechaIngreso === 'string') setFechaIngreso(partial.fechaIngreso);
+        if (typeof partial.fechaTerminacion === 'string') setFechaTerminacion(partial.fechaTerminacion);
+        if (typeof partial.salarioMensual === 'number') setSalarioMensual(partial.salarioMensual);
+        else if (typeof partial.salarioMensual === 'string' && partial.salarioMensual)
+          setSalarioMensual(Number(partial.salarioMensual));
+        if (typeof partial.causa === 'string') setCausa(partial.causa as Causa);
+        if (typeof partial.tipoContrato === 'string') setTipoContrato(partial.tipoContrato as TipoContrato);
+        if (typeof partial.salarioIntegral === 'boolean') setSalarioIntegral(partial.salarioIntegral);
+      },
+      submit: () => {
+        formRef.current?.requestSubmit();
+      },
+    });
+    return unregister;
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -117,7 +140,7 @@ export function LiquidacionForm({ matterId }: { matterId?: string }) {
 
   return (
     <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_1fr]">
-      <form onSubmit={submit} className="surface flex flex-col gap-4 p-[var(--pad-card)]">
+      <form ref={formRef} onSubmit={submit} className="surface flex flex-col gap-4 p-[var(--pad-card)]">
         <h3 className="serif m-0 text-[16px] font-semibold">Datos del trabajador</h3>
 
         <Field label="Nombre del trabajador (opcional)">

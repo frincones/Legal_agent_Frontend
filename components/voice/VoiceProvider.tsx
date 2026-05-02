@@ -1,9 +1,12 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { RealtimeClient } from '@/components/voice/RealtimeClient';
 import { useVoiceStore } from '@/lib/stores/voice-store';
+import { uiCommandBus, type UICommand } from '@/lib/voice/ui-command-bus';
+import { openCommandPalette } from '@/components/shell/SidebarSearchTrigger';
 
 type VoiceCtx = {
   ready: boolean;
@@ -31,6 +34,7 @@ export function useVoice(): VoiceCtx {
 }
 
 export function VoiceProvider({ children, matterId }: { children: React.ReactNode; matterId?: string }) {
+  const router = useRouter();
   const [ready, setReady] = useState(false);
   const [micPermission, setMicPermission] = useState<VoiceCtx['micPermission']>('prompt');
   const clientRef = useRef<RealtimeClient | null>(null);
@@ -40,6 +44,88 @@ export function VoiceProvider({ children, matterId }: { children: React.ReactNod
   useEffect(() => {
     setMatter(matterId ?? null);
   }, [matterId, setMatter]);
+
+  // F1 · UI Bridge — registrar handlers default en UICommandBus.
+  // Estos manejan navigate, scroll, toast, modal y prefill_form (delega al
+  // formApi registrado por cada formulario). Cleanup en unmount.
+  useEffect(() => {
+    const unsubs = [
+      uiCommandBus.register('navigate', (cmd) => {
+        if (cmd.action !== 'navigate') return false;
+        try {
+          router.push(cmd.path);
+          return true;
+        } catch (e) {
+          console.error('[VoiceProvider] navigate failed', e);
+          return false;
+        }
+      }),
+      uiCommandBus.register('open_matter_tab', (cmd) => {
+        if (cmd.action !== 'open_matter_tab') return false;
+        // Navega + emite evento para que MatterTabs seleccione la pestaña.
+        try {
+          router.push(`/casos/${cmd.matter_id}?tab=${encodeURIComponent(cmd.tab)}`);
+          window.dispatchEvent(new CustomEvent('lexai:matter-tab-select', { detail: { tab: cmd.tab } }));
+          return true;
+        } catch {
+          return false;
+        }
+      }),
+      uiCommandBus.register('scroll_to', (cmd) => {
+        if (cmd.action !== 'scroll_to') return false;
+        if (typeof document === 'undefined') return false;
+        const el = document.querySelector(`[data-scroll-target="${CSS.escape(cmd.target)}"]`);
+        if (!el) return false;
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return true;
+      }),
+      uiCommandBus.register('open_command_palette', (cmd) => {
+        if (cmd.action !== 'open_command_palette') return false;
+        openCommandPalette();
+        return true;
+      }),
+      uiCommandBus.register('toast', (cmd) => {
+        if (cmd.action !== 'toast') return false;
+        const fn =
+          cmd.variant === 'success' ? toast.success
+          : cmd.variant === 'warning' ? toast.warning
+          : cmd.variant === 'error' ? toast.error
+          : toast.info;
+        fn(cmd.message);
+        return true;
+      }),
+      uiCommandBus.register('open_modal', (cmd) => {
+        if (cmd.action !== 'open_modal') return false;
+        // MVP: usar window.confirm para no introducir modal nuevo. Reemplazable
+        // por un modal estilizado registrando otro handler.
+        const ok = typeof window !== 'undefined'
+          ? window.confirm(`${cmd.title}\n\n${cmd.body}`)
+          : true;
+        if (ok) toast(cmd.confirm_label ?? 'Aceptado');
+        return true;
+      }),
+      uiCommandBus.register('prefill_form', async (cmd) => {
+        if (cmd.action !== 'prefill_form') return false;
+        const api = uiCommandBus.getFormApi(cmd.form);
+        if (!api) {
+          toast.warning(`Formulario "${cmd.form}" no está montado en esta pantalla`);
+          return false;
+        }
+        api.setValues(cmd.values);
+        if (cmd.submit && api.submit) {
+          try {
+            await api.submit();
+          } catch (e) {
+            console.error('[VoiceProvider] form submit failed', e);
+          }
+        }
+        return true;
+      }),
+    ];
+    return () => {
+      unsubs.forEach((u) => u());
+    };
+  }, [router]);
 
   // Detect mic permission state without prompting
   useEffect(() => {

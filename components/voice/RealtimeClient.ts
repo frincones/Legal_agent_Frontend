@@ -12,6 +12,7 @@
 import { useVoiceStore } from '@/lib/stores/voice-store';
 import { PCMRecorder } from '@/lib/voice/PCMRecorder';
 import { PCMPlayer } from '@/lib/voice/PCMPlayer';
+import { uiCommandBus, type UICommand } from '@/lib/voice/ui-command-bus';
 
 export type RealtimeOptions = {
   ticket: string;
@@ -173,6 +174,13 @@ export class RealtimeClient {
       case 'hitl.resolved':
         store.setCaption('');
         break;
+      case 'ui.command': {
+        const cmd = msg.command as UICommand | undefined;
+        if (cmd && typeof cmd === 'object' && 'action' in cmd) {
+          void uiCommandBus.dispatch(cmd);
+        }
+        break;
+      }
       case 'error': {
         const code = msg.code as string | number | undefined;
         const message = (msg.message as string) ?? 'unknown error';
