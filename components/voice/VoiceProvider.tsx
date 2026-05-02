@@ -187,6 +187,11 @@ export function VoiceProvider({ children, matterId }: { children: React.ReactNod
   }, [matterId]);
 
   const pttDown = useCallback(async () => {
+    // Respetar el flag de pausa: el agente sigue conectado pero ignora el push-to-talk.
+    if (useVoiceStore.getState().paused) {
+      toast.info('Agente pausado — usa el menú "..." para reanudar');
+      return;
+    }
     const c = await issueTicketAndConnect();
     if (!c) return;
     try {

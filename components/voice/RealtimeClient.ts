@@ -88,8 +88,10 @@ export class RealtimeClient {
   private onMessage(e: MessageEvent): void {
     const store = useVoiceStore.getState();
     if (typeof e.data !== 'string') {
-      // Binary PCM16 24kHz from OpenAI → enqueue
-      this.player.enqueue(e.data);
+      // Binary PCM16 24kHz from OpenAI → enqueue (a menos que silentMode esté activo)
+      if (!store.silentMode) {
+        this.player.enqueue(e.data);
+      }
       this.speaking = true;
       this.clearThinkingTimer();
       if (store.state !== 'speaking') store.setState('speaking');
@@ -158,6 +160,8 @@ export class RealtimeClient {
       case 'speak.end':
         this.speaking = false;
         this.cancelInFlight = false;
+        // Commit assistant turn al historial (resetAnswer ya lo hace si hay texto)
+        store.resetAnswer();
         store.setState('idle');
         break;
       case 'speak.cancelled':
