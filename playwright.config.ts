@@ -32,7 +32,6 @@ export default defineConfig({
       name: 'mobile',
       use: {
         ...devices['iPhone 13'],
-        permissions: ['microphone'],
       },
     },
   ],

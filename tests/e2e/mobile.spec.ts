@@ -45,7 +45,9 @@ test.describe('LexAI · Mobile responsive', () => {
   test('3 · backdrop cierra el drawer', async ({ page }) => {
     await login(page);
     await page.getByLabel('Abrir menú').click();
-    await page.locator('.bg-black\\/40').first().click();
+    // Click outside the drawer (backdrop area is to the right of the 280px sidebar).
+    const vw = page.viewportSize()?.width ?? 390;
+    await page.mouse.click(vw - 30, 200);
     const drawer = page.locator('aside[data-open]').first();
     await expect(drawer).toHaveAttribute('data-open', 'false');
   });
