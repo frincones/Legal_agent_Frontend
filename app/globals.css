@@ -1,0 +1,211 @@
+/* LexAI · Design tokens ported from Legal/styles/tokens.css
+   RGB triplets so Tailwind can apply alpha via /<value> syntax. */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Sobria · default · Apple-grade */
+    --bg-rgb: 250 250 247;             /* #FAFAF7 */
+    --bg-elev-rgb: 255 255 255;
+    --bg-sunken-rgb: 244 242 236;      /* #F4F2EC */
+    --ink-rgb: 20 18 14;               /* #14120E */
+    --ink-2-rgb: 58 56 51;
+    --ink-3-rgb: 107 104 98;
+    --ink-4-rgb: 160 156 148;
+    --line-rgb: 231 227 217;
+    --line-strong-rgb: 212 207 194;
+    --accent-rgb: 0 102 204;           /* #0066CC */
+    --accent-soft-rgb: 229 239 250;
+    --accent-ink-rgb: 0 80 163;
+    --ok-rgb: 13 122 61;
+    --ok-soft-rgb: 220 241 228;
+    --warn-rgb: 139 94 0;
+    --warn-soft-rgb: 251 239 204;
+    --danger-rgb: 180 35 24;
+    --danger-soft-rgb: 252 231 229;
+    --purple-rgb: 107 71 194;
+    --purple-soft-rgb: 236 229 251;
+
+    --row-h: 44px;
+    --pad-card: 20px;
+    --pad-screen: 28px;
+  }
+
+  [data-density='compacta'] {
+    --row-h: 32px;
+    --pad-card: 14px;
+    --pad-screen: 20px;
+  }
+
+  [data-mode='dark'] {
+    --bg-rgb: 19 18 16;
+    --bg-elev-rgb: 27 26 23;
+    --bg-sunken-rgb: 14 13 11;
+    --ink-rgb: 245 243 238;
+    --ink-2-rgb: 201 197 188;
+    --ink-3-rgb: 143 139 130;
+    --ink-4-rgb: 92 89 83;
+    --line-rgb: 42 40 38;
+    --line-strong-rgb: 56 53 49;
+    --accent-rgb: 77 163 255;
+    --accent-soft-rgb: 14 34 54;
+    --accent-ink-rgb: 143 196 255;
+    --ok-soft-rgb: 14 36 24;
+    --warn-soft-rgb: 42 31 8;
+    --danger-soft-rgb: 43 15 13;
+    --purple-soft-rgb: 26 18 48;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    color: rgb(var(--ink-rgb));
+    background: rgb(var(--bg-rgb));
+    font-family: theme('fontFamily.sans');
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    font-feature-settings: 'ss01', 'cv11';
+  }
+  .serif {
+    font-family: theme('fontFamily.serif');
+    font-feature-settings: 'ss01';
+  }
+  .mono {
+    font-family: theme('fontFamily.mono');
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center gap-2 h-[34px] px-[14px] rounded-md
+           border border-line-strong bg-bg-elev text-ink
+           font-medium text-[13px] cursor-pointer transition-colors;
+  }
+  .btn:hover {
+    @apply bg-bg-sunken;
+  }
+  .btn-primary {
+    @apply bg-accent border-accent text-white;
+  }
+  .btn-primary:hover {
+    @apply bg-accent-ink;
+  }
+  .btn-ghost {
+    @apply bg-transparent border-transparent;
+  }
+  .btn-ghost:hover {
+    @apply bg-bg-sunken;
+  }
+  .btn-sm {
+    @apply h-[26px] px-[10px] text-[12px] rounded-[7px];
+  }
+  .btn-lg {
+    @apply h-[44px] px-[18px] text-[14px];
+  }
+  .btn-icon {
+    @apply w-8 h-8 px-0 justify-center;
+  }
+
+  .kbd {
+    @apply inline-flex items-center justify-center min-w-[18px] h-[18px] px-[5px]
+           font-mono text-[10.5px] font-medium text-ink-3 bg-bg-sunken
+           border border-line rounded-[4px];
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-[5px] h-[22px] px-2
+           text-[11.5px] font-medium rounded-full
+           bg-bg-sunken text-ink-2 border border-line;
+  }
+  .chip-blue {
+    @apply bg-accent-soft text-accent-ink border-transparent;
+  }
+  .chip-green {
+    @apply bg-ok-soft text-ok border-transparent;
+  }
+  .chip-amber {
+    @apply bg-warn-soft text-warn border-transparent;
+  }
+  .chip-red {
+    @apply bg-danger-soft text-danger border-transparent;
+  }
+  .chip-purple {
+    @apply bg-purple-soft text-purple border-transparent;
+  }
+
+  .dot {
+    @apply w-[6px] h-[6px] rounded-full bg-current shrink-0;
+  }
+
+  .surface {
+    @apply bg-bg-elev border border-line rounded-lg;
+  }
+
+  .muted {
+    @apply text-ink-3;
+  }
+
+  .ico {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .glass {
+    background: color-mix(in oklab, rgb(var(--bg-elev-rgb)) 92%, transparent);
+    backdrop-filter: saturate(140%) blur(18px);
+    -webkit-backdrop-filter: saturate(140%) blur(18px);
+  }
+
+  /* Skeleton shimmer for Live Canvas */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      rgb(var(--bg-sunken-rgb)) 0%,
+      rgb(var(--line-rgb)) 50%,
+      rgb(var(--bg-sunken-rgb)) 100%
+    );
+    background-size: 800px 100%;
+    animation: shimmer 1.4s linear infinite;
+    border-radius: 4px;
+  }
+
+  /* Citation inline badges (verified vs unverified) */
+  .cite-verified {
+    @apply inline-flex items-center gap-1 px-[6px] py-[1px] rounded-[4px]
+           bg-accent-soft text-accent-ink font-medium cursor-pointer;
+    text-decoration: none;
+    border-bottom: 1px solid color-mix(in oklab, rgb(var(--accent-rgb)) 40%, transparent);
+  }
+  .cite-verified::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: rgb(var(--ok-rgb));
+    flex: none;
+  }
+  .cite-pending {
+    @apply bg-warn-soft text-warn select-none pointer-events-none;
+  }
+  .cite-pending::before {
+    background: rgb(var(--warn-rgb)) !important;
+  }
+}

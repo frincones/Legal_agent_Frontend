@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>LexAI · Diseño completo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="styles/tokens.css"/>
+  <style>
+    html, body, #root { height: 100%; }
+    body { overflow: hidden; }
+    [data-screen-label] { position: relative; }
+    /* Screen frame visualization on the canvas */
+    .screen-shell { width: 100%; height: 100%; overflow: hidden; background: var(--bg); }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+
+  <script type="text/babel" src="components/atoms.jsx"></script>
+  <script type="text/babel" src="components/data.jsx"></script>
+  <script type="text/babel" src="components/voice-hud.jsx"></script>
+  <script type="text/babel" src="components/shell.jsx"></script>
+  <script type="text/babel" src="components/screen-home.jsx"></script>
+  <script type="text/babel" src="components/screens-cases.jsx"></script>
+  <script type="text/babel" src="components/screen-canvas.jsx"></script>
+  <script type="text/babel" src="components/screens-extras.jsx"></script>
+  <script type="text/babel" src="components/showcase.jsx"></script>
+
+  <script type="text/babel">
+    const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+      "mode": "light",
+      "density": "compacta",
+      "direction": "sobria",
+      "locale": "es-MX",
+      "showHitl": true
+    }/*EDITMODE-END*/;
+
+    function ScreenShell({ children }) {
+      return <div className="screen-shell">{children}</div>;
+    }
+
+    function App() {
+      const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+      // Apply tweaks to <html> via data attrs for tokens.css
+      React.useEffect(() => {
+        const root = document.documentElement;
+        root.setAttribute("data-mode", tweaks.mode);
+        root.setAttribute("data-density", tweaks.density);
+        root.setAttribute("data-direction", tweaks.direction);
+        root.setAttribute("data-locale", tweaks.locale);
+      }, [tweaks]);
+
+      return (
+        <>
+          <DesignCanvas>
+            <DCSection id="brand" title="01 · Marca y sistema" subtitle="Logo, paleta, tipografía y los 6 estados del Voice HUD">
+              <DCArtboard id="brand" label="Brand · sistema visual" width={920} height={680}>
+                <ScreenShell><BrandShowcase/></ScreenShell>
+              </DCArtboard>
+              <DCArtboard id="hud" label="Voice HUD · 6 estados (animado)" width={680} height={680}>
+                <ScreenShell><HUDStatesShowcase/></ScreenShell>
+              </DCArtboard>
+            </DCSection>
+
+            <DCSection id="auth" title="02 · Auth & Onboarding" subtitle="Signup con verificación de cédula SEP, MFA TOTP, demo mode">
+              <DCArtboard id="signup" label="Signup · verificación cédula + MFA" width={1280} height={820}>
+                <ScreenShell><AuthScreen mode="signup"/></ScreenShell>
+              </DCArtboard>
+              <DCArtboard id="login" label="Login · MFA" width={1280} height={820}>
+                <ScreenShell><AuthScreen mode="login"/></ScreenShell>
+              </DCArtboard>
+              <DCArtboard id="onb" label="Onboarding · demo mode 'Pérez vs ACME'" width={1280} height={820}>
+                <ScreenShell><OnboardingScreen/></ScreenShell>
+              </DCArtboard>
+            </DCSection>
+
+            <DCSection id="core" title="03 · Las 5 pantallas core" subtitle="Home dashboard, Casos lista densa estilo Linear, Caso detalle, Cliente 360, Live Canvas (signature)">
+              <DCArtboard id="home" label="Home · dashboard diario" width={1440} height={900}>
+                <ScreenShell><HomeScreen/></ScreenShell>
+              </DCArtboard>
+              <DCArtboard id="casos" label="Casos · lista densa" width={1440} height={900}>
+                <ScreenShell><CasosScreen/></ScreenShell>
+              </DCArtboard>
+              <DCArtboard id="caso" label="Caso · detalle con tabs" width={1440} height={900}>
+                <ScreenShell><CasoDetalleScreen/></ScreenShell>
+              </DCArtboard>
+              <DCArtboard id="cliente" label="Cliente · ficha 360 + LFPDPPP" width={1440} height={900}>
+                <ScreenShell><ClienteScreen/></ScreenShell>
+              </DCArtboard>
+              <DCArtboard id="canvas" label="★ Live Canvas · dual surface (animado)" width={1440} height={900}>
+                <ScreenShell><LiveCanvasScreen/></ScreenShell>
+              </DCArtboard>
+            </DCSection>
+
+            <DCSection id="modals" title="04 · Command Palette & HITL Gates" subtitle="⌘K palette + 7 gates de aprobación humana">
+              <DCArtboard id="cmdk" label="⌘K Command Palette" width={1280} height={820}>
+                <ScreenShell><CommandPalette/></ScreenShell>
+              </DCArtboard>
+              <DCArtboard id="hitl" label="HITL · 7 gates obligatorios" width={1280} height={820}>
+                <ScreenShell><HITLGatesScreen/></ScreenShell>
+              </DCArtboard>
+            </DCSection>
+
+            <DCSection id="mobile" title="05 · PWA móvil — voice on-the-go" subtitle="Casos en bolsillo, dictado camino al juzgado, resultados con citas verificadas">
+              <DCArtboard id="phones" label="iOS PWA · 3 momentos" width={1080} height={720}>
+                <ScreenShell><MobilePWAScreen/></ScreenShell>
+              </DCArtboard>
+            </DCSection>
+          </DesignCanvas>
+
+          <LexTweaksPanel tweaks={tweaks} setTweak={setTweak}/>
+        </>
+      );
+    }
+
+    function BrandShowcase() {
+      const palette = [
+        {n:"Fondo",        v:"--bg"},
+        {n:"Elev",         v:"--bg-elev"},
+        {n:"Sunken",       v:"--bg-sunken"},
+        {n:"Tinta",        v:"--ink"},
+        {n:"Acento",       v:"--accent"},
+        {n:"OK",           v:"--ok"},
+        {n:"HITL ámbar",   v:"--warn"},
+        {n:"Urgente",      v:"--danger"},
+        {n:"Tools",        v:"--purple"},
+      ];
+      return (
+        <div style={{padding:32, height:"100%", overflow:"auto", background:"var(--bg)"}}>
+          <div style={{display:"flex", alignItems:"flex-end", gap:18, marginBottom:8}}>
+            <div className="lex-mark-sigil" style={{width:56, height:56, fontSize:28, borderRadius:14}}>L</div>
+            <div>
+              <h1 className="serif" style={{fontSize:42, letterSpacing:"-0.025em", fontWeight:600, margin:0, lineHeight:1}}>LexAI</h1>
+              <div className="muted" style={{fontSize:13, marginTop:4}}>El primer asistente legal voice-first para abogados hispanos</div>
+            </div>
+          </div>
+          <p className="serif" style={{fontSize:20, letterSpacing:"-0.01em", lineHeight:1.45, maxWidth:760, margin:"24px 0 28px", color:"var(--ink-2)"}}>
+            Voice-first no es el moat. El <em>moat</em> es el <b style={{color:"var(--ink)"}}>citation registry determinista</b> de jurisprudencia mexicana — cero alucinaciones, vigencia versionada, bloqueo en UI.
+          </p>
+
+          <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:24}}>
+            <section>
+              <div className="muted" style={{fontSize:11, textTransform:"uppercase", letterSpacing:"0.06em", fontWeight:600, marginBottom:12}}>Tipografía</div>
+              <div style={{display:"flex", flexDirection:"column", gap:10}}>
+                <div style={{padding:14, background:"var(--bg-elev)", border:"1px solid var(--line)", borderRadius:10}}>
+                  <div className="muted" style={{fontSize:10.5}}>Fraunces · títulos · serif cálida literaria</div>
+                  <div className="serif" style={{fontSize:32, letterSpacing:"-0.02em", fontWeight:600, lineHeight:1.1, marginTop:4}}>Demanda laboral por despido injustificado</div>
+                </div>
+                <div style={{padding:14, background:"var(--bg-elev)", border:"1px solid var(--line)", borderRadius:10}}>
+                  <div className="muted" style={{fontSize:10.5}}>Inter · UI · 13–17px body</div>
+                  <div style={{fontSize:14, marginTop:4}}>El abogado dicta; LexAI ejecuta hasta 7 herramientas en paralelo y muestra el resultado construirse en vivo.</div>
+                </div>
+                <div style={{padding:14, background:"var(--bg-elev)", border:"1px solid var(--line)", borderRadius:10}}>
+                  <div className="muted" style={{fontSize:10.5}}>JetBrains Mono · referencias técnicas y citas</div>
+                  <div className="mono" style={{fontSize:13, marginTop:4}}>Reg. 2027183 · Tesis 2a./J. 14/2024</div>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <div className="muted" style={{fontSize:11, textTransform:"uppercase", letterSpacing:"0.06em", fontWeight:600, marginBottom:12}}>Paleta</div>
+              <div style={{display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8}}>
+                {palette.map(p => (
+                  <div key={p.v} style={{borderRadius:10, overflow:"hidden", border:"1px solid var(--line)"}}>
+                    <div style={{height:48, background:`var(${p.v})`}}/>
+                    <div style={{padding:"6px 10px", background:"var(--bg-elev)", fontSize:11.5}}>
+                      <div style={{fontWeight:600}}>{p.n}</div>
+                      <div className="muted mono" style={{fontSize:10}}>{p.v}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="muted" style={{fontSize:11, textTransform:"uppercase", letterSpacing:"0.06em", fontWeight:600, margin:"22px 0 10px"}}>Componentes</div>
+              <div style={{padding:14, background:"var(--bg-elev)", border:"1px solid var(--line)", borderRadius:10, display:"flex", flexWrap:"wrap", gap:8, alignItems:"center"}}>
+                <button className="btn btn-primary">{Ic.bolt} Primary</button>
+                <button className="btn">{Ic.search} Default</button>
+                <button className="btn btn-ghost">Ghost</button>
+                <span className="chip chip-blue"><span className="dot"/>Materia · Civil</span>
+                <span className="chip chip-amber"><span className="dot"/>HITL</span>
+                <span className="chip chip-green"><span className="dot"/>Verificada</span>
+                <span className="chip chip-red"><span className="dot"/>Urgente</span>
+                <a className="cite-verified">2a./J. 14/2024</a>
+                <span className="kbd">⌘</span><span className="kbd">K</span>
+              </div>
+            </section>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+  </script>
+</body>
+</html>
