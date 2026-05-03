@@ -21,7 +21,21 @@ export type UICommand =
   | { action: 'open_command_palette'; initial_query?: string }
   | { action: 'prefill_form'; form: string; values: Record<string, unknown>; submit?: boolean }
   | { action: 'toast'; message: string; variant?: 'info' | 'success' | 'warning' | 'error' }
-  | { action: 'open_modal'; title: string; body: string; confirm_label?: string; cancel_label?: string };
+  | { action: 'open_modal'; title: string; body: string; confirm_label?: string; cancel_label?: string }
+  // Canvas operations · ejecutadas por CanvasEditor.registerCanvasApi
+  | { action: 'canvas_get_current' }
+  | { action: 'canvas_set_text'; markdown: string }
+  | { action: 'canvas_append'; markdown: string }
+  | { action: 'canvas_replace_section'; heading: string; markdown: string }
+  | { action: 'canvas_save_version' };
+
+export type CanvasApi = {
+  get_current: () => { text: string; html: string; word_count: number };
+  set_text: (markdown: string) => void;
+  append: (markdown: string) => void;
+  replace_section: (heading: string, markdown: string) => void;
+  save_version: () => Promise<void>;
+};
 
 export type UIHandler = (command: UICommand) => boolean | Promise<boolean>;
 
@@ -33,6 +47,7 @@ type FormApi = {
 class UICommandBusImpl {
   private handlers: Map<string, Set<UIHandler>> = new Map();
   private formApis: Map<string, FormApi> = new Map();
+  private canvasApi: CanvasApi | null = null;
 
   /** Registra un handler para un action específico. Devuelve la función de unregister. */
   register(action: UICommand['action'], handler: UIHandler): () => void {
@@ -55,6 +70,18 @@ class UICommandBusImpl {
 
   getFormApi(name: string): FormApi | undefined {
     return this.formApis.get(name);
+  }
+
+  /** El CanvasEditor registra su API imperativa al montar. */
+  registerCanvasApi(api: CanvasApi): () => void {
+    this.canvasApi = api;
+    return () => {
+      if (this.canvasApi === api) this.canvasApi = null;
+    };
+  }
+
+  getCanvasApi(): CanvasApi | null {
+    return this.canvasApi;
   }
 
   /** Despacha el comando al primer handler que lo consuma (true). */

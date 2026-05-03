@@ -2,6 +2,7 @@ import { AppShell } from '@/components/shell/AppShell';
 import { TopBar } from '@/components/shell/TopBar';
 import { Ic } from '@/components/atoms/icons';
 import { LiveCanvasShell } from '@/components/canvas/LiveCanvasShell';
+import { CanvasMain } from '@/components/canvas/CanvasMain';
 import { fetchMatter } from '@/lib/api/rsc-fetchers';
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
@@ -83,10 +84,17 @@ export default async function CanvasPage({ params }: { params: { matterId: strin
             </>
           }
         />
-        <LiveCanvasShell
-          sentencias={sentencias.length > 0 ? sentencias : []}
-          tools={tools.length > 0 ? tools : []}
-        />
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden p-3 lg:grid-cols-[1fr_320px]">
+          {/* Editor principal · TipTap con co-edición agente↔abogado */}
+          <CanvasMain matterId={matter.id} />
+          {/* Side rail: jurisprudencia citada + tools recientes */}
+          <aside className="hidden lg:block">
+            <LiveCanvasShell
+              sentencias={sentencias.length > 0 ? sentencias : []}
+              tools={tools.length > 0 ? tools : []}
+            />
+          </aside>
+        </div>
       </main>
     </AppShell>
   );

@@ -121,6 +121,45 @@ export function VoiceProvider({ children, matterId }: { children: React.ReactNod
         }
         return true;
       }),
+      // Canvas operations — requieren que el editor esté montado en /canvas.
+      uiCommandBus.register('canvas_set_text', (cmd) => {
+        if (cmd.action !== 'canvas_set_text') return false;
+        const api = uiCommandBus.getCanvasApi();
+        if (!api) {
+          toast.warning('Canvas no está abierto. Abre el caso primero.');
+          return false;
+        }
+        api.set_text(cmd.markdown);
+        return true;
+      }),
+      uiCommandBus.register('canvas_append', (cmd) => {
+        if (cmd.action !== 'canvas_append') return false;
+        const api = uiCommandBus.getCanvasApi();
+        if (!api) {
+          toast.warning('Canvas no está abierto.');
+          return false;
+        }
+        api.append(cmd.markdown);
+        return true;
+      }),
+      uiCommandBus.register('canvas_replace_section', (cmd) => {
+        if (cmd.action !== 'canvas_replace_section') return false;
+        const api = uiCommandBus.getCanvasApi();
+        if (!api) {
+          toast.warning('Canvas no está abierto.');
+          return false;
+        }
+        api.replace_section(cmd.heading, cmd.markdown);
+        return true;
+      }),
+      uiCommandBus.register('canvas_save_version', async (cmd) => {
+        if (cmd.action !== 'canvas_save_version') return false;
+        const api = uiCommandBus.getCanvasApi();
+        if (!api) return false;
+        await api.save_version();
+        toast.success('Versión guardada');
+        return true;
+      }),
     ];
     return () => {
       unsubs.forEach((u) => u());
@@ -261,6 +300,29 @@ export function VoiceProvider({ children, matterId }: { children: React.ReactNod
       window.removeEventListener('keyup', onUp);
     };
   }, [pttDown, pttUp]);
+
+  // Idle timeout — auto-desconecta tras 90s sin actividad para NO quemar
+  // tokens en silencio. El usuario reanuda con Espacio o click en el orb
+  // (pttDown detecta clientRef=null y reabre la sesión).
+  useEffect(() => {
+    const IDLE_MS = 90_000;
+    const CHECK_INTERVAL_MS = 15_000;
+    const interval = setInterval(() => {
+      const c = clientRef.current;
+      if (!c) return;
+      const last = useVoiceStore.getState().lastActivityAt;
+      const elapsed = Date.now() - last;
+      if (elapsed > IDLE_MS) {
+        toast.info('Sesión pausada por inactividad', {
+          description: 'Pulsa Espacio o el orb para reanudar',
+        });
+        void c.close();
+        clientRef.current = null;
+        setReady(false);
+      }
+    }, CHECK_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => () => {

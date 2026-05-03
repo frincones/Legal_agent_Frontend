@@ -41,6 +41,9 @@ interface VoiceStore {
   paused: boolean;
   /** Suprime audio output (sólo texto). */
   silentMode: boolean;
+  /** Timestamp (ms) del último evento de actividad: vad, transcript, speak.
+   *  El idle-timeout en VoiceProvider lo lee para auto-desconectar. */
+  lastActivityAt: number;
 
   setState: (s: VoiceState) => void;
   setTranscript: (t: string) => void;
@@ -55,6 +58,7 @@ interface VoiceStore {
   pushHistory: (turn: ConversationTurn) => void;
   setPaused: (v: boolean) => void;
   setSilentMode: (v: boolean) => void;
+  bumpActivity: () => void;
   reset: () => void;
 }
 
@@ -72,6 +76,7 @@ export const useVoiceStore = create<VoiceStore>((set) => ({
   history: [],
   paused: false,
   silentMode: false,
+  lastActivityAt: Date.now(),
 
   setState: (s) => set({ state: s }),
   setTranscript: (t) => set((p) => ({
@@ -106,6 +111,7 @@ export const useVoiceStore = create<VoiceStore>((set) => ({
   pushHistory: (turn) => set((p) => ({ history: [...p.history, turn] })),
   setPaused: (v) => set({ paused: v }),
   setSilentMode: (v) => set({ silentMode: v }),
+  bumpActivity: () => set({ lastActivityAt: Date.now() }),
   reset: () =>
     set({
       state: 'idle',

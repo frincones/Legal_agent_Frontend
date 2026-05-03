@@ -122,16 +122,19 @@ export class RealtimeClient {
           store.bumpBargein();
         }
         store.setState('listening');
+        store.bumpActivity();
         break;
       case 'vad.user_stopped':
-        // wait for transcript.final → 'thinking'
+        store.bumpActivity();
         break;
       case 'transcript.partial':
         store.setPartial((msg.text as string) ?? '');
+        store.bumpActivity();
         break;
       case 'transcript.final':
         store.setTranscript((msg.text as string) ?? '');
         store.setState('thinking');
+        store.bumpActivity();
         this.armThinkingTimer();
         break;
       case 'tool.started':
