@@ -20,6 +20,13 @@ type CanvasEditorProps = {
   onSavedVersion?: (versionId: string) => void;
 };
 
+type TemplateMeta = {
+  kind: string;
+  title: string;
+  description: string;
+  applicable: string;
+};
+
 export function CanvasEditor({
   matterId,
   documentId,
@@ -31,6 +38,10 @@ export function CanvasEditor({
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [userTypingAt, setUserTypingAt] = useState<number>(0);
+  const [templates, setTemplates] = useState<TemplateMeta[]>([]);
+  const [tplOpen, setTplOpen] = useState(false);
+  const [tplLoading, setTplLoading] = useState(false);
+  const tplBtnRef = useRef<HTMLDivElement | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingOpsRef = useRef<Array<() => void>>([]);
 
@@ -95,6 +106,69 @@ export function CanvasEditor({
     }, 500);
     return () => clearInterval(i);
   }, [userTypingAt]);
+
+  // Cargar lista de plantillas disponibles al montar.
+  useEffect(() => {
+    let cancelled = false;
+    void fetch('/api/legal-templates')
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(r.statusText))))
+      .then((data: { templates?: TemplateMeta[] }) => {
+        if (!cancelled && Array.isArray(data.templates)) {
+          setTemplates(data.templates);
+        }
+      })
+      .catch((e) => {
+        console.warn('[CanvasEditor] templates fetch failed:', e);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Click-outside / Escape para cerrar el dropdown de plantillas.
+  useEffect(() => {
+    if (!tplOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (!tplBtnRef.current) return;
+      if (!tplBtnRef.current.contains(e.target as Node)) setTplOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setTplOpen(false);
+    };
+    document.addEventListener('mousedown', onClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [tplOpen]);
+
+  const loadTemplate = useCallback(
+    async (kind: string) => {
+      if (!editor) return;
+      setTplLoading(true);
+      try {
+        const res = await fetch(`/api/legal-templates?kind=${encodeURIComponent(kind)}`);
+        if (!res.ok) throw new Error(await res.text());
+        const data = (await res.json()) as { markdown: string; title: string };
+        const hasContent = editor.getText().trim().length > 0;
+        const ok = hasContent
+          ? window.confirm(
+              `Esto reemplazará el contenido actual del documento con la plantilla "${data.title}". ¿Continuar?`,
+            )
+          : true;
+        if (!ok) return;
+        editor.commands.setContent(markdownToHtml(data.markdown));
+        toast.success(`Plantilla "${data.title}" cargada`);
+        setTplOpen(false);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Error cargando plantilla');
+      } finally {
+        setTplLoading(false);
+      }
+    },
+    [editor],
+  );
 
   async function doSave(html: string): Promise<void> {
     if (!matterId || !documentId) return;
@@ -163,6 +237,59 @@ export function CanvasEditor({
     <div className="surface flex h-full min-h-0 flex-col overflow-hidden">
       {/* Toolbar manual */}
       <div className="flex flex-wrap items-center gap-1 border-b border-line px-2 py-1.5">
+        <div ref={tplBtnRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setTplOpen((v) => !v)}
+            disabled={tplLoading || templates.length === 0}
+            className={cn(
+              'inline-flex h-7 items-center gap-1 rounded px-2 text-[12px] transition',
+              'hover:bg-bg-sunken disabled:cursor-not-allowed disabled:opacity-50',
+              tplOpen && 'bg-accent-soft text-accent-ink',
+            )}
+            title="Cargar plantilla legal"
+          >
+            <span aria-hidden>📋</span>
+            <span>Plantillas</span>
+            <span className="text-[10px] opacity-70">▾</span>
+          </button>
+          {tplOpen && templates.length > 0 && (
+            <div
+              className="absolute left-0 top-full z-30 mt-1 w-[340px] overflow-hidden rounded-md border border-line bg-bg shadow-lg"
+              role="menu"
+            >
+              <div className="border-b border-line bg-bg-sunken px-3 py-1.5 text-[11px] muted">
+                {templates.length} plantillas profesionales · Colombia
+              </div>
+              <div className="max-h-[360px] overflow-auto">
+                {templates.map((t) => (
+                  <button
+                    key={t.kind}
+                    type="button"
+                    onClick={() => void loadTemplate(t.kind)}
+                    disabled={tplLoading}
+                    className="flex w-full flex-col items-start gap-0.5 border-b border-line/60 px-3 py-2 text-left transition last:border-0 hover:bg-bg-sunken disabled:opacity-50"
+                    role="menuitem"
+                  >
+                    <div className="flex w-full items-center justify-between gap-2">
+                      <span className="text-[13px] font-medium">{t.title}</span>
+                      <span className="chip chip-purple shrink-0 text-[9.5px]">
+                        {t.applicable}
+                      </span>
+                    </div>
+                    <span className="text-[11px] muted line-clamp-2">{t.description}</span>
+                  </button>
+                ))}
+              </div>
+              {tplLoading && (
+                <div className="border-t border-line px-3 py-1.5 text-[11px] muted">
+                  Cargando…
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        <Divider />
         <ToolbarButton
           active={editor.isActive('heading', { level: 1 })}
           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}

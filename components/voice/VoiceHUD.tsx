@@ -45,23 +45,37 @@ export function VoiceHUD({ compact = false }: { compact?: boolean }) {
   const partial = useVoiceStore((s) => s.partialTranscript);
   const transcript = useVoiceStore((s) => s.transcript);
   const captionOverride = useVoiceStore((s) => s.caption);
+  const paused = useVoiceStore((s) => s.paused);
   const meta = STATE_META[state];
   const showText = state === 'listening' ? partial : transcript || partial;
-  const { toggle, micPermission } = useVoice();
+  const { toggle, micPermission, ready } = useVoice();
   const disabled = micPermission === 'unsupported' || micPermission === 'denied';
+
+  // Estado on/off visual claro:
+  //   'off'      = sin sesión (no conectado, esperando que toques)
+  //   'paused'   = pausado por el usuario (menú …)
+  //   'on'       = activo (idle/listening/thinking/etc.)
+  const onOffState: 'off' | 'paused' | 'on' =
+    paused ? 'paused' : ready ? 'on' : 'off';
+
+  // Border color por estado on/off (no por VoiceState, eso es el orb)
+  const borderClass =
+    onOffState === 'on'      ? 'border-ok/60 shadow-[0_0_0_3px_rgb(var(--ok-soft-rgb))]'
+    : onOffState === 'paused' ? 'border-warn/60'
+    :                            'border-line';
 
   return (
     <motion.div
       role="status"
       aria-live="polite"
       data-state={state}
+      data-onoff={onOffState}
       initial={{ y: 30, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ type: 'spring', stiffness: 380, damping: 30 }}
       className={cn(
-        'glass flex items-center gap-2 rounded-full border border-line shadow-hud md:gap-3',
-        // Mobile: tight pill (~max 92vw), no enforced min so the orb-only state shrinks gracefully.
-        // Desktop: original sizing.
+        'glass flex items-center gap-2 rounded-full border-2 shadow-hud transition-colors md:gap-3',
+        borderClass,
         'h-[56px] max-w-[92vw] px-3 md:h-[64px] md:px-3',
         compact
           ? 'md:h-[52px] md:min-w-[360px]'
@@ -88,6 +102,32 @@ export function VoiceHUD({ compact = false }: { compact?: boolean }) {
       >
         <Orb state={state} compact={compact} />
       </button>
+      {/* Pill de estado on/off — visualmente clara para que el abogado
+          vea de un vistazo si el agente está activo o no. */}
+      <span
+        className={cn(
+          'hidden flex-none items-center gap-1 rounded-full border px-2 py-[3px] text-[10px] font-semibold uppercase tracking-wider md:inline-flex',
+          onOffState === 'on'      && 'border-ok/40 bg-ok-soft text-ok',
+          onOffState === 'paused'  && 'border-warn/40 bg-warn-soft text-warn',
+          onOffState === 'off'     && 'border-line bg-bg-sunken text-ink-3',
+        )}
+        title={
+          onOffState === 'on'     ? 'Agente activo · usando tokens'
+          : onOffState === 'paused' ? 'Agente pausado · sin consumir tokens'
+          : 'Agente desconectado · pulsa Espacio para activar'
+        }
+      >
+        <span
+          className={cn(
+            'h-[6px] w-[6px] rounded-full',
+            onOffState === 'on'     && 'bg-ok animate-pulse',
+            onOffState === 'paused' && 'bg-warn',
+            onOffState === 'off'    && 'bg-ink-4',
+          )}
+        />
+        {onOffState === 'on' ? 'Activo' : onOffState === 'paused' ? 'Pausado' : 'Off'}
+      </span>
+
       <div className="flex min-w-0 flex-col gap-[1px] md:min-w-[110px]">
         <div className={cn('truncate text-[12.5px] font-semibold -tracking-[0.01em] md:text-[13px]', meta.color)}>
           {meta.label}

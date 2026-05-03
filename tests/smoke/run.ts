@@ -156,6 +156,24 @@ async function main() {
       detail: data.map((c) => c.citation_ref).join(', '),
     };
   });
+  await timed('GET /v1/legal-templates', async () => {
+    const r = await fetch(`${BACKEND}/v1/legal-templates/`, { headers: auth });
+    const data = (await r.json()) as { count?: number; templates?: Array<{ kind: string; title: string; applicable: string }> };
+    return {
+      ok: r.status === 200 && (data.count ?? 0) >= 8 && Array.isArray(data.templates),
+      status: r.status,
+      detail: `${data.count ?? 0} templates`,
+    };
+  });
+  await timed('GET /v1/legal-templates/tutela', async () => {
+    const r = await fetch(`${BACKEND}/v1/legal-templates/tutela`, { headers: auth });
+    const data = (await r.json()) as { kind?: string; markdown?: string; title?: string };
+    return {
+      ok: r.status === 200 && data.kind === 'tutela' && (data.markdown?.length ?? 0) > 500,
+      status: r.status,
+      detail: `${(data.markdown?.length ?? 0)} chars · "${data.title ?? '—'}"`,
+    };
+  });
   await timed('POST /v1/calc/liquidacion', async () => {
     const r = await fetch(`${BACKEND}/v1/calc/liquidacion`, {
       method: 'POST',
@@ -245,6 +263,15 @@ async function main() {
     });
     const data = (await r.json()) as { total_cop?: number };
     return { ok: r.status === 200 && typeof data.total_cop === 'number', status: r.status, detail: `total=${data.total_cop}` };
+  });
+  await timed('GET /api/legal-templates', async () => {
+    const r = await fetch(`${FRONTEND}/api/legal-templates`, { headers: { cookie } });
+    const data = (await r.json()) as { count?: number; templates?: Array<{ kind: string }> };
+    return {
+      ok: r.status === 200 && (data.count ?? 0) >= 8,
+      status: r.status,
+      detail: `${data.count ?? 0} templates`,
+    };
   });
   await timed('POST /api/arco', async () => {
     const r = await fetch(`${FRONTEND}/api/arco`, {
