@@ -62,12 +62,16 @@ export async function POST(req: Request) {
     .insert({
       matter_id: matterId,
       firm_id: principal.firm_id,
-      uploader_id: principal.user_id,
-      kind: ext === '.pdf' ? 'pdf' : ext === '.docx' || ext === '.doc' ? 'docx' : 'txt',
+      // Schema column es `uploaded_by`, no `uploader_id`
+      uploaded_by: principal.user_id,
+      // doc_kind enum: demanda|contestacion|escrito|tutela|recurso|contrato|sentencia|recibido|generado|otro
+      // No existe 'pdf'/'docx'/'txt' como kind. Para uploads del usuario:
+      kind: 'recibido',
       titulo: file.name,
       storage_path: storagePath,
       byte_size: file.size,
-      status: 'pending_ocr',
+      // doc_status enum: pending|processing|completed|failed|superseded ('pending_ocr' inválido)
+      status: 'pending',
     })
     .select('id')
     .single();

@@ -45,15 +45,22 @@ async function _ensureCanvasDocument(
     .insert({
       matter_id: matterId,
       firm_id: firmId,
-      uploader_id: userId,
+      // Schema column is `uploaded_by` (not uploader_id)
+      uploaded_by: userId,
       kind: CANVAS_KIND,
       titulo,
-      status: 'borrador',
+      // doc_status enum: pending | processing | completed | failed | superseded
+      status: 'completed',
       pages: 1,
     })
     .select('id, titulo')
     .single();
-  if (error || !created) throw error ?? new Error('failed to create canvas document');
+  if (error || !created) {
+    throw new Error(
+      `failed to create canvas document: ${error?.message ?? 'unknown'} ` +
+      `(code=${error?.code ?? 'n/a'}, details=${error?.details ?? 'n/a'})`,
+    );
+  }
   return created as { id: string; titulo: string };
 }
 
