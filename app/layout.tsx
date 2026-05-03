@@ -6,7 +6,7 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'LexAI · Asistente legal voice-first',
   description: 'El primer asistente legal voice-first para abogados hispanos.',
-  icons: { icon: '/favicon.ico' },
+  // Favicon auto-generado por Next.js desde app/icon.svg
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
