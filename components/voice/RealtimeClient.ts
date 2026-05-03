@@ -21,6 +21,10 @@ export type RealtimeOptions = {
 };
 
 const THINKING_TIMEOUT_MS = 8_000;
+// Si OpenAI no confirma speak.cancelled en este tiempo, asumimos que sí se
+// canceló (race típico cuando el modelo ya terminó por su cuenta) y
+// liberamos el flag para no bloquear el siguiente barge-in.
+const CANCEL_SAFETY_TIMEOUT_MS = 1_500;
 
 export class RealtimeClient {
   private ws: WebSocket | null = null;
@@ -30,6 +34,7 @@ export class RealtimeClient {
   private player = new PCMPlayer();
   private speaking = false;
   private cancelInFlight = false;
+  private cancelSafetyTimer: ReturnType<typeof setTimeout> | null = null;
   private thinkingTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(opts: RealtimeOptions) {
@@ -108,10 +113,11 @@ export class RealtimeClient {
         store.setState('idle');
         break;
       case 'vad.user_started':
-        // Only request cancel if assistant is currently speaking AND we
-        // haven't already sent one; cancelInFlight clears on speak.cancelled.
+        // Hard barge-in: SIEMPRE flush el player (audio del agente para),
+        // incluso si `speaking` flag está stale. Sólo enviamos cancel a
+        // OpenAI cuando estamos seguros de que hay una respuesta activa.
+        this.player.flush();
         if (this.speaking && !this.cancelInFlight) {
-          this.player.flush();
           this.bargeinCommit();
           store.bumpBargein();
         }
@@ -154,12 +160,14 @@ export class RealtimeClient {
       case 'speak.start':
         this.speaking = true;
         this.cancelInFlight = false;
+        this.clearCancelSafetyTimer();
         this.clearThinkingTimer();
         store.setState('speaking');
         break;
       case 'speak.end':
         this.speaking = false;
         this.cancelInFlight = false;
+        this.clearCancelSafetyTimer();
         // Commit assistant turn al historial (resetAnswer ya lo hace si hay texto)
         store.resetAnswer();
         store.setState('idle');
@@ -167,6 +175,7 @@ export class RealtimeClient {
       case 'speak.cancelled':
         this.speaking = false;
         this.cancelInFlight = false;
+        this.clearCancelSafetyTimer();
         this.player.flush();
         store.bumpBargein();
         store.setState('listening');
@@ -233,6 +242,7 @@ export class RealtimeClient {
       return;
     }
     this.cancelInFlight = true;
+    this.armCancelSafetyTimer();
     this.sendControl({ type: 'response.cancel' });
     this.sendControl({ type: 'input_audio_buffer.commit', reason: 'bargein' });
   }
@@ -240,7 +250,26 @@ export class RealtimeClient {
   cancel(): void {
     if (this.cancelInFlight || !this.speaking) return;
     this.cancelInFlight = true;
+    this.armCancelSafetyTimer();
     this.sendControl({ type: 'response.cancel' });
+  }
+
+  /** Si OpenAI no manda speak.cancelled en CANCEL_SAFETY_TIMEOUT_MS,
+   *  liberamos el flag para no bloquear el próximo barge-in. */
+  private armCancelSafetyTimer(): void {
+    this.clearCancelSafetyTimer();
+    this.cancelSafetyTimer = setTimeout(() => {
+      this.cancelInFlight = false;
+      this.speaking = false;
+      this.cancelSafetyTimer = null;
+    }, CANCEL_SAFETY_TIMEOUT_MS);
+  }
+
+  private clearCancelSafetyTimer(): void {
+    if (this.cancelSafetyTimer) {
+      clearTimeout(this.cancelSafetyTimer);
+      this.cancelSafetyTimer = null;
+    }
   }
 
   private sendControl(obj: Record<string, unknown>): void {
@@ -250,6 +279,7 @@ export class RealtimeClient {
 
   async close(): Promise<void> {
     this.clearThinkingTimer();
+    this.clearCancelSafetyTimer();
     await this.recorder.stop();
     await this.player.close();
     this.ws?.close();
