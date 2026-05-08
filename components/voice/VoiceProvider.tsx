@@ -152,6 +152,42 @@ export function VoiceProvider({ children, matterId }: { children: React.ReactNod
         api.replace_section(cmd.heading, cmd.markdown);
         return true;
       }),
+      uiCommandBus.register('canvas_insert_at_cursor', (cmd) => {
+        if (cmd.action !== 'canvas_insert_at_cursor') return false;
+        const api = uiCommandBus.getCanvasApi();
+        if (!api) {
+          toast.warning('Canvas no está abierto.');
+          return false;
+        }
+        api.insert_at_cursor(cmd.markdown);
+        return true;
+      }),
+      uiCommandBus.register('canvas_find_replace', (cmd) => {
+        if (cmd.action !== 'canvas_find_replace') return false;
+        const api = uiCommandBus.getCanvasApi();
+        if (!api) {
+          toast.warning('Canvas no está abierto.');
+          return false;
+        }
+        const { count } = api.find_replace(cmd.needle, cmd.replacement);
+        if (count === 0) {
+          toast.info(`No encontré coincidencias para "${cmd.needle}"`);
+        } else {
+          toast.success(`Reemplacé ${count} coincidencia${count === 1 ? '' : 's'}`);
+        }
+        return true;
+      }),
+      uiCommandBus.register('canvas_select_section', (cmd) => {
+        if (cmd.action !== 'canvas_select_section') return false;
+        const api = uiCommandBus.getCanvasApi();
+        if (!api) {
+          toast.warning('Canvas no está abierto.');
+          return false;
+        }
+        const { found } = api.select_section(cmd.heading);
+        if (!found) toast.info(`Sección "${cmd.heading}" no encontrada`);
+        return true;
+      }),
       uiCommandBus.register('canvas_save_version', async (cmd) => {
         if (cmd.action !== 'canvas_save_version') return false;
         const api = uiCommandBus.getCanvasApi();

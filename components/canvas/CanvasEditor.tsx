@@ -1,9 +1,22 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { EditorContent, useEditor } from '@tiptap/react';
+import { EditorContent, useEditor, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
+import Table from '@tiptap/extension-table';
+import TableRow from '@tiptap/extension-table-row';
+import TableCell from '@tiptap/extension-table-cell';
+import TableHeader from '@tiptap/extension-table-header';
+import Link from '@tiptap/extension-link';
+import TaskList from '@tiptap/extension-task-list';
+import TaskItem from '@tiptap/extension-task-item';
+import CharacterCount from '@tiptap/extension-character-count';
+import Typography from '@tiptap/extension-typography';
+import TextAlign from '@tiptap/extension-text-align';
+import Underline from '@tiptap/extension-underline';
+import Highlight from '@tiptap/extension-highlight';
+import { Markdown } from 'tiptap-markdown';
 import { toast } from 'sonner';
 import { Ic } from '@/components/atoms/icons';
 import { uiCommandBus } from '@/lib/voice/ui-command-bus';
@@ -53,6 +66,32 @@ export function CanvasEditor({
       Placeholder.configure({
         placeholder: 'Empieza a escribir o dile a LexAI: "redacta una tutela"…',
       }),
+      Markdown.configure({
+        html: true,
+        tightLists: true,
+        bulletListMarker: '-',
+        linkify: true,
+        breaks: false,
+        transformPastedText: true,
+        transformCopiedText: false,
+      }),
+      Underline,
+      Highlight.configure({ multicolor: false }),
+      Typography,
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+        protocols: ['http', 'https', 'mailto'],
+        HTMLAttributes: { class: 'text-accent underline underline-offset-2', rel: 'noopener noreferrer' },
+      }),
+      Table.configure({ resizable: false, HTMLAttributes: { class: 'border-collapse w-full text-[13px]' } }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      TaskList,
+      TaskItem.configure({ nested: true }),
+      CharacterCount,
     ],
     content: initialContent,
     editorProps: {
@@ -64,7 +103,12 @@ export function CanvasEditor({
           '[&_h3]:font-serif [&_h3]:text-[15px] [&_h3]:font-semibold [&_h3]:mt-3 ' +
           '[&_p]:text-[14px] [&_p]:leading-relaxed [&_p]:mt-2 ' +
           '[&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 ' +
-          '[&_blockquote]:border-l-2 [&_blockquote]:border-line [&_blockquote]:pl-3 [&_blockquote]:italic',
+          '[&_blockquote]:border-l-2 [&_blockquote]:border-line [&_blockquote]:pl-3 [&_blockquote]:italic ' +
+          '[&_table]:border [&_table]:border-line [&_th]:border [&_th]:border-line [&_th]:px-2 [&_th]:py-1 [&_th]:bg-bg-sunken ' +
+          '[&_td]:border [&_td]:border-line [&_td]:px-2 [&_td]:py-1 ' +
+          '[&_mark]:bg-warn-soft [&_mark]:px-0.5 [&_mark]:rounded ' +
+          '[&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]]:pl-0 ' +
+          '[&_ul[data-type=taskList]_li]:flex [&_ul[data-type=taskList]_li]:gap-2 [&_ul[data-type=taskList]_li]:items-start',
       },
       handleDOMEvents: {
         keydown: () => {
@@ -158,7 +202,7 @@ export function CanvasEditor({
             )
           : true;
         if (!ok) return;
-        editor.commands.setContent(markdownToHtml(data.markdown));
+        editor.commands.setContent(parseMarkdown(editor, data.markdown));
         toast.success(`Plantilla "${data.title}" cargada`);
         setTplOpen(false);
       } catch (e) {
@@ -198,31 +242,52 @@ export function CanvasEditor({
       get_current: () => ({
         text: editor.getText(),
         html: editor.getHTML(),
+        markdown: getMarkdownSafe(editor),
         word_count: editor.getText().split(/\s+/).filter(Boolean).length,
       }),
       set_text: (markdown: string) => {
         runOpRespectingUser(() => {
           setAgentBusy(true);
-          editor.commands.setContent(markdownToHtml(markdown));
+          editor.commands.setContent(parseMarkdown(editor, markdown));
           setTimeout(() => setAgentBusy(false), 300);
         });
       },
       append: (markdown: string) => {
         runOpRespectingUser(() => {
           setAgentBusy(true);
-          const html = markdownToHtml(markdown);
-          editor.commands.focus('end');
-          editor.commands.insertContent(html);
+          editor.chain().focus('end').insertContent(parseMarkdown(editor, markdown)).run();
           setTimeout(() => setAgentBusy(false), 300);
         });
       },
       replace_section: (heading: string, newMarkdown: string) => {
         runOpRespectingUser(() => {
           setAgentBusy(true);
-          const replaced = replaceSectionInHtml(editor.getHTML(), heading, markdownToHtml(newMarkdown));
-          editor.commands.setContent(replaced);
+          const replaced = replaceSectionByHeading(editor, heading, parseMarkdown(editor, newMarkdown));
+          if (!replaced) {
+            editor.chain().focus('end').insertContent(parseMarkdown(editor, newMarkdown)).run();
+          }
           setTimeout(() => setAgentBusy(false), 300);
         });
+      },
+      insert_at_cursor: (markdown: string) => {
+        runOpRespectingUser(() => {
+          setAgentBusy(true);
+          editor.chain().focus().insertContent(parseMarkdown(editor, markdown)).run();
+          setTimeout(() => setAgentBusy(false), 300);
+        });
+      },
+      find_replace: (needle: string, replacement: string) => {
+        let count = 0;
+        runOpRespectingUser(() => {
+          setAgentBusy(true);
+          count = findAndReplaceAll(editor, needle, replacement);
+          setTimeout(() => setAgentBusy(false), 300);
+        });
+        return { count };
+      },
+      select_section: (heading: string) => {
+        const ok = selectSectionByHeading(editor, heading);
+        return { found: ok };
       },
       save_version: async () => {
         await doSave(editor.getHTML());
@@ -426,95 +491,121 @@ function Divider() {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// Markdown → HTML conversion (light, sin dependencia)
-// Soporta: headings (#, ##, ###), bold (**), italic (_), listas, párrafos.
+// Helpers ProseMirror · usan tiptap-markdown como parser real
 // ─────────────────────────────────────────────────────────────────────
-function markdownToHtml(md: string): string {
-  if (!md) return '';
-  const lines = md.split('\n');
-  const out: string[] = [];
-  let inList = false;
-  let listType: 'ul' | 'ol' | null = null;
 
-  const closeList = () => {
-    if (inList && listType) {
-      out.push(`</${listType}>`);
-      inList = false;
-      listType = null;
+type MarkdownStorage = {
+  parser?: { parse: (src: string) => string };
+  serializer?: { serialize: (doc: unknown) => string };
+  getMarkdown?: () => string;
+};
+
+/** Convierte markdown → HTML usando el parser oficial registrado por tiptap-markdown. */
+function parseMarkdown(editor: Editor, markdown: string): string {
+  if (!markdown) return '';
+  const storage = editor.storage.markdown as MarkdownStorage | undefined;
+  if (storage?.parser?.parse) return storage.parser.parse(markdown);
+  return markdown; // fallback: pasar tal cual; tiptap intentará interpretarlo
+}
+
+/** Devuelve el documento serializado a markdown (vía tiptap-markdown). */
+function getMarkdownSafe(editor: Editor): string {
+  const storage = editor.storage.markdown as MarkdownStorage | undefined;
+  if (storage?.getMarkdown) return storage.getMarkdown();
+  return editor.getText();
+}
+
+/**
+ * Reemplaza el contenido entre un heading y el siguiente heading hermano.
+ * Match por substring case-insensitive del título.
+ * Devuelve true si se reemplazó, false si no se encontró.
+ */
+function replaceSectionByHeading(editor: Editor, headingText: string, newHtml: string): boolean {
+  const needle = headingText.toLowerCase().trim();
+  const doc = editor.state.doc;
+  let headingPos = -1;
+  let headingLevel = 0;
+  doc.descendants((node, pos) => {
+    if (headingPos !== -1) return false;
+    if (node.type.name === 'heading' && node.textContent.toLowerCase().includes(needle)) {
+      headingPos = pos;
+      headingLevel = (node.attrs as { level?: number }).level ?? 1;
+      return false;
     }
-  };
+    return undefined;
+  });
+  if (headingPos === -1) return false;
 
-  for (const raw of lines) {
-    const line = raw.trim();
-    if (!line) {
-      closeList();
-      continue;
-    }
-    const h3 = /^###\s+(.+)/.exec(line);
-    const h2 = /^##\s+(.+)/.exec(line);
-    const h1 = /^#\s+(.+)/.exec(line);
-    const ul = /^[-*]\s+(.+)/.exec(line);
-    const ol = /^\d+\.\s+(.+)/.exec(line);
+  const headingNode = doc.nodeAt(headingPos);
+  if (!headingNode) return false;
+  const fromPos = headingPos + headingNode.nodeSize;
 
-    if (h1) {
-      closeList();
-      out.push(`<h1>${inline(h1[1]!)}</h1>`);
-    } else if (h2) {
-      closeList();
-      out.push(`<h2>${inline(h2[1]!)}</h2>`);
-    } else if (h3) {
-      closeList();
-      out.push(`<h3>${inline(h3[1]!)}</h3>`);
-    } else if (ul) {
-      if (!inList || listType !== 'ul') {
-        closeList();
-        out.push('<ul>');
-        inList = true;
-        listType = 'ul';
+  // Buscar el siguiente heading de nivel <= al actual (sección hermana o superior)
+  let toPos = doc.content.size;
+  doc.descendants((node, pos) => {
+    if (pos <= headingPos) return undefined;
+    if (node.type.name === 'heading') {
+      const lvl = (node.attrs as { level?: number }).level ?? 1;
+      if (lvl <= headingLevel) {
+        toPos = pos;
+        return false;
       }
-      out.push(`<li>${inline(ul[1]!)}</li>`);
-    } else if (ol) {
-      if (!inList || listType !== 'ol') {
-        closeList();
-        out.push('<ol>');
-        inList = true;
-        listType = 'ol';
-      }
-      out.push(`<li>${inline(ol[1]!)}</li>`);
-    } else {
-      closeList();
-      out.push(`<p>${inline(line)}</p>`);
     }
-  }
-  closeList();
-  return out.join('\n');
+    return undefined;
+  });
+
+  editor
+    .chain()
+    .focus()
+    .deleteRange({ from: fromPos, to: toPos })
+    .insertContentAt(fromPos, newHtml)
+    .run();
+  return true;
 }
 
-function inline(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/_(.+?)_/g, '<em>$1</em>');
-}
-
-// Reemplaza el contenido bajo un heading (h1/h2/h3) por nuevo HTML.
-function replaceSectionInHtml(html: string, heading: string, newHtml: string): string {
-  const tags: Array<'h1' | 'h2' | 'h3'> = ['h1', 'h2', 'h3'];
-  for (const tag of tags) {
-    const re = new RegExp(
-      `(<${tag}>)([^<]*${escapeRegex(heading)}[^<]*)(</${tag}>)([\\s\\S]*?)(?=<h[123]>|$)`,
-      'i',
-    );
-    if (re.test(html)) {
-      return html.replace(re, `$1$2$3${newHtml}`);
+/**
+ * Busca todas las ocurrencias de `find` (texto plano) y las reemplaza por `replace`.
+ * Itera de derecha a izquierda para no invalidar posiciones.
+ * Devuelve la cantidad de matches reemplazados.
+ */
+function findAndReplaceAll(editor: Editor, find: string, replace: string): number {
+  if (!find) return 0;
+  const positions: Array<{ from: number; to: number }> = [];
+  editor.state.doc.descendants((node, pos) => {
+    if (!node.isText || !node.text) return undefined;
+    let idx = node.text.indexOf(find);
+    while (idx !== -1) {
+      positions.push({ from: pos + idx, to: pos + idx + find.length });
+      idx = node.text.indexOf(find, idx + find.length);
     }
+    return undefined;
+  });
+  if (positions.length === 0) return 0;
+  positions.sort((a, b) => b.from - a.from);
+  const tr = editor.state.tr;
+  for (const { from, to } of positions) {
+    tr.replaceWith(from, to, editor.schema.text(replace));
   }
-  // No matching heading → append at end.
-  return html + newHtml;
+  editor.view.dispatch(tr);
+  return positions.length;
 }
 
-function escapeRegex(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+/**
+ * Sitúa el caret justo después del heading que matchee (substring case-insensitive).
+ * Devuelve true si encontró el heading.
+ */
+function selectSectionByHeading(editor: Editor, headingText: string): boolean {
+  const needle = headingText.toLowerCase().trim();
+  let target = -1;
+  editor.state.doc.descendants((node, pos) => {
+    if (target !== -1) return false;
+    if (node.type.name === 'heading' && node.textContent.toLowerCase().includes(needle)) {
+      target = pos + node.nodeSize;
+      return false;
+    }
+    return undefined;
+  });
+  if (target === -1) return false;
+  editor.chain().focus().setTextSelection(target).run();
+  return true;
 }

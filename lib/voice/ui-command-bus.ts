@@ -27,13 +27,19 @@ export type UICommand =
   | { action: 'canvas_set_text'; markdown: string }
   | { action: 'canvas_append'; markdown: string }
   | { action: 'canvas_replace_section'; heading: string; markdown: string }
+  | { action: 'canvas_insert_at_cursor'; markdown: string }
+  | { action: 'canvas_find_replace'; needle: string; replacement: string }
+  | { action: 'canvas_select_section'; heading: string }
   | { action: 'canvas_save_version' };
 
 export type CanvasApi = {
-  get_current: () => { text: string; html: string; word_count: number };
+  get_current: () => { text: string; html: string; markdown: string; word_count: number };
   set_text: (markdown: string) => void;
   append: (markdown: string) => void;
   replace_section: (heading: string, markdown: string) => void;
+  insert_at_cursor: (markdown: string) => void;
+  find_replace: (needle: string, replacement: string) => { count: number };
+  select_section: (heading: string) => { found: boolean };
   save_version: () => Promise<void>;
 };
 
