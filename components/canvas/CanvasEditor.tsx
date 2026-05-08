@@ -21,6 +21,17 @@ import { toast } from 'sonner';
 import { Ic } from '@/components/atoms/icons';
 import { uiCommandBus } from '@/lib/voice/ui-command-bus';
 import { cn } from '@/lib/utils';
+import { AICursorPlugin, applyHtmlStreaming } from './streaming';
+import { Extension } from '@tiptap/core';
+import { SlashMenu, preloadSlashTemplates } from './SlashMenu';
+import { AIBubbleMenu } from './AIBubbleMenu';
+
+const AICursorExtension = Extension.create({
+  name: 'lexaiAiCursor',
+  addProseMirrorPlugins() {
+    return [AICursorPlugin()];
+  },
+});
 
 const AUTOSAVE_DEBOUNCE_MS = 3_000;
 
@@ -92,6 +103,29 @@ export function CanvasEditor({
       TaskList,
       TaskItem.configure({ nested: true }),
       CharacterCount,
+      AICursorExtension,
+      SlashMenu.configure({
+        onTransform: (action: string) => {
+          toast.info(`Para "${action}" selecciona texto primero y usa el menú flotante.`);
+        },
+        onTemplate: async (kind: string, ed: Editor) => {
+          try {
+            const res = await fetch(`/api/legal-templates?kind=${encodeURIComponent(kind)}`);
+            if (!res.ok) throw new Error(await res.text());
+            const data = (await res.json()) as { markdown: string; title: string };
+            const hasContent = ed.getText().trim().length > 0;
+            const ok = hasContent
+              ? window.confirm(`Reemplazar el documento con "${data.title}"?`)
+              : true;
+            if (!ok) return;
+            const html = parseMarkdown(ed, data.markdown);
+            void applyHtmlStreaming(ed, html, 'replace');
+            toast.success(`Plantilla "${data.title}" cargada`);
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : 'Error cargando plantilla');
+          }
+        },
+      }),
     ],
     content: initialContent,
     editorProps: {
@@ -168,6 +202,12 @@ export function CanvasEditor({
       cancelled = true;
     };
   }, []);
+
+  // Preload plantillas dentro del slash menu (storage del editor).
+  useEffect(() => {
+    if (!editor) return;
+    void preloadSlashTemplates(editor);
+  }, [editor]);
 
   // Click-outside / Escape para cerrar el dropdown de plantillas.
   useEffect(() => {
@@ -248,15 +288,19 @@ export function CanvasEditor({
       set_text: (markdown: string) => {
         runOpRespectingUser(() => {
           setAgentBusy(true);
-          editor.commands.setContent(parseMarkdown(editor, markdown));
-          setTimeout(() => setAgentBusy(false), 300);
+          const html = parseMarkdown(editor, markdown);
+          void applyHtmlStreaming(editor, html, 'replace').finally(() => {
+            setTimeout(() => setAgentBusy(false), 200);
+          });
         });
       },
       append: (markdown: string) => {
         runOpRespectingUser(() => {
           setAgentBusy(true);
-          editor.chain().focus('end').insertContent(parseMarkdown(editor, markdown)).run();
-          setTimeout(() => setAgentBusy(false), 300);
+          const html = parseMarkdown(editor, markdown);
+          void applyHtmlStreaming(editor, html, 'append').finally(() => {
+            setTimeout(() => setAgentBusy(false), 200);
+          });
         });
       },
       replace_section: (heading: string, newMarkdown: string) => {
@@ -264,16 +308,22 @@ export function CanvasEditor({
           setAgentBusy(true);
           const replaced = replaceSectionByHeading(editor, heading, parseMarkdown(editor, newMarkdown));
           if (!replaced) {
-            editor.chain().focus('end').insertContent(parseMarkdown(editor, newMarkdown)).run();
+            const html = parseMarkdown(editor, newMarkdown);
+            void applyHtmlStreaming(editor, html, 'append').finally(() => {
+              setTimeout(() => setAgentBusy(false), 200);
+            });
+          } else {
+            setTimeout(() => setAgentBusy(false), 200);
           }
-          setTimeout(() => setAgentBusy(false), 300);
         });
       },
       insert_at_cursor: (markdown: string) => {
         runOpRespectingUser(() => {
           setAgentBusy(true);
-          editor.chain().focus().insertContent(parseMarkdown(editor, markdown)).run();
-          setTimeout(() => setAgentBusy(false), 300);
+          const html = parseMarkdown(editor, markdown);
+          void applyHtmlStreaming(editor, html, 'insert').finally(() => {
+            setTimeout(() => setAgentBusy(false), 200);
+          });
         });
       },
       find_replace: (needle: string, replacement: string) => {
@@ -432,7 +482,8 @@ export function CanvasEditor({
         </div>
       </div>
 
-      {/* Editor body */}
+      {/* Editor body + bubble menu inline IA */}
+      <AIBubbleMenu editor={editor} />
       <div
         className={cn(
           'flex-1 overflow-auto',

@@ -165,6 +165,22 @@ async function main() {
       detail: `${data.count ?? 0} templates`,
     };
   });
+  await timed('POST /v1/canvas/transform (improve)', async () => {
+    const r = await fetch(`${BACKEND}/v1/canvas/transform`, {
+      method: 'POST',
+      headers: { ...auth, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'improve',
+        text: 'el demandante manda esta demanda porque el otro le debe plata',
+      }),
+    });
+    const data = (await r.json()) as { markdown?: string; chars_out?: number };
+    return {
+      ok: r.status === 200 && (data.chars_out ?? 0) > 20,
+      status: r.status,
+      detail: `${data.chars_out ?? 0} chars · "${(data.markdown ?? '').slice(0, 60)}..."`,
+    };
+  });
   await timed('GET /v1/legal-templates/tutela', async () => {
     const r = await fetch(`${BACKEND}/v1/legal-templates/tutela`, { headers: auth });
     const data = (await r.json()) as { kind?: string; markdown?: string; title?: string };
