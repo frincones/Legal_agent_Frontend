@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation';
 import { AppShell } from '@/components/shell/AppShell';
 import { TopBar } from '@/components/shell/TopBar';
 import { IntegrationsManager } from '@/components/settings/IntegrationsManager';
+import { CalendarIntegrationsManager } from '@/components/settings/CalendarIntegrationsManager';
+import { WhatsAppIntegrationPanel } from '@/components/settings/WhatsAppIntegrationPanel';
 import { SettingsTabs } from '@/components/settings/SettingsTabs';
 import { getSessionPrincipal } from '@/lib/supabase/session';
 
@@ -30,7 +32,11 @@ export default async function SettingsIntegraciones() {
           <div className="mb-4">
             <SettingsTabs active="integraciones" />
           </div>
-          <IntegrationsManager />
+          <div className="grid gap-6">
+            <IntegrationsManager />
+            <CalendarIntegrationsManager />
+            <WhatsAppIntegrationPanel />
+          </div>
         </div>
       </main>
     </AppShell>

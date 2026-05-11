@@ -13,7 +13,9 @@ export type SidebarKey =
   | 'clientes'
   | 'calendario'
   | 'documentos'
-  | 'inbox';
+  | 'inbox'
+  | 'reportes'
+  | 'buscar';
 
 type SidebarItem = {
   id: SidebarKey;
@@ -56,6 +58,8 @@ export function Sidebar({
     { id: 'calendario', href: '/calendario', icon: 'cal', label: 'Calendario', count: counts.calendario ?? null, requires: 'calendar' },
     { id: 'documentos', href: '/documentos', icon: 'doc', label: 'Documentos', requires: 'documents' },
     { id: 'inbox', href: '/notificaciones', icon: 'inbox', label: 'Notificaciones', count: counts.inbox ?? null, requires: 'inbox' },
+    { id: 'buscar', href: '/buscar', icon: 'search', label: 'Buscar' },
+    { id: 'reportes', href: '/reportes', icon: 'badge', label: 'Reportes' },
   ];
 
   // Capability filter: e.g. funcionario_publico in_house don't get "Clientes".
