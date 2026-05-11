@@ -15,6 +15,8 @@ export const MATTER_TABS = [
   'Riesgos',
   'Citas',
   'Refundamentación',
+  // Sprint 8 · billable hours + expenses
+  'Horas y Gastos',
 ] as const;
 export type MatterTab = (typeof MATTER_TABS)[number];
 

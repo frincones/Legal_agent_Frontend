@@ -15,7 +15,8 @@ export type SidebarKey =
   | 'documentos'
   | 'inbox'
   | 'reportes'
-  | 'buscar';
+  | 'buscar'
+  | 'facturacion';
 
 type SidebarItem = {
   id: SidebarKey;
@@ -60,6 +61,7 @@ export function Sidebar({
     { id: 'inbox', href: '/notificaciones', icon: 'inbox', label: 'Notificaciones', count: counts.inbox ?? null, requires: 'inbox' },
     { id: 'buscar', href: '/buscar', icon: 'search', label: 'Buscar' },
     { id: 'reportes', href: '/reportes', icon: 'badge', label: 'Reportes' },
+    { id: 'facturacion', href: '/facturacion', icon: 'doc', label: 'Facturación' },
   ];
 
   // Capability filter: e.g. funcionario_publico in_house don't get "Clientes".

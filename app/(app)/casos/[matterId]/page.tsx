@@ -11,6 +11,7 @@ import { RefundamentacionTab } from '@/components/matter/RefundamentacionTab';
 import { TimelineRebuildButton } from '@/components/matter/TimelineRebuildButton';
 import { InstanceSelector, InstanceBadge } from '@/components/matter/InstanceSelector';
 import { DocumentDropzone } from '@/components/documents/DocumentDropzone';
+import { HorasGastosTab } from '@/components/billing/HorasGastosTab';
 import { fetchMatter, fetchMatterTimeline } from '@/lib/api/rsc-fetchers';
 import { createClient } from '@/lib/supabase/server';
 import { cn, formatCOP, formatRelative } from '@/lib/utils';
@@ -402,6 +403,7 @@ export default async function CasoDetallePage({ params }: { params: { matterId: 
             Partes: partesPanel,
             Notas: notasPanel,
             Calendario: calendarioPanel,
+            'Horas y Gastos': <HorasGastosTab matterId={matter.id} />,
           }}
         />
       </main>
