@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getSessionPrincipal } from '@/lib/supabase/session';
+import { createClient } from '@/lib/supabase/server';
 import { VoiceHUD } from '@/components/voice/VoiceHUD';
 import { VoiceProvider } from '@/components/voice/VoiceProvider';
 import { CommandPalette } from '@/components/command/CommandPalette';
@@ -9,6 +10,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // Fast: reads cookie + decodes JWT locally · no Supabase roundtrip.
   const principal = await getSessionPrincipal();
   if (!principal) redirect('/login');
+
+  // Onboarding gate: if the user hasn't completed the wizard
+  // (modo_ejercicio is null) and is hitting a protected route,
+  // bounce them to /wizard. The query is cheap (PK lookup) and
+  // RLS-scoped to the user's own row.
+  const supabase = createClient();
+  const { data: profile } = await supabase
+    .from('users')
+    .select('modo_ejercicio')
+    .eq('id', principal.user_id)
+    .maybeSingle();
+  if (profile && !profile.modo_ejercicio) {
+    redirect('/wizard');
+  }
 
   return (
     <VoiceProvider>

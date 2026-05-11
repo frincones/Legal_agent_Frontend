@@ -4,6 +4,7 @@ import { Ic } from '@/components/atoms/icons';
 import { SidebarSearchTrigger } from '@/components/shell/SidebarSearchTrigger';
 import { SidebarCloseButton } from '@/components/shell/SidebarCloseButton';
 import { cn } from '@/lib/utils';
+import { hasCapability, PRIORITY_SHORTCUTS_BY_AREA, PRACTICE_AREAS, type Capability, type PracticeArea } from '@/lib/auth/roles';
 
 export type SidebarKey =
   | 'inicio'
@@ -21,6 +22,8 @@ type SidebarItem = {
   label: string;
   count?: number | null;
   accent?: boolean;
+  /** Capability gate · only render if the user's role grants it. */
+  requires?: Capability;
 };
 
 export function Sidebar({
@@ -29,22 +32,40 @@ export function Sidebar({
   user = { name: 'Usuario', cedula: '' },
   nsm = { documentos: 0, meta: 40, deltaPct: 0 },
   counts = {},
+  role,
+  modoEjercicio,
+  primaryArea,
 }: {
   active: SidebarKey;
   firmName?: string;
   user?: { name: string; cedula: string };
   nsm?: { documentos: number; meta: number; deltaPct: number };
   counts?: Partial<Record<SidebarKey, number>>;
+  /** Role-based gating. Defaults to "lawyer" capabilities if undefined. */
+  role?: string | null;
+  /** M1-M5 · drives sidebar order. In_house and sector_publico don't see Clients. */
+  modoEjercicio?: string | null;
+  /** Practice area marked as primary by the user · drives shortcuts at the top. */
+  primaryArea?: string | null;
 }) {
-  const items: SidebarItem[] = [
+  const allItems: SidebarItem[] = [
     { id: 'inicio', href: '/inicio', icon: 'home', label: 'Inicio' },
-    { id: 'casos', href: '/casos', icon: 'folder', label: 'Casos', count: counts.casos ?? null },
-    { id: 'canvas', href: '/canvas', icon: 'bolt', label: 'Live Canvas', accent: true },
-    { id: 'clientes', href: '/clientes', icon: 'users', label: 'Clientes', count: counts.clientes ?? null },
-    { id: 'calendario', href: '/calendario', icon: 'cal', label: 'Calendario', count: counts.calendario ?? null },
-    { id: 'documentos', href: '/documentos', icon: 'doc', label: 'Documentos' },
-    { id: 'inbox', href: '/notificaciones', icon: 'inbox', label: 'Notificaciones', count: counts.inbox ?? null },
+    { id: 'casos', href: '/casos', icon: 'folder', label: 'Casos', count: counts.casos ?? null, requires: 'cases' },
+    { id: 'canvas', href: '/canvas', icon: 'bolt', label: 'Live Canvas', accent: true, requires: 'canvas' },
+    { id: 'clientes', href: '/clientes', icon: 'users', label: 'Clientes', count: counts.clientes ?? null, requires: 'clients' },
+    { id: 'calendario', href: '/calendario', icon: 'cal', label: 'Calendario', count: counts.calendario ?? null, requires: 'calendar' },
+    { id: 'documentos', href: '/documentos', icon: 'doc', label: 'Documentos', requires: 'documents' },
+    { id: 'inbox', href: '/notificaciones', icon: 'inbox', label: 'Notificaciones', count: counts.inbox ?? null, requires: 'inbox' },
   ];
+
+  // Capability filter: e.g. funcionario_publico in_house don't get "Clientes".
+  const items = allItems.filter((it) => !it.requires || hasCapability(role, it.requires));
+
+  // Priority shortcuts driven by the user's primary practice area.
+  const shortcuts =
+    primaryArea && (primaryArea in PRACTICE_AREAS)
+      ? (PRIORITY_SHORTCUTS_BY_AREA[primaryArea as PracticeArea] ?? [])
+      : [];
   return (
     <div className="flex h-full min-h-0 flex-col gap-[6px] overflow-y-auto border-r border-line bg-bg p-[14px_12px_12px]">
       <div className="flex flex-col px-1 pb-2 pt-1">
@@ -86,6 +107,26 @@ export function Sidebar({
         })}
       </nav>
 
+      {shortcuts.length > 0 && (
+        <div className="mt-2 border-t border-line pt-2">
+          <div className="px-[10px] pb-1 text-[10px] font-semibold uppercase tracking-wider text-ink-3">
+            Atajos · {primaryArea && primaryArea in PRACTICE_AREAS ? PRACTICE_AREAS[primaryArea as PracticeArea]!.label : ''}
+          </div>
+          <nav className="flex flex-col gap-px">
+            {shortcuts.map((href) => (
+              <Link
+                key={href}
+                href={href}
+                className="flex items-center gap-[10px] rounded-lg px-[10px] py-[6px] text-[12.5px] text-ink-3 hover:bg-bg-sunken hover:text-ink"
+              >
+                <span aria-hidden="true">·</span>
+                <span className="truncate">{shortcutLabel(href)}</span>
+              </Link>
+            ))}
+          </nav>
+        </div>
+      )}
+
       <div className="flex-1" />
 
       <div className="flex flex-col gap-3 px-1 py-[6px]">
@@ -121,11 +162,29 @@ export function Sidebar({
             <div className="text-[13px] font-semibold">{user.name}</div>
             <div className="text-[11px] muted">{user.cedula} · verificada</div>
           </div>
-          <Link href="/settings/despacho" className="btn btn-icon btn-ghost btn-sm" aria-label="Configuración">
+          <Link href="/settings/perfil" className="btn btn-icon btn-ghost btn-sm" aria-label="Configuración">
             {Ic.setting}
           </Link>
         </div>
       </div>
     </div>
   );
+}
+
+/** Best-effort human label for a shortcut href · keeps the sidebar
+ *  honest when paths change without forcing a per-area dictionary.
+ *  Suppresses `modoEjercicio` as unused (kept in props for future use). */
+function shortcutLabel(href: string): string {
+  if (href.startsWith('/calc/liquidacion')) return 'Calcular liquidación';
+  if (href.startsWith('/calc/prescripcion')) return 'Prescripción';
+  if (href.startsWith('/calc/intereses')) return 'Intereses moratorios';
+  if (href.startsWith('/casos?categoria=civil')) return 'Casos civiles';
+  if (href.startsWith('/casos?categoria=comercial')) return 'Casos comerciales';
+  if (href.startsWith('/casos?categoria=administrativo')) return 'Contencioso admin.';
+  if (href.startsWith('/casos?categoria=tutela')) return 'Acciones de tutela';
+  if (href.startsWith('/casos?categoria=penal')) return 'Casos penales';
+  if (href.startsWith('/casos?categoria=familiar')) return 'Casos de familia';
+  if (href.startsWith('/clientes')) return 'Clientes empresa';
+  if (href.startsWith('/notificaciones')) return 'Notificaciones';
+  return href;
 }

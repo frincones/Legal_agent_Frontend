@@ -5,6 +5,12 @@ import { Ic } from '@/components/atoms/icons';
 import { MatterTabs } from '@/components/matter/MatterTabs';
 import { MatterActions } from '@/components/matter/MatterActions';
 import { AnalisisTab, type AnalysisRow } from '@/components/matter/AnalisisTab';
+import { CitasTab } from '@/components/matter/CitasTab';
+import { RiesgosTab } from '@/components/matter/RiesgosTab';
+import { RefundamentacionTab } from '@/components/matter/RefundamentacionTab';
+import { TimelineRebuildButton } from '@/components/matter/TimelineRebuildButton';
+import { InstanceSelector, InstanceBadge } from '@/components/matter/InstanceSelector';
+import { DocumentDropzone } from '@/components/documents/DocumentDropzone';
 import { fetchMatter, fetchMatterTimeline } from '@/lib/api/rsc-fetchers';
 import { createClient } from '@/lib/supabase/server';
 import { cn, formatCOP, formatRelative } from '@/lib/utils';
@@ -22,7 +28,13 @@ export default async function CasoDetallePage({ params }: { params: { matterId: 
       supabase.from('matter_parties').select('rol, nombre, tax_id, client_id, origen').eq('matter_id', matterId),
       supabase.from('matter_deadlines').select('titulo, fecha, tipo, completado').eq('matter_id', matterId).eq('completado', false).order('fecha').limit(10),
       supabase.from('matter_documents').select('id, kind, titulo, status, pages, byte_size, created_at, resumen_ia').eq('matter_id', matterId).order('created_at', { ascending: false }),
-      supabase.from('document_citations').select('citation_ref, rubro_inserted, estado').eq('matter_id' as never, matterId).limit(6),
+      // Citations live on document_citations.matter_document_id, not matter_id directly.
+      // Use a join via matter_documents to resolve them per case (Sprint 2 fix).
+      supabase
+        .from('document_citations')
+        .select('citation_ref, rubro_inserted, estado, matter_documents!inner(matter_id)')
+        .eq('matter_documents.matter_id', matterId)
+        .limit(6),
       supabase.from('matter_notes').select('body, created_at').eq('matter_id', matterId).order('created_at', { ascending: false }),
       supabase
         .from('document_extractions')
@@ -33,6 +45,20 @@ export default async function CasoDetallePage({ params }: { params: { matterId: 
     ]);
 
   if (!matter) return notFound();
+
+  // Sprint 2 · matter.instance puede no estar en el shape devuelto por fetchMatter
+  // si el tipado no se ha regenerado tras la migración. Lo leemos defensivamente
+  // de la fila del matter (que usa createClient directamente).
+  const matterExtraRes = await supabase
+    .from('matters')
+    .select('instance, proceso_tipo, current_term_due_at')
+    .eq('id', matterId)
+    .maybeSingle();
+  const matterExtra = (matterExtraRes.data ?? {}) as {
+    instance?: string | null;
+    proceso_tipo?: string | null;
+    current_term_due_at?: string | null;
+  };
 
   const clientRes = await supabase
     .from('clients')
@@ -196,7 +222,10 @@ export default async function CasoDetallePage({ params }: { params: { matterId: 
     <section className="surface p-[var(--pad-card)]">
       <div className="flex items-center justify-between">
         <h3 className="serif m-0 text-[16px] font-semibold">Cronología completa</h3>
-        <span className="text-[12px] muted">{timelineRes.length} eventos</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[12px] muted">{timelineRes.length} eventos</span>
+          <TimelineRebuildButton matterId={matter.id} />
+        </div>
       </div>
       <ol className="relative m-[12px_0_0] flex list-none flex-col gap-3 p-0">
         {timelineRes.map((e) => (
@@ -221,6 +250,9 @@ export default async function CasoDetallePage({ params }: { params: { matterId: 
       <div className="flex items-center justify-between">
         <h3 className="serif m-0 text-[16px] font-semibold">Documentos del expediente</h3>
         <span className="text-[12px] muted">{documentos.length}</span>
+      </div>
+      <div className="mt-3">
+        <DocumentDropzone matterId={matter.id} />
       </div>
       <div className="mt-[10px] flex flex-col">
         {documentos.map((d) => (
@@ -328,11 +360,16 @@ export default async function CasoDetallePage({ params }: { params: { matterId: 
           }
           title={matter.titulo}
           subtitle={
-            <>
-              {matter.tribunal} · Exp. {matter.expediente}{' '}
-              <span className="chip chip-amber ml-1">{matter.materia}</span>{' '}
+            <span className="inline-flex flex-wrap items-center gap-1">
+              <span>{matter.tribunal} · Exp. {matter.expediente}</span>
+              <span className="chip chip-amber ml-1">{matter.materia}</span>
               <span className="chip ml-1">{matter.etapa_procesal}</span>
-            </>
+              <InstanceBadge instance={matterExtra.instance} />
+              <InstanceSelector
+                matterId={matter.id}
+                initialInstance={matterExtra.instance}
+              />
+            </span>
           }
           actions={<MatterActions matterId={matter.id} canvasHref={`/casos/${matter.id}/canvas`} />}
         />
@@ -344,9 +381,15 @@ export default async function CasoDetallePage({ params }: { params: { matterId: 
             Notas: notas.length,
             Calendario: deadlines.length,
             'Análisis IA': analyses.length,
+            Citas: (citationsRes.data ?? []).length,
           }}
           panels={{
             Resumen: resumenPanel,
+            Riesgos: <RiesgosTab matterId={matter.id} />,
+            Citas: <CitasTab matterId={matter.id} />,
+            Refundamentación: (
+              <RefundamentacionTab matterId={matter.id} instance={matterExtra.instance} />
+            ),
             'Análisis IA': (
               <AnalisisTab
                 matterId={matter.id}

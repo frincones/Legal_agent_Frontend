@@ -54,3 +54,6 @@ tests/e2e/.report/
 
 # editor swap
 *.swp
+
+# Discovery docs (PRDs, transcripts) — internal only
+Transcripciones/

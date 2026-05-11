@@ -17,6 +17,9 @@ type CachedFirm = {
   user_full_name: string;
   user_cedula: string;
   user_role: string;
+  modo_ejercicio: string | null;
+  practice_areas: string[];
+  primary_area: string | null;
 };
 
 export async function getCachedShellData(): Promise<{
@@ -45,9 +48,9 @@ const _shellDataCached = unstable_cache(
     const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 3600 * 1000).toISOString().slice(0, 10);
     const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
 
-    const [profileRes, firmRes, thisMonth, lastMonth, weekData, mattersC, clientsC, hitlC, deadlinesC, judicialC] =
+    const [profileRes, firmRes, thisMonth, lastMonth, weekData, mattersC, clientsC, hitlC, deadlinesC, judicialC, areasRes] =
       await Promise.all([
-        supabase.from('users').select('full_name, cedula_profesional, role').eq('id', userId).single(),
+        supabase.from('users').select('full_name, cedula_profesional, role, modo_ejercicio').eq('id', userId).single(),
         supabase.from('firms').select('razon_social').eq('id', firmId).single(),
         supabase.from('nsm_daily').select('documentos_verificados, voice_commands, horas_ahorradas').eq('firm_id', firmId).gte('day', thisMonthStart),
         supabase.from('nsm_daily').select('documentos_verificados').eq('firm_id', firmId).gte('day', lastMonthStart).lt('day', thisMonthStart),
@@ -57,10 +60,19 @@ const _shellDataCached = unstable_cache(
         supabase.from('hitl_interrupts').select('*', { count: 'exact', head: true }).eq('firm_id', firmId).eq('decision', 'pending'),
         supabase.from('matter_deadlines').select('*', { count: 'exact', head: true }).eq('firm_id', firmId).eq('completado', false).lte('fecha', sevenDaysFromNow),
         supabase.from('judicial_notifications').select('*', { count: 'exact', head: true }).eq('firm_id', firmId).eq('status', 'unread'),
+        supabase.from('user_practice_areas').select('area, is_primary').eq('user_id', userId),
       ]);
 
-    const profile = profileRes.data as { full_name: string; cedula_profesional: string | null; role: string } | null;
+    const profile = profileRes.data as {
+      full_name: string;
+      cedula_profesional: string | null;
+      role: string;
+      modo_ejercicio: string | null;
+    } | null;
     const firm = firmRes.data as { razon_social: string } | null;
+    const areasRows = (areasRes.data ?? []) as Array<{ area: string; is_primary: boolean | null }>;
+    const practice_areas = areasRows.map((r) => r.area);
+    const primary_area = areasRows.find((r) => r.is_primary)?.area ?? null;
 
     const docsThis = (thisMonth.data ?? []).reduce((s, r) => s + (r.documentos_verificados ?? 0), 0);
     const docsLast = (lastMonth.data ?? []).reduce((s, r) => s + (r.documentos_verificados ?? 0), 0);
@@ -76,6 +88,9 @@ const _shellDataCached = unstable_cache(
             user_full_name: profile.full_name,
             user_cedula: profile.cedula_profesional ?? '',
             user_role: profile.role,
+            modo_ejercicio: profile.modo_ejercicio,
+            practice_areas,
+            primary_area,
           }
         : null,
       nsm: {
@@ -94,6 +109,6 @@ const _shellDataCached = unstable_cache(
       },
     };
   },
-  ['shell-data-v3'],
+  ['shell-data-v4'],
   { revalidate: 60, tags: ['shell-data'] },
 );

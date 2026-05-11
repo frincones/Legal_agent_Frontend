@@ -3,7 +3,19 @@
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 
-export const MATTER_TABS = ['Resumen', 'Análisis IA', 'Cronología', 'Documentos', 'Partes', 'Notas', 'Calendario'] as const;
+export const MATTER_TABS = [
+  'Resumen',
+  'Análisis IA',
+  'Cronología',
+  'Documentos',
+  'Partes',
+  'Notas',
+  'Calendario',
+  // Sprint 2 · S2-01
+  'Riesgos',
+  'Citas',
+  'Refundamentación',
+] as const;
 export type MatterTab = (typeof MATTER_TABS)[number];
 
 export function MatterTabs({

@@ -38,6 +38,9 @@ export async function AppShell({
             calendario: counts.deadlines7d,
             inbox: counts.hitl + counts.judicial,
           }}
+          role={firm?.user_role ?? null}
+          modoEjercicio={firm?.modo_ejercicio ?? null}
+          primaryArea={firm?.primary_area ?? null}
         />
       </SidebarShell>
       {children}

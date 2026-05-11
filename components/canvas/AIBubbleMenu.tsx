@@ -16,13 +16,14 @@ import { cn } from '@/lib/utils';
  * durante 6s para que el abogado pueda revisar y, si quiere, deshacer (Ctrl+Z).
  */
 
-type Action = 'improve' | 'formalize' | 'summarize' | 'cite';
+type Action = 'improve' | 'formalize' | 'summarize' | 'cite' | 'atacar';
 
 const ACTIONS: Array<{ key: Action; label: string; icon: string; description: string }> = [
   { key: 'improve', label: 'Mejorar', icon: '✨', description: 'Reescribe con tono profesional' },
   { key: 'formalize', label: 'Formal', icon: '🎓', description: 'Lenguaje jurídico técnico' },
   { key: 'summarize', label: 'Resumir', icon: '📝', description: 'Condensa en 1-2 oraciones' },
   { key: 'cite', label: 'Citar', icon: '⚖️', description: 'Añade jurisprudencia relacionada' },
+  { key: 'atacar', label: 'Atacar', icon: '🛡️', description: 'Refuta este argumento de la contraparte' },
 ];
 
 export function AIBubbleMenu({ editor }: { editor: Editor }) {
@@ -51,8 +52,14 @@ export function AIBubbleMenu({ editor }: { editor: Editor }) {
       const data = (await res.json()) as { markdown?: string; error?: string };
       if (data.error || !data.markdown) throw new Error(data.error ?? 'Sin respuesta');
 
-      // Aplicar: parsear markdown y reemplazar la selección con highlight + accept/reject.
-      applyWithReview(editor, from, to, data.markdown, action);
+      // `atacar` inserta el contra-argumento DESPUÉS de la selección
+      // (no reemplaza el argumento de la contraparte). El resto de
+      // acciones reemplazan in-place.
+      if (action === 'atacar') {
+        appendAfter(editor, to, data.markdown);
+      } else {
+        applyWithReview(editor, from, to, data.markdown, action);
+      }
       toast.success(`${ACTIONS.find((a) => a.key === action)!.label} aplicado · Ctrl+Z para deshacer`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Error al aplicar transformación');
@@ -161,6 +168,25 @@ function applyWithReview(
       } catch {
         // Document may have changed; ignore.
       }
+    }, 6_000);
+  }
+}
+
+/** S3-02 · used by the 'atacar' action: inserts a new block after the
+ *  selected paragraph instead of replacing it. */
+function appendAfter(editor: Editor, to: number, markdown: string) {
+  const storage = (editor.storage as Record<string, unknown>).markdown as
+    | { parser?: { parse: (s: string) => string } }
+    | undefined;
+  const html = storage?.parser?.parse?.(`\n\n${markdown}\n\n`) ?? markdown;
+  editor.chain().focus().insertContentAt(to, html).run();
+  const newTo = editor.state.selection.from;
+  if (newTo > to) {
+    editor.chain().setTextSelection({ from: to, to: newTo }).setHighlight().run();
+    setTimeout(() => {
+      try {
+        editor.chain().setTextSelection({ from: to, to: newTo }).unsetHighlight().run();
+      } catch {}
     }, 6_000);
   }
 }

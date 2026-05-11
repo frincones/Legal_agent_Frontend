@@ -1,7 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PROTECTED_PREFIXES = ['/inicio', '/casos', '/clientes', '/documentos', '/calendario', '/notificaciones', '/liquidacion', '/settings', '/admin'];
+const PROTECTED_PREFIXES = ['/inicio', '/casos', '/clientes', '/documentos', '/calendario', '/notificaciones', '/liquidacion', '/settings', '/admin', '/wizard'];
 const AUTH_REDIRECT = '/login';
 
 export async function middleware(request: NextRequest) {

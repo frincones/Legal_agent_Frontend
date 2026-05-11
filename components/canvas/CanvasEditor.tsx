@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 import { Ic } from '@/components/atoms/icons';
 import { uiCommandBus } from '@/lib/voice/ui-command-bus';
 import { cn } from '@/lib/utils';
+import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { AICursorPlugin, applyHtmlStreaming } from './streaming';
 import { Extension } from '@tiptap/core';
 import { SlashMenu, preloadSlashTemplates } from './SlashMenu';
@@ -67,6 +68,7 @@ export function CanvasEditor({
   const [tplLoading, setTplLoading] = useState(false);
   const tplBtnRef = useRef<HTMLDivElement | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const storePublishTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingOpsRef = useRef<Array<() => void>>([]);
 
   const editor = useEditor({
@@ -158,6 +160,13 @@ export function CanvasEditor({
         const html = editor.getHTML();
         void doSave(html);
       }, AUTOSAVE_DEBOUNCE_MS);
+      // Short-debounced publish al canvas store (consumido por sidebar
+      // de citas, pre-flight validator, etc.). 600ms da feedback rápido
+      // sin recomputar regex en cada keystroke.
+      if (storePublishTimerRef.current) clearTimeout(storePublishTimerRef.current);
+      storePublishTimerRef.current = setTimeout(() => {
+        useCanvasStore.getState().setMarkdown(getMarkdownSafe(editor));
+      }, 600);
     },
   });
 
@@ -208,6 +217,22 @@ export function CanvasEditor({
     if (!editor) return;
     void preloadSlashTemplates(editor);
   }, [editor]);
+
+  // Sincroniza el documentId actual con el canvas store (consumido por
+  // panels laterales: citas, pre-flight, suma, etc.). Hidratación inicial
+  // del markdown cuando el editor monta con contenido guardado.
+  useEffect(() => {
+    if (!editor) return;
+    const store = useCanvasStore.getState();
+    store.setDocumentId(documentId ?? null);
+    store.setMarkdown(getMarkdownSafe(editor));
+    return () => {
+      // Reset solo si seguimos siendo el doc activo (evita race con un
+      // remount inmediato hacia otro caso).
+      const cur = useCanvasStore.getState();
+      if (cur.documentId === (documentId ?? null)) cur.reset();
+    };
+  }, [editor, documentId]);
 
   // Click-outside / Escape para cerrar el dropdown de plantillas.
   useEffect(() => {

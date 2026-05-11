@@ -5,6 +5,11 @@ import { createClient } from '@/lib/supabase/server';
 import { formatRelative } from '@/lib/utils';
 import { Ic } from '@/components/atoms/icons';
 import { JudicialInbox, type JudicialNotif } from '@/components/notificaciones/JudicialInbox';
+import { LegalAlertsInbox } from '@/components/notificaciones/LegalAlertsInbox';
+import { UnifiedInboxFeed } from '@/components/notificaciones/UnifiedInboxFeed';
+import { HITLActions } from '@/components/hitl/HITLActions';
+import { DailyBriefingButton } from '@/components/inbox/DailyBriefingButton';
+import { PushEnableButton } from '@/components/inbox/PushEnableButton';
 
 export const revalidate = 30;
 
@@ -46,9 +51,23 @@ export default async function NotificacionesPage() {
           subtitle={`${pending.length} confirmaciones pendientes · actividad LexAI`}
         />
         <div className="flex-1 overflow-auto p-[var(--pad-screen)]">
+          <div className="mb-4 flex justify-end gap-2">
+            <PushEnableButton />
+            <DailyBriefingButton />
+          </div>
+          <div className="mb-6">
+            <UnifiedInboxFeed />
+          </div>
           <div className="mb-6">
             <JudicialInbox items={judicialItems} />
           </div>
+
+          <section className="mb-6">
+            <h3 className="serif mb-2 text-[16px] font-semibold">
+              Alertas legislativas
+            </h3>
+            <LegalAlertsInbox />
+          </section>
 
           <section className="mb-6">
             <h3 className="serif mb-2 text-[16px] font-semibold">
@@ -76,11 +95,7 @@ export default async function NotificacionesPage() {
                           {JSON.stringify(p.payload, null, 2)}
                         </pre>
                       </div>
-                      <div className="flex flex-col gap-1.5">
-                        <button className="btn btn-sm">Rechazar</button>
-                        <button className="btn btn-sm">Editar</button>
-                        <button className="btn btn-sm btn-primary">Aprobar</button>
-                      </div>
+                      <HITLActions id={p.id} payload={p.payload} size="sm" />
                     </article>
                   );
                 })}
