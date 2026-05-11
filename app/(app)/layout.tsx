@@ -5,6 +5,7 @@ import { VoiceHUD } from '@/components/voice/VoiceHUD';
 import { VoiceProvider } from '@/components/voice/VoiceProvider';
 import { CommandPalette } from '@/components/command/CommandPalette';
 import { HITLController } from '@/components/hitl/HITLController';
+import { QuotaBanner } from '@/components/shell/QuotaBanner';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   // Fast: reads cookie + decodes JWT locally · no Supabase roundtrip.
@@ -27,7 +28,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <VoiceProvider>
-      <div className="grid h-screen w-screen grid-cols-1 overflow-hidden bg-bg text-ink md:grid-cols-[248px_1fr]">
+      <div className="flex h-screen w-screen flex-col overflow-hidden bg-bg text-ink">
+        <QuotaBanner />
+        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden md:grid-cols-[248px_1fr]">
         {children}
         <div className="pointer-events-none fixed bottom-[16px] left-1/2 z-50 -translate-x-1/2 md:bottom-[22px]">
           <div className="pointer-events-auto">
@@ -36,6 +39,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
         <CommandPalette />
         <HITLController />
+        </div>
       </div>
     </VoiceProvider>
   );

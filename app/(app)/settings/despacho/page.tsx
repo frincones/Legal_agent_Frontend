@@ -4,6 +4,8 @@ import { Ic } from '@/components/atoms/icons';
 import { createClient } from '@/lib/supabase/server';
 import { fetchFirmInfo } from '@/lib/api/supabase-fetchers';
 import { formatRelative } from '@/lib/utils';
+import { SettingsTabs } from '@/components/settings/SettingsTabs';
+import { BillingPanel } from '@/components/settings/BillingPanel';
 
 export const revalidate = 30;
 
@@ -45,6 +47,13 @@ export default async function SettingsDespacho() {
         />
         <div className="flex-1 overflow-auto p-[var(--pad-screen)]">
           <div className="mx-auto flex max-w-5xl flex-col gap-5">
+            <SettingsTabs active="despacho" />
+
+            <section>
+              <h3 className="serif mb-2 text-[16px] font-semibold">Plan y facturación</h3>
+              <BillingPanel />
+            </section>
+
             <section className="surface p-[var(--pad-card)]">
               <h3 className="serif m-0 text-[16px] font-semibold">Miembros del despacho</h3>
 

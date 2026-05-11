@@ -8,6 +8,7 @@ const TABS = [
   { id: 'plantillas', href: '/settings/templates', label: 'Plantillas' },
   { id: 'integraciones', href: '/settings/integraciones', label: 'Integraciones' },
   { id: 'despacho', href: '/settings/despacho', label: 'Despacho' },
+  { id: 'uso', href: '/settings/uso', label: 'Uso' },
   { id: 'privacidad', href: '/settings/privacidad', label: 'Privacidad' },
 ] as const;
 
