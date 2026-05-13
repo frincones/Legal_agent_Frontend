@@ -1,0 +1,28 @@
+import { redirect } from 'next/navigation';
+import { AppShell } from '@/components/shell/AppShell';
+import { TopBar } from '@/components/shell/TopBar';
+import { RulesList } from '@/components/automation/RulesList';
+import { getSessionPrincipal } from '@/lib/supabase/session';
+
+export const dynamic = 'force-dynamic';
+
+export default async function AutomationPage() {
+  const principal = await getSessionPrincipal();
+  if (!principal) redirect('/login');
+  return (
+    <AppShell active="inicio">
+      <main className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+        <TopBar
+          breadcrumb="Automatizaciones"
+          title="Workflow automation"
+          subtitle="Reglas tipo Zapier internas · triggers + acciones automáticas"
+        />
+        <div className="flex-1 overflow-auto p-[var(--pad-screen)]">
+          <div className="mx-auto max-w-5xl">
+            <RulesList />
+          </div>
+        </div>
+      </main>
+    </AppShell>
+  );
+}
