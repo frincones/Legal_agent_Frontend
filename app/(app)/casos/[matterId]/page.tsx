@@ -12,6 +12,7 @@ import { TimelineRebuildButton } from '@/components/matter/TimelineRebuildButton
 import { InstanceSelector, InstanceBadge } from '@/components/matter/InstanceSelector';
 import { DocumentDropzone } from '@/components/documents/DocumentDropzone';
 import { HorasGastosTab } from '@/components/billing/HorasGastosTab';
+import { DocumentRowActions } from '@/components/matter/DocumentRowActions';
 import { fetchMatter, fetchMatterTimeline } from '@/lib/api/rsc-fetchers';
 import { createClient } from '@/lib/supabase/server';
 import { cn, formatCOP, formatRelative } from '@/lib/utils';
@@ -272,9 +273,16 @@ export default async function CasoDetallePage({ params }: { params: { matterId: 
                 <div className="mt-1 line-clamp-2 text-[12px] text-ink-2">{d.resumen_ia}</div>
               )}
             </div>
-            <span className={cn('chip', d.status === 'verificado' ? 'chip-green' : 'chip-amber')}>
-              {d.status}
-            </span>
+            <div className="flex flex-none items-center gap-2">
+              <DocumentRowActions
+                documentId={d.id}
+                documentTitle={d.titulo}
+                documents={documentos.map((x) => ({ id: x.id, titulo: x.titulo }))}
+              />
+              <span className={cn('chip', d.status === 'verificado' ? 'chip-green' : 'chip-amber')}>
+                {d.status}
+              </span>
+            </div>
           </div>
         ))}
         {documentos.length === 0 && (
