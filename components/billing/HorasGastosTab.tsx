@@ -5,6 +5,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { Clock, Loader2, Plus, Receipt, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { TimerWidget } from './TimerWidget';
+import { TrustBalanceCard } from '@/components/trust/TrustBalanceCard';
 import { cn, formatCOP, formatRelative } from '@/lib/utils';
 
 type TimeEntry = {
@@ -92,6 +93,9 @@ export function HorasGastosTab({ matterId }: { matterId: string }) {
     <div className="grid gap-4">
       {/* Timer */}
       <TimerWidget matterId={matterId} onChange={refresh} />
+
+      {/* Trust balance · Sprint 10 */}
+      <TrustBalanceCard matterId={matterId} />
 
       {/* Summary */}
       <div className="grid gap-3 md:grid-cols-3">

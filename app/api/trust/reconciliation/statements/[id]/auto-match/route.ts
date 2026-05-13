@@ -1,0 +1,5 @@
+import { proxyToRailway } from '@/lib/api/proxy';
+
+export async function POST(req: Request, { params }: { params: { id: string } }) {
+  return proxyToRailway(req, `/v1/trust/reconciliation/statements/${params.id}/auto-match`, { method: 'POST' });
+}
