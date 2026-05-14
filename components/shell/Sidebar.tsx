@@ -29,7 +29,8 @@ export type SidebarKey =
   | 'mi-dia'
   | 'tareas'
   | 'dashboard'
-  | 'intake';
+  | 'intake'
+  | 'jueces';
 
 type SidebarItem = {
   id: SidebarKey;
@@ -75,6 +76,7 @@ export function Sidebar({
     { id: 'calendario', href: '/calendario', icon: 'cal', label: 'Calendario', count: counts.calendario ?? null, requires: 'calendar' },
     { id: 'documentos', href: '/documentos', icon: 'doc', label: 'Documentos', requires: 'documents' },
     { id: 'kb', href: '/kb', icon: 'badge', label: 'Conocimiento', requires: 'documents' },
+    { id: 'jueces', href: '/jueces', icon: 'scales', label: 'Jueces' },
     { id: 'actividad', href: '/actividad', icon: 'bolt', label: 'Actividad' },
     { id: 'menciones', href: '/menciones', icon: 'bell', label: 'Menciones', count: counts.menciones ?? null },
     { id: 'inbox', href: '/notificaciones', icon: 'inbox', label: 'Notificaciones', count: counts.inbox ?? null, requires: 'inbox' },

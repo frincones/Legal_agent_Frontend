@@ -18,6 +18,7 @@ import { PresenceBar } from '@/components/collab/PresenceBar';
 import { MatterPresenceHeartbeat } from '@/components/collab/MatterPresenceHeartbeat';
 import { MatterPredictionCard } from '@/components/predictions/MatterPredictionCard';
 import { TasksList } from '@/components/tasks/TasksList';
+import { JudgePerspectivePanel } from '@/components/judges/JudgePerspectivePanel';
 import { DocumentRowActions } from '@/components/matter/DocumentRowActions';
 import { fetchMatter, fetchMatterTimeline } from '@/lib/api/rsc-fetchers';
 import { createClient } from '@/lib/supabase/server';
@@ -446,6 +447,11 @@ export default async function CasoDetallePage({ params }: { params: { matterId: 
                   </p>
                 </header>
                 <TasksList matterId={matter.id} showMatterColumn={false} />
+              </section>
+            ),
+            'Juez': (
+              <section className="surface flex flex-col gap-3 p-[var(--pad-card)]">
+                <JudgePerspectivePanel matterId={matter.id} />
               </section>
             ),
           }}
