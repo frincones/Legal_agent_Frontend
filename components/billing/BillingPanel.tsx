@@ -168,7 +168,12 @@ export function BillingPanel({ role }: { role: string }) {
   const planName = status.plan?.name || 'Free Trial';
   const subStatus = status.plan?.status || 'trialing';
   const trialEnds = status.plan?.trial_ends_at;
+  const periodStart = status.plan?.period_start;
+  const periodEnd = status.plan?.period_end;
   const flags = status.flags || {};
+  const quotas = status.quotas || {};
+  const usage = status.usage || {};
+  const features = status.features || {};
 
   return (
     <div className="flex flex-col gap-4">
@@ -190,10 +195,10 @@ export function BillingPanel({ role }: { role: string }) {
               <strong>{new Date(trialEnds).toLocaleDateString('es-CO')}</strong>.
             </p>
           )}
-          {status.plan.period_end && subStatus === 'active' && (
+          {periodEnd && subStatus === 'active' && (
             <p className="mt-1 text-[12.5px] muted">
               Próxima renovación:{' '}
-              <strong>{new Date(status.plan.period_end).toLocaleDateString('es-CO')}</strong>
+              <strong>{new Date(periodEnd).toLocaleDateString('es-CO')}</strong>
             </p>
           )}
         </div>
@@ -220,13 +225,13 @@ export function BillingPanel({ role }: { role: string }) {
         <header className="mb-3 flex items-center justify-between">
           <h3 className="serif m-0 text-[16px] font-semibold">Uso del periodo actual</h3>
           <span className="text-[11px] muted">
-            Desde {new Date(status.plan.period_start || Date.now()).toLocaleDateString('es-CO')}
+            Desde {new Date(periodStart || Date.now()).toLocaleDateString('es-CO')}
           </span>
         </header>
         <div className="grid gap-3">
           {QUOTA_DISPLAY.map((q) => {
-            const limit = status.quotas[q.quotaKey];
-            const used = status.usage[q.kind] || 0;
+            const limit = quotas[q.quotaKey];
+            const used = usage[q.kind] || 0;
             const pct = limit ? Math.min(100, (used / limit) * 100) : 0;
             const isOver = flags[`over_${q.kind === 'llm_call' ? 'llm' : q.kind === 'voice_minute' ? 'voice' : 'docs'}`];
             const isNear = flags[`near80_${q.kind === 'llm_call' ? 'llm' : q.kind === 'voice_minute' ? 'voice' : 'docs'}`];
@@ -308,7 +313,7 @@ export function BillingPanel({ role }: { role: string }) {
       <section className="surface p-5">
         <h3 className="serif m-0 mb-3 text-[16px] font-semibold">Features habilitadas en tu plan</h3>
         <ul className="grid gap-1.5 text-[12.5px] md:grid-cols-2">
-          {Object.entries(status.features || {}).map(([key, on]) => (
+          {Object.entries(features).map(([key, on]) => (
             <li key={key} className="flex items-center gap-2">
               {on ? <Check size={13} className="text-ok" /> : <X size={13} className="text-ink-3" />}
               <span className={cn(on ? 'text-ink-2' : 'muted line-through')}>{featureLabel(key)}</span>
