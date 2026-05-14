@@ -25,21 +25,23 @@ export async function registerPush(): Promise<PushRegisterResult> {
     return { ok: false, reason: 'unsupported', message: 'Tu navegador no soporta Web Push.' };
   }
 
-  // 1. VAPID key
-  let publicKey: string | null = null;
-  try {
-    const r = await fetch('/api/push/vapid-key', { cache: 'no-store' });
-    const data = await r.json();
-    if (!data.configured) {
-      return {
-        ok: false,
-        reason: 'not_configured',
-        message: data.instructions || 'Push no configurado en el servidor.',
-      };
+  // 1. VAPID key · fast-path env var, fallback al endpoint
+  let publicKey: string | null = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null;
+  if (!publicKey) {
+    try {
+      const r = await fetch('/api/push/vapid-key', { cache: 'no-store' });
+      const data = await r.json();
+      if (!data.configured) {
+        return {
+          ok: false,
+          reason: 'not_configured',
+          message: data.instructions || 'Push no configurado en el servidor.',
+        };
+      }
+      publicKey = data.public_key;
+    } catch {
+      return { ok: false, reason: 'error', message: 'No pude obtener la VAPID key' };
     }
-    publicKey = data.public_key;
-  } catch {
-    return { ok: false, reason: 'error', message: 'No pude obtener la VAPID key' };
   }
   if (!publicKey) return { ok: false, reason: 'not_configured' };
 

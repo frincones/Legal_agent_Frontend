@@ -6,6 +6,9 @@ import { VoiceProvider } from '@/components/voice/VoiceProvider';
 import { CommandPalette } from '@/components/command/CommandPalette';
 import { HITLController } from '@/components/hitl/HITLController';
 import { QuotaBanner } from '@/components/shell/QuotaBanner';
+import { OfflineIndicator } from '@/components/shell/OfflineIndicator';
+import { PWAInstallPrompt } from '@/components/shell/PWAInstallPrompt';
+import { MobileBottomNav } from '@/components/shell/MobileBottomNav';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   // Fast: reads cookie + decodes JWT locally · no Supabase roundtrip.
@@ -29,6 +32,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <VoiceProvider>
       <div className="flex h-screen w-screen flex-col overflow-hidden bg-bg text-ink">
+        <OfflineIndicator />
         <QuotaBanner />
         <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden md:grid-cols-[248px_1fr]">
         {children}
@@ -40,6 +44,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <CommandPalette />
         <HITLController />
         </div>
+        <MobileBottomNav />
+        <PWAInstallPrompt />
       </div>
     </VoiceProvider>
   );
