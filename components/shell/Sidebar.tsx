@@ -21,7 +21,8 @@ export type SidebarKey =
   | 'insights'
   | 'automation'
   | 'trust'
-  | 'firmas';
+  | 'firmas'
+  | 'marketplace';
 
 type SidebarItem = {
   id: SidebarKey;
@@ -69,6 +70,7 @@ export function Sidebar({
     { id: 'facturacion', href: '/facturacion', icon: 'doc', label: 'Facturación' },
     { id: 'trust', href: '/trust', icon: 'shield', label: 'Fondos cliente' },
     { id: 'firmas', href: '/firmas', icon: 'edit', label: 'Firmas' },
+    { id: 'marketplace', href: '/marketplace', icon: 'badge', label: 'Marketplace' },
     { id: 'leads', href: '/leads', icon: 'send', label: 'Leads' },
     { id: 'insights', href: '/insights', icon: 'bolt', label: 'Insights', accent: true },
     { id: 'automation', href: '/automation', icon: 'shield', label: 'Automatización' },
