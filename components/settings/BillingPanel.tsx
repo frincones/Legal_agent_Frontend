@@ -113,8 +113,8 @@ export function BillingPanel() {
     );
   }
 
-  const currentCode = sub?.plan.code || 'free';
-  const currentStatus = sub?.plan.status || 'active';
+  const currentCode = sub?.plan?.code || 'free';
+  const currentStatus = sub?.plan?.status || 'active';
 
   return (
     <div className="grid gap-4">
@@ -122,10 +122,10 @@ export function BillingPanel() {
         <div>
           <div className="text-[11px] uppercase tracking-wider muted">Plan actual</div>
           <div className="serif text-[18px] font-semibold">
-            {sub?.plan.name || 'Free Trial'}
+            {sub?.plan?.name || 'Free Trial'}
             <span className="ml-2 text-[11.5px] muted">({currentStatus})</span>
           </div>
-          {sub?.plan.period_end && (
+          {sub?.plan?.period_end && (
             <div className="text-[11.5px] muted">
               Próximo cobro: {new Date(sub.plan.period_end).toLocaleDateString('es-CO')}
             </div>

@@ -6,15 +6,23 @@ import { toast } from 'sonner';
 import { countQueuedJobs, requestDrainNow } from '@/lib/offline/queue';
 
 export function OfflineIndicator() {
-  const [online, setOnline] = useState<boolean>(
-    typeof navigator === 'undefined' ? true : navigator.onLine,
-  );
+  // Iniciar online=true para evitar hydration mismatch; el useEffect lo corrige.
+  const [online, setOnline] = useState<boolean>(true);
   const [queued, setQueued] = useState(0);
   const [draining, setDraining] = useState(false);
 
-  const refresh = async () => setQueued(await countQueuedJobs());
+  const refresh = async () => {
+    try {
+      setQueued(await countQueuedJobs());
+    } catch {
+      /* IndexedDB no disponible (modo incógnito) — ignorar */
+    }
+  };
 
   useEffect(() => {
+    if (typeof navigator !== 'undefined' && 'onLine' in navigator) {
+      setOnline(navigator.onLine);
+    }
     void refresh();
     const onOnline = () => {
       setOnline(true);

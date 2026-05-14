@@ -5,13 +5,14 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatCOP(amount: number): string {
+export function formatCOP(amount: number | null | undefined): string {
+  const safe = typeof amount === 'number' && Number.isFinite(amount) ? amount : 0;
   return new Intl.NumberFormat('es-CO', {
     style: 'currency',
     currency: 'COP',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(amount);
+  }).format(safe);
 }
 
 export function formatDate(date: Date | string, opts: Intl.DateTimeFormatOptions = {}): string {
