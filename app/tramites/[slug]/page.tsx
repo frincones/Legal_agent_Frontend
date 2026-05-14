@@ -35,7 +35,7 @@ export default async function WizardPage({
   return (
     <main className="min-h-screen bg-bg">
       <header className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4 border-b border-line">
-        <Link href="/wizard" className="flex items-center gap-2 text-ink-3 hover:text-ink">
+        <Link href="/tramites" className="flex items-center gap-2 text-ink-3 hover:text-ink">
           <Logo size={18} />
           <span className="text-[12.5px]">Volver</span>
         </Link>

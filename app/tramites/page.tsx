@@ -73,7 +73,7 @@ export default async function WizardLanding() {
           wizards.map((w) => (
             <Link
               key={w.slug}
-              href={`/wizard/${w.slug}`}
+              href={`/tramites/${w.slug}`}
               className="surface flex flex-col items-start gap-3 p-6 transition hover:border-accent hover:shadow-1"
             >
               <span className="text-[40px]">{w.icon || '📄'}</span>

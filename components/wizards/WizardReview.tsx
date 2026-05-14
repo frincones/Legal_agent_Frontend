@@ -118,7 +118,7 @@ export function WizardReview({
           Para volver a ver este documento, guarda este link:
           <br />
           <code className="mono text-accent break-all">
-            {typeof window !== 'undefined' ? `${window.location.origin}/wizard/resume?token=${token}` : ''}
+            {typeof window !== 'undefined' ? `${window.location.origin}/tramites/resume?token=${token}` : ''}
           </code>
         </p>
       </div>

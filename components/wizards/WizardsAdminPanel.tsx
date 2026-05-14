@@ -89,7 +89,7 @@ export function WizardsAdminPanel() {
   useEffect(() => { void refresh(); }, [refresh]);
 
   function copyPublicUrl(slug: string) {
-    const url = `${window.location.origin}/wizard/${slug}`;
+    const url = `${window.location.origin}/tramites/${slug}`;
     void navigator.clipboard.writeText(url);
     toast.success('URL pública copiada');
   }
@@ -134,7 +134,7 @@ export function WizardsAdminPanel() {
                     <span className="text-[13.5px] font-semibold">{t.name}</span>
                     {t.is_system && <span className="chip chip-purple text-[10px]">system</span>}
                     {!t.active && <span className="chip chip-neutral text-[10px]">inactivo</span>}
-                    <span className="text-[10.5px] muted">/wizard/{t.slug}</span>
+                    <span className="text-[10.5px] muted">/tramites/{t.slug}</span>
                     <button
                       onClick={() => copyPublicUrl(t.slug)}
                       className="btn btn-icon btn-ghost btn-sm"
@@ -143,7 +143,7 @@ export function WizardsAdminPanel() {
                       <Copy size={11} />
                     </button>
                     <a
-                      href={`/wizard/${t.slug}`}
+                      href={`/tramites/${t.slug}`}
                       target="_blank"
                       rel="noopener"
                       className="btn btn-icon btn-ghost btn-sm"
