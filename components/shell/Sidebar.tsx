@@ -22,7 +22,8 @@ export type SidebarKey =
   | 'automation'
   | 'trust'
   | 'firmas'
-  | 'marketplace';
+  | 'marketplace'
+  | 'kb';
 
 type SidebarItem = {
   id: SidebarKey;
@@ -64,6 +65,7 @@ export function Sidebar({
     { id: 'clientes', href: '/clientes', icon: 'users', label: 'Clientes', count: counts.clientes ?? null, requires: 'clients' },
     { id: 'calendario', href: '/calendario', icon: 'cal', label: 'Calendario', count: counts.calendario ?? null, requires: 'calendar' },
     { id: 'documentos', href: '/documentos', icon: 'doc', label: 'Documentos', requires: 'documents' },
+    { id: 'kb', href: '/kb', icon: 'badge', label: 'Conocimiento', requires: 'documents' },
     { id: 'inbox', href: '/notificaciones', icon: 'inbox', label: 'Notificaciones', count: counts.inbox ?? null, requires: 'inbox' },
     { id: 'buscar', href: '/buscar', icon: 'search', label: 'Buscar' },
     { id: 'reportes', href: '/reportes', icon: 'badge', label: 'Reportes' },

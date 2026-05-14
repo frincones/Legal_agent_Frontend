@@ -15,6 +15,16 @@ type SearchResult = {
   sentencias: Array<{ id: string; numero: string; corte: string; rubro: string | null }>;
 };
 
+type KBHit = {
+  id: string;
+  title: string;
+  body: string;
+  kind: string;
+  tags: string[];
+  pinned: boolean;
+  rank: number;
+};
+
 const EMPTY: SearchResult = { matters: [], clients: [], documents: [], sentencias: [] };
 
 export function CommandPalette() {
@@ -23,6 +33,7 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult>(EMPTY);
+  const [kbHits, setKbHits] = useState<KBHit[]>([]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -44,6 +55,7 @@ export function CommandPalette() {
   useEffect(() => {
     if (query.trim().length < 2) {
       setResults(EMPTY);
+      setKbHits([]);
       return;
     }
     const ctrl = new AbortController();
@@ -56,7 +68,24 @@ export function CommandPalette() {
       } catch {
         /* ignore */
       }
-    }, 120);
+      // KB semantic search (paralelo, no bloquea cmdk results)
+      if (query.trim().length >= 3) {
+        try {
+          const kbRes = await fetch('/api/kb/search', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ query: query.trim(), limit: 5, use_vector: true }),
+            signal: ctrl.signal,
+          });
+          if (kbRes.ok) {
+            const data = await kbRes.json();
+            setKbHits(data.items || []);
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+    }, 140);
     return () => {
       clearTimeout(t);
       ctrl.abort();
@@ -190,10 +219,25 @@ export function CommandPalette() {
                   ))}
                 </Group>
               )}
+              {kbHits.length > 0 && (
+                <Group heading={`Conocimiento del despacho (${kbHits.length})`}>
+                  {kbHits.map((h) => (
+                    <Item
+                      key={h.id}
+                      value={`kb-${h.id}`}
+                      icon={Ic.badge}
+                      title={h.title}
+                      sub={(h.body || '').slice(0, 90)}
+                      onSelect={() => go(`/kb?entry=${h.id}`)}
+                    />
+                  ))}
+                </Group>
+              )}
               {results.matters.length === 0 &&
                 results.clients.length === 0 &&
                 results.documents.length === 0 &&
-                results.sentencias.length === 0 && (
+                results.sentencias.length === 0 &&
+                kbHits.length === 0 && (
                   <div className="p-4 text-center text-[12.5px] muted">
                     Sin resultados para &ldquo;{query}&rdquo;
                   </div>
