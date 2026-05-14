@@ -20,7 +20,8 @@ export type SidebarKey =
   | 'leads'
   | 'insights'
   | 'automation'
-  | 'trust';
+  | 'trust'
+  | 'firmas';
 
 type SidebarItem = {
   id: SidebarKey;
@@ -67,6 +68,7 @@ export function Sidebar({
     { id: 'reportes', href: '/reportes', icon: 'badge', label: 'Reportes' },
     { id: 'facturacion', href: '/facturacion', icon: 'doc', label: 'Facturación' },
     { id: 'trust', href: '/trust', icon: 'shield', label: 'Fondos cliente' },
+    { id: 'firmas', href: '/firmas', icon: 'edit', label: 'Firmas' },
     { id: 'leads', href: '/leads', icon: 'send', label: 'Leads' },
     { id: 'insights', href: '/insights', icon: 'bolt', label: 'Insights', accent: true },
     { id: 'automation', href: '/automation', icon: 'shield', label: 'Automatización' },
