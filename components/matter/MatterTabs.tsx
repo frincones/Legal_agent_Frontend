@@ -25,6 +25,8 @@ export const MATTER_TABS = [
   'Tareas',
   // Sprint 20 · Judge perspective
   'Juez',
+  // Sprint 21 · Evidence Authenticity
+  'Evidencia',
 ] as const;
 export type MatterTab = (typeof MATTER_TABS)[number];
 

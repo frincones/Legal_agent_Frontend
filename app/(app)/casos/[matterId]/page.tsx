@@ -19,6 +19,7 @@ import { MatterPresenceHeartbeat } from '@/components/collab/MatterPresenceHeart
 import { MatterPredictionCard } from '@/components/predictions/MatterPredictionCard';
 import { TasksList } from '@/components/tasks/TasksList';
 import { JudgePerspectivePanel } from '@/components/judges/JudgePerspectivePanel';
+import { EvidenceCheckPanel } from '@/components/evidence/EvidenceCheckPanel';
 import { DocumentRowActions } from '@/components/matter/DocumentRowActions';
 import { fetchMatter, fetchMatterTimeline } from '@/lib/api/rsc-fetchers';
 import { createClient } from '@/lib/supabase/server';
@@ -453,6 +454,17 @@ export default async function CasoDetallePage({ params }: { params: { matterId: 
               <section className="surface flex flex-col gap-3 p-[var(--pad-card)]">
                 <JudgePerspectivePanel matterId={matter.id} />
               </section>
+            ),
+            'Evidencia': (
+              <EvidenceCheckPanel
+                matterId={matter.id}
+                documents={documentos.map((d) => ({
+                  id: d.id,
+                  titulo: d.titulo,
+                  kind: d.kind,
+                  resumen_ia: d.resumen_ia,
+                }))}
+              />
             ),
           }}
         />
