@@ -28,7 +28,8 @@ export type SidebarKey =
   | 'menciones'
   | 'mi-dia'
   | 'tareas'
-  | 'dashboard';
+  | 'dashboard'
+  | 'intake';
 
 type SidebarItem = {
   id: SidebarKey;
@@ -84,6 +85,7 @@ export function Sidebar({
     { id: 'firmas', href: '/firmas', icon: 'edit', label: 'Firmas' },
     { id: 'marketplace', href: '/marketplace', icon: 'badge', label: 'Marketplace' },
     { id: 'leads', href: '/leads', icon: 'send', label: 'Leads' },
+    { id: 'intake', href: '/intake-forms', icon: 'link', label: 'Intake forms', count: counts.intake ?? null },
     { id: 'insights', href: '/insights', icon: 'bolt', label: 'Insights', accent: true },
     { id: 'automation', href: '/automation', icon: 'shield', label: 'Automatización' },
   ];
