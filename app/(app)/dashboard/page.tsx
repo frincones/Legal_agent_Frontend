@@ -9,9 +9,14 @@ export const dynamic = 'force-dynamic';
 export default async function DashboardEjecutivoPage() {
   const principal = await getSessionPrincipal();
   if (!principal) redirect('/login');
-  const allowed = ['admin', 'socio_senior', 'socio_junior'];
+  // Sprint 18 · roles que pueden ver el dashboard ejecutivo.
+  // Incluye roles autónomos (in_house, independiente, consultor) que
+  // legítimamente quieren ver KPIs de SU operación.
+  // Si el usuario llega sin permiso, lo mandamos a /inicio (no a /, que es
+  // landing y se siente como "sesión cerrada").
+  const allowed = ['admin', 'socio_senior', 'socio_junior', 'in_house', 'independiente', 'consultor'];
   if (!principal.role || !allowed.includes(principal.role)) {
-    redirect('/');
+    redirect('/inicio?denied=dashboard');
   }
   return (
     <AppShell active="inicio">
