@@ -13,6 +13,9 @@ import { InstanceSelector, InstanceBadge } from '@/components/matter/InstanceSel
 import { DocumentDropzone } from '@/components/documents/DocumentDropzone';
 import { HorasGastosTab } from '@/components/billing/HorasGastosTab';
 import { MatterLessonsTab } from '@/components/matter/MatterLessonsTab';
+import { CommentsThread } from '@/components/collab/CommentsThread';
+import { PresenceBar } from '@/components/collab/PresenceBar';
+import { MatterPresenceHeartbeat } from '@/components/collab/MatterPresenceHeartbeat';
 import { DocumentRowActions } from '@/components/matter/DocumentRowActions';
 import { fetchMatter, fetchMatterTimeline } from '@/lib/api/rsc-fetchers';
 import { createClient } from '@/lib/supabase/server';
@@ -381,8 +384,14 @@ export default async function CasoDetallePage({ params }: { params: { matterId: 
               />
             </span>
           }
-          actions={<MatterActions matterId={matter.id} canvasHref={`/casos/${matter.id}/canvas`} />}
+          actions={
+            <div className="flex items-center gap-3">
+              <PresenceBar matterId={matter.id} />
+              <MatterActions matterId={matter.id} canvasHref={`/casos/${matter.id}/canvas`} />
+            </div>
+          }
         />
+        <MatterPresenceHeartbeat matterId={matter.id} />
 
         <MatterTabs
           counts={{
@@ -414,6 +423,17 @@ export default async function CasoDetallePage({ params }: { params: { matterId: 
             Calendario: calendarioPanel,
             'Horas y Gastos': <HorasGastosTab matterId={matter.id} />,
             'Lecciones': <MatterLessonsTab matterId={matter.id} />,
+            'Comentarios': (
+              <section className="surface flex flex-col gap-3 p-[var(--pad-card)]">
+                <header>
+                  <h3 className="serif m-0 text-[16px] font-semibold">Comentarios del caso</h3>
+                  <p className="text-[12px] muted">
+                    Comentarios anclados al caso. Usa @ para mencionar a alguien del despacho.
+                  </p>
+                </header>
+                <CommentsThread anchor={{ kind: 'matter', matter_id: matter.id }} />
+              </section>
+            ),
           }}
         />
       </main>
