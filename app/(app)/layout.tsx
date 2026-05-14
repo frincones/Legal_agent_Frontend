@@ -5,7 +5,9 @@ import { VoiceHUD } from '@/components/voice/VoiceHUD';
 import { VoiceProvider } from '@/components/voice/VoiceProvider';
 import { CommandPalette } from '@/components/command/CommandPalette';
 import { HITLController } from '@/components/hitl/HITLController';
-import { QuotaBanner } from '@/components/shell/QuotaBanner';
+import { QuotaBanner } from '@/components/billing/QuotaBanner';
+import { UpgradeModal } from '@/components/billing/UpgradeModal';
+import { QuotaErrorWatcher } from '@/components/billing/QuotaErrorWatcher';
 import { OfflineIndicator } from '@/components/shell/OfflineIndicator';
 import { PWAInstallPrompt } from '@/components/shell/PWAInstallPrompt';
 import { MobileBottomNav } from '@/components/shell/MobileBottomNav';
@@ -46,6 +48,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
         <MobileBottomNav />
         <PWAInstallPrompt />
+        <UpgradeModal />
+        <QuotaErrorWatcher />
       </div>
     </VoiceProvider>
   );
