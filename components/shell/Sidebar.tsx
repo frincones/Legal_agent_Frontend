@@ -25,7 +25,9 @@ export type SidebarKey =
   | 'marketplace'
   | 'kb'
   | 'actividad'
-  | 'menciones';
+  | 'menciones'
+  | 'mi-dia'
+  | 'tareas';
 
 type SidebarItem = {
   id: SidebarKey;
@@ -62,6 +64,8 @@ export function Sidebar({
 }) {
   const allItems: SidebarItem[] = [
     { id: 'inicio', href: '/inicio', icon: 'home', label: 'Inicio' },
+    { id: 'mi-dia', href: '/mi-dia', icon: 'bolt', label: 'Mi día', accent: true },
+    { id: 'tareas', href: '/tareas', icon: 'check', label: 'Tareas', count: counts.tareas ?? null },
     { id: 'casos', href: '/casos', icon: 'folder', label: 'Casos', count: counts.casos ?? null, requires: 'cases' },
     { id: 'canvas', href: '/canvas', icon: 'bolt', label: 'Live Canvas', accent: true, requires: 'canvas' },
     { id: 'clientes', href: '/clientes', icon: 'users', label: 'Clientes', count: counts.clientes ?? null, requires: 'clients' },

@@ -21,6 +21,8 @@ export const MATTER_TABS = [
   'Lecciones',
   // Sprint 16 · Colaboración
   'Comentarios',
+  // Sprint 17 · Productividad
+  'Tareas',
 ] as const;
 export type MatterTab = (typeof MATTER_TABS)[number];
 

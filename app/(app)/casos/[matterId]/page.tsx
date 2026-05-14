@@ -16,6 +16,8 @@ import { MatterLessonsTab } from '@/components/matter/MatterLessonsTab';
 import { CommentsThread } from '@/components/collab/CommentsThread';
 import { PresenceBar } from '@/components/collab/PresenceBar';
 import { MatterPresenceHeartbeat } from '@/components/collab/MatterPresenceHeartbeat';
+import { MatterPredictionCard } from '@/components/predictions/MatterPredictionCard';
+import { TasksList } from '@/components/tasks/TasksList';
 import { DocumentRowActions } from '@/components/matter/DocumentRowActions';
 import { fetchMatter, fetchMatterTimeline } from '@/lib/api/rsc-fetchers';
 import { createClient } from '@/lib/supabase/server';
@@ -115,6 +117,7 @@ export default async function CasoDetallePage({ params }: { params: { matterId: 
   const resumenPanel = (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-[1.4fr_1fr]">
       <div className="flex flex-col gap-4">
+        <MatterPredictionCard matterId={matter.id} />
         {documentos[0]?.resumen_ia && (
           <section className="surface p-[var(--pad-card)]">
             <div className="flex items-center gap-2">
@@ -432,6 +435,17 @@ export default async function CasoDetallePage({ params }: { params: { matterId: 
                   </p>
                 </header>
                 <CommentsThread anchor={{ kind: 'matter', matter_id: matter.id }} />
+              </section>
+            ),
+            'Tareas': (
+              <section className="surface flex flex-col gap-3 p-[var(--pad-card)]">
+                <header>
+                  <h3 className="serif m-0 text-[16px] font-semibold">Tareas del caso</h3>
+                  <p className="text-[12px] muted">
+                    Tareas asignables al despacho · plazo + prioridad + responsable.
+                  </p>
+                </header>
+                <TasksList matterId={matter.id} showMatterColumn={false} />
               </section>
             ),
           }}
