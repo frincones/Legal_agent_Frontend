@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -13,7 +13,18 @@ const PROVIDER_LABELS: Record<string, string> = {
   gmail: 'Gmail',
 };
 
-export default function OAuthReturn() {
+// Suspense wrapper requerido por Next.js 14 cuando usamos useSearchParams
+// durante static prerender. Sin esto, el build falla con
+// "useSearchParams() should be wrapped in a suspense boundary".
+export default function OAuthReturnPage() {
+  return (
+    <Suspense fallback={<ProcessingView />}>
+      <OAuthReturnInner />
+    </Suspense>
+  );
+}
+
+function OAuthReturnInner() {
   const router = useRouter();
   const params = useSearchParams();
   const [phase, setPhase] = useState<'processing' | 'success' | 'error'>('processing');
@@ -38,48 +49,59 @@ export default function OAuthReturn() {
       setErrorMsg('Respuesta inesperada del proveedor OAuth');
     }
 
-    // Redirect a /settings/integraciones después de 1.5s
     const timer = setTimeout(() => {
       router.replace('/settings/integraciones');
     }, 1800);
     return () => clearTimeout(timer);
   }, [params, router]);
 
+  if (phase === 'processing') return <ProcessingView />;
+  if (phase === 'success') return <SuccessView label={label} />;
+  return <ErrorView errorMsg={errorMsg} />;
+}
+
+function Container({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-bg p-6">
-      <div className="surface w-full max-w-md p-8 text-center">
-        {phase === 'processing' && (
-          <>
-            <Spinner />
-            <h1 className="serif mt-5 text-[20px] font-semibold">Procesando autorización…</h1>
-            <p className="mt-2 text-[13px] text-ink-2">Un momento.</p>
-          </>
-        )}
-        {phase === 'success' && (
-          <>
-            <SuccessIcon />
-            <h1 className="serif mt-5 text-[20px] font-semibold">
-              {label} conectado correctamente
-            </h1>
-            <p className="mt-2 text-[13px] text-ink-2">
-              Redirigiendo a configuración…
-            </p>
-          </>
-        )}
-        {phase === 'error' && (
-          <>
-            <ErrorIcon />
-            <h1 className="serif mt-5 text-[20px] font-semibold">No se pudo conectar</h1>
-            <p className="mt-2 text-[13px] text-ink-2 break-words">
-              {errorMsg}
-            </p>
-            <p className="mt-3 text-[12px] text-ink-3">
-              Redirigiendo a configuración para reintentar…
-            </p>
-          </>
-        )}
-      </div>
+      <div className="surface w-full max-w-md p-8 text-center">{children}</div>
     </div>
+  );
+}
+
+function ProcessingView() {
+  return (
+    <Container>
+      <Spinner />
+      <h1 className="serif mt-5 text-[20px] font-semibold">Procesando autorización…</h1>
+      <p className="mt-2 text-[13px] text-ink-2">Un momento.</p>
+    </Container>
+  );
+}
+
+function SuccessView({ label }: { label: string }) {
+  return (
+    <Container>
+      <SuccessIcon />
+      <h1 className="serif mt-5 text-[20px] font-semibold">
+        {label} conectado correctamente
+      </h1>
+      <p className="mt-2 text-[13px] text-ink-2">
+        Redirigiendo a configuración…
+      </p>
+    </Container>
+  );
+}
+
+function ErrorView({ errorMsg }: { errorMsg: string }) {
+  return (
+    <Container>
+      <ErrorIcon />
+      <h1 className="serif mt-5 text-[20px] font-semibold">No se pudo conectar</h1>
+      <p className="mt-2 text-[13px] text-ink-2 break-words">{errorMsg}</p>
+      <p className="mt-3 text-[12px] text-ink-3">
+        Redirigiendo a configuración para reintentar…
+      </p>
+    </Container>
   );
 }
 
