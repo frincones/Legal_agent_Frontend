@@ -13,6 +13,8 @@ import {
 import { fetchMatters } from '@/lib/api/rsc-fetchers';
 import { getCachedShellData } from '@/lib/api/cached-fetchers';
 import { formatCOP, cn } from '@/lib/utils';
+import { WelcomeBanner } from '@/components/onboarding/WelcomeBanner';
+import { Suspense } from 'react';
 
 export const revalidate = 30;
 
@@ -73,6 +75,7 @@ export default async function InicioPage() {
         />
 
         <div className="flex-1 overflow-auto p-[var(--pad-screen)]">
+          <Suspense fallback={null}><WelcomeBanner /></Suspense>
           {urgentes[0] && <Greeting matterTitulo={urgentes[0].titulo} matterId={urgentes[0].id} />}
 
           <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">

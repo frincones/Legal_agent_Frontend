@@ -80,7 +80,7 @@ export function OnboardingWizard() {
         throw new Error(text.slice(0, 200) || `Error ${res.status}`);
       }
       toast.success('¡Bienvenido! Tu workspace está listo.');
-      router.replace('/inicio');
+      router.replace('/inicio?welcome=1');
       router.refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Error completando onboarding');

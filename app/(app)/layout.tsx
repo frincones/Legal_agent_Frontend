@@ -12,6 +12,9 @@ import { OfflineIndicator } from '@/components/shell/OfflineIndicator';
 import { PWAInstallPrompt } from '@/components/shell/PWAInstallPrompt';
 import { MobileBottomNav } from '@/components/shell/MobileBottomNav';
 import { EntitlementsProvider } from '@/lib/entitlements/EntitlementsContext';
+import { ActivationChecklist } from '@/components/onboarding/ActivationChecklist';
+import { LexHelper } from '@/components/onboarding/LexHelper';
+import { WelcomeBanner } from '@/components/onboarding/WelcomeBanner';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   // Fast: reads cookie + decodes JWT locally · no Supabase roundtrip.
@@ -52,6 +55,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <PWAInstallPrompt />
         <UpgradeModal />
         <QuotaErrorWatcher />
+        <ActivationChecklist />
+        <LexHelper />
       </div>
     </VoiceProvider>
     </EntitlementsProvider>
