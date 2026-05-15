@@ -20,6 +20,9 @@ export function PublicNav() {
         <Link href="/seguridad" className="text-[12.5px] text-ink-2 hover:text-ink">
           Seguridad
         </Link>
+        <Link href="/status" className="text-[12.5px] text-ink-2 hover:text-ink">
+          Status
+        </Link>
         <Link href="/tramites" className="text-[12.5px] text-ink-3 hover:text-ink">
           Trámites ciudadanos
         </Link>

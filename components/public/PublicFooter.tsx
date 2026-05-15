@@ -25,6 +25,9 @@ export function PublicFooter() {
           <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-3">Compañía</h3>
           <ul className="grid gap-1.5 text-[12px]">
             <li><Link href="/seguridad" className="text-ink-2 hover:text-ink">Seguridad</Link></li>
+            <li><Link href="/status" className="text-ink-2 hover:text-ink">Status</Link></li>
+            <li><Link href="/terms" className="text-ink-2 hover:text-ink">Términos de servicio</Link></li>
+            <li><Link href="/dpa" className="text-ink-2 hover:text-ink">DPA · Data Processing</Link></li>
             <li><Link href="/aviso-privacidad" className="text-ink-2 hover:text-ink">Aviso de privacidad</Link></li>
             <li><a href="mailto:hello@lexai.co" className="text-ink-2 hover:text-ink">Contacto</a></li>
           </ul>
