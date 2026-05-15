@@ -5,6 +5,7 @@ import { TopBar } from '@/components/shell/TopBar';
 import { IntegrationsManager } from '@/components/settings/IntegrationsManager';
 import { CalendarIntegrationsManager } from '@/components/settings/CalendarIntegrationsManager';
 import { WhatsAppIntegrationPanel } from '@/components/settings/WhatsAppIntegrationPanel';
+import { IntegrationsGrid } from '@/components/settings/IntegrationsGrid';
 import { SettingsTabs } from '@/components/settings/SettingsTabs';
 import { getSessionPrincipal } from '@/lib/supabase/session';
 
@@ -36,6 +37,7 @@ export default async function SettingsIntegraciones() {
             <IntegrationsManager />
             <CalendarIntegrationsManager />
             <WhatsAppIntegrationPanel />
+            <IntegrationsGrid />
           </div>
         </div>
       </main>
