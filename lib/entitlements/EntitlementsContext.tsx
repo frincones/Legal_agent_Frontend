@@ -90,14 +90,17 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
   useEffect(() => { void load(); }, [load]);
 
   const has = useCallback((moduleKey: string): boolean => {
-    if (!data) return true;  // permisivo durante carga
+    // Durante la carga: permisivo (evita flicker)
+    if (loading && !data) return true;
+    // Sin data después de cargar (error 403, JWT sin firm_id, etc.): fail-CLOSE
+    if (!data) return false;
     const m = data.modules[moduleKey];
     if (!m) {
       // Si el módulo NO está en el catálogo, asumimos permitido (no se debe romper la app)
       return true;
     }
     return m.enabled;
-  }, [data]);
+  }, [data, loading]);
 
   const quota = useCallback((quotaKey: string): QuotaState | null => {
     return data?.quotas[quotaKey] || null;

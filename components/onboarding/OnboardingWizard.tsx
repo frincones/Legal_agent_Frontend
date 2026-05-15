@@ -68,7 +68,8 @@ export function OnboardingWizard() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           modo_ejercicio: mode,
-          role,
+          // role NO se envía · ya quedó asignado al crear la firm (admin)
+          // o al unirse con código (rol que el admin de la firm definió)
           practice_areas: areas,
           primary_area: primary,
           full_name: fullName.trim() || undefined,
@@ -161,29 +162,17 @@ export function OnboardingWizard() {
                 placeholder="Opcional · Ej: 123.456 del C.S. de la J."
               />
             </label>
-            <label className="block">
-              <span className="text-[11.5px] font-medium muted">Rol funcional</span>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value as UserRole)}
-                className="mt-1 w-full rounded-md border border-line bg-bg-elev px-3 py-2 text-[13px] outline-none focus:border-accent"
-              >
-                {(mode ? SUGGESTED_ROLES_BY_MODE[mode] : []).length > 0 && (
-                  <optgroup label={`Sugeridos para ${modeLabel(mode)}`}>
-                    {(mode ? SUGGESTED_ROLES_BY_MODE[mode] : []).map((r) => (
-                      <option key={r} value={r}>{ROLES[r].label}</option>
-                    ))}
-                  </optgroup>
-                )}
-                <optgroup label="Otros roles">
-                  {Object.entries(ROLES)
-                    .filter(([k]) => !((mode ? SUGGESTED_ROLES_BY_MODE[mode] : []) as string[]).includes(k))
-                    .map(([k, v]) => (
-                      <option key={k} value={k}>{v.label}</option>
-                    ))}
-                </optgroup>
-              </select>
-            </label>
+            <div className="block">
+              <span className="text-[11.5px] font-medium muted">Tu rol</span>
+              <div className="mt-1 rounded-md border border-line bg-bg-sunken px-3 py-2 text-[13px]">
+                <strong>Admin del despacho</strong>
+                <p className="mt-0.5 text-[11px] muted">
+                  Como creaste este despacho, tienes acceso total. Puedes invitar a otros
+                  miembros en <code className="mono">Settings → Usuarios</code> y asignarles
+                  roles (Abogado, Paralegal, Secretaria, Socio).
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
