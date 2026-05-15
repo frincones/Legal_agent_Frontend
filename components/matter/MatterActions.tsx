@@ -2,8 +2,10 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
+import { CalendarPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Ic } from '@/components/atoms/icons';
+import { AudienciaModal } from '@/components/casos/AudienciaModal';
 
 const SAVED_KEY = 'lexai:matters:saved';
 
@@ -25,10 +27,21 @@ function writeSaved(set: Set<string>): void {
   }
 }
 
-export function MatterActions({ matterId, canvasHref }: { matterId: string; canvasHref: string }) {
+export function MatterActions({
+  matterId,
+  canvasHref,
+  matterTitulo,
+  clientEmail,
+}: {
+  matterId: string;
+  canvasHref: string;
+  matterTitulo?: string;
+  clientEmail?: string | null;
+}) {
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [audienciaOpen, setAudienciaOpen] = useState(false);
 
   useEffect(() => {
     setSaved(readSaved().has(matterId));
@@ -106,9 +119,24 @@ export function MatterActions({ matterId, canvasHref }: { matterId: string; canv
       >
         {Ic.bookmark} {saved ? 'Guardado' : 'Guardar'}
       </button>
+      <button
+        type="button"
+        onClick={() => setAudienciaOpen(true)}
+        className="btn"
+        title="Agendar audiencia o reunión"
+      >
+        <CalendarPlus size={14} /> Audiencia
+      </button>
       <Link href={canvasHref} className="btn btn-primary">
         {Ic.bolt} Trabajar en Canvas
       </Link>
+      <AudienciaModal
+        matterId={matterId}
+        matterTitulo={matterTitulo}
+        clientEmail={clientEmail}
+        open={audienciaOpen}
+        onOpenChange={setAudienciaOpen}
+      />
     </>
   );
 }

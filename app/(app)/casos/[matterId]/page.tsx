@@ -392,7 +392,12 @@ export default async function CasoDetallePage({ params }: { params: { matterId: 
           actions={
             <div className="flex items-center gap-3">
               <PresenceBar matterId={matter.id} />
-              <MatterActions matterId={matter.id} canvasHref={`/casos/${matter.id}/canvas`} />
+              <MatterActions
+                matterId={matter.id}
+                canvasHref={`/casos/${matter.id}/canvas`}
+                matterTitulo={matter.titulo ?? undefined}
+                clientEmail={clientRes.data?.email ?? null}
+              />
             </div>
           }
         />
