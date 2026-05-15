@@ -4,6 +4,7 @@ import { AppShell } from '@/components/shell/AppShell';
 import { TopBar } from '@/components/shell/TopBar';
 import { UsersManager } from '@/components/settings/UsersManager';
 import { SettingsTabs } from '@/components/settings/SettingsTabs';
+import { InviteCodesPanel } from '@/components/settings/InviteCodesPanel';
 import { getSessionPrincipal } from '@/lib/supabase/session';
 
 export const dynamic = 'force-dynamic';
@@ -34,6 +35,9 @@ export default async function SettingsUsuarios() {
             currentUserId={principal.user_id}
             currentUserRole={principal.role ?? 'lawyer'}
           />
+          <div className="mt-6">
+            <InviteCodesPanel currentRole={principal.role ?? 'lawyer'} />
+          </div>
         </div>
       </main>
     </AppShell>

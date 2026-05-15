@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { Ic } from '@/components/atoms/icons';
 import { createClient } from '@/lib/supabase/client';
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 
 export default function SignupPage() {
   const [fullName, setFullName] = useState('');
@@ -40,9 +41,17 @@ export default function SignupPage() {
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-[440px]">
       <h1 className="serif m-[0_0_4px] text-[28px] -tracking-[0.02em]">Crea tu cuenta</h1>
-      <p className="m-[0_0_24px] text-[13.5px] muted">
-        Verificamos tu tarjeta profesional contra el C.S. de la Judicatura. Toma 60 segundos.
+      <p className="m-[0_0_20px] text-[13.5px] muted">
+        14 días gratis · sin tarjeta de crédito · cancela cuando quieras.
       </p>
+
+      <GoogleSignInButton label="Continuar con Google" />
+
+      <div className="my-5 flex items-center gap-3 text-[11px] muted">
+        <div className="flex-1 h-px bg-line" />
+        <span>o regístrate con email</span>
+        <div className="flex-1 h-px bg-line" />
+      </div>
 
       <Field label="Nombre completo">
         <input
@@ -55,13 +64,12 @@ export default function SignupPage() {
         />
       </Field>
       <Field
-        label="Tarjeta profesional"
+        label="Tarjeta profesional (opcional · valida luego)"
         badge={tarjetaProfesional && <span className="chip chip-green"><span className="dot" />Por verificar</span>}
       >
         <input
           type="text"
-          required
-          placeholder="123456"
+          placeholder="123456 (puedes agregarla después)"
           value={tarjetaProfesional}
           onChange={(e) => setTarjeta(e.target.value)}
           className="w-full bg-transparent outline-none"

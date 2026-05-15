@@ -45,11 +45,13 @@ export async function middleware(request: NextRequest) {
   }
 
   // If logged in and visiting /login or /signup → redirect to /inicio
+  // EXCEPT: don't redirect if we're handling OAuth callback (path starts with /auth/)
   if (user && (path === '/login' || path === '/signup')) {
     const url = request.nextUrl.clone();
     url.pathname = '/inicio';
     return NextResponse.redirect(url);
   }
+  // /auth/callback is intentionally NOT protected · OAuth needs to land there sin auth pre-existente
 
   return response;
 }

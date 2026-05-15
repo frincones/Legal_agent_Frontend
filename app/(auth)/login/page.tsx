@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { Ic } from '@/components/atoms/icons';
 import { createClient } from '@/lib/supabase/client';
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 
 export default function LoginPage() {
   return (
@@ -43,7 +44,15 @@ function LoginInner() {
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-[440px]">
       <h1 className="serif m-[0_0_4px] text-[28px] -tracking-[0.02em]">Bienvenida de vuelta</h1>
-      <p className="m-[0_0_24px] text-[13.5px] muted">Continuemos donde dejaste · LexAI</p>
+      <p className="m-[0_0_20px] text-[13.5px] muted">Continuemos donde dejaste · LexAI</p>
+
+      <GoogleSignInButton label="Continuar con Google" next={next} />
+
+      <div className="my-5 flex items-center gap-3 text-[11px] muted">
+        <div className="flex-1 h-px bg-line" />
+        <span>o ingresa con email</span>
+        <div className="flex-1 h-px bg-line" />
+      </div>
 
       <Field label="Email">
         <input
