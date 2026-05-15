@@ -5,6 +5,7 @@ import { SidebarSearchTrigger } from '@/components/shell/SidebarSearchTrigger';
 import { SidebarCloseButton } from '@/components/shell/SidebarCloseButton';
 import { cn } from '@/lib/utils';
 import { hasCapability, PRIORITY_SHORTCUTS_BY_AREA, PRACTICE_AREAS, type Capability, type PracticeArea } from '@/lib/auth/roles';
+import { EntitledOnly } from '@/components/entitlements/EntitledOnly';
 
 export type SidebarKey =
   | 'inicio'
@@ -41,6 +42,8 @@ type SidebarItem = {
   accent?: boolean;
   /** Capability gate · only render if the user's role grants it. */
   requires?: Capability;
+  /** Entitlement gate · only render if firm has access to this module (Sprint 25). */
+  module?: string;
 };
 
 export function Sidebar({
@@ -67,29 +70,29 @@ export function Sidebar({
 }) {
   const allItems: SidebarItem[] = [
     { id: 'inicio', href: '/inicio', icon: 'home', label: 'Inicio' },
-    { id: 'mi-dia', href: '/mi-dia', icon: 'bolt', label: 'Mi día', accent: true },
-    { id: 'tareas', href: '/tareas', icon: 'check', label: 'Tareas', count: counts.tareas ?? null },
-    { id: 'dashboard', href: '/dashboard', icon: 'badge', label: 'Dashboard ejecutivo' },
+    { id: 'mi-dia', href: '/mi-dia', icon: 'bolt', label: 'Mi día', accent: true, module: 'my_day' },
+    { id: 'tareas', href: '/tareas', icon: 'check', label: 'Tareas', count: counts.tareas ?? null, module: 'tasks' },
+    { id: 'dashboard', href: '/dashboard', icon: 'badge', label: 'Dashboard ejecutivo', module: 'analytics_executive' },
     { id: 'casos', href: '/casos', icon: 'folder', label: 'Casos', count: counts.casos ?? null, requires: 'cases' },
-    { id: 'canvas', href: '/canvas', icon: 'bolt', label: 'Live Canvas', accent: true, requires: 'canvas' },
+    { id: 'canvas', href: '/canvas', icon: 'bolt', label: 'Live Canvas', accent: true, requires: 'canvas', module: 'canvas' },
     { id: 'clientes', href: '/clientes', icon: 'users', label: 'Clientes', count: counts.clientes ?? null, requires: 'clients' },
-    { id: 'calendario', href: '/calendario', icon: 'cal', label: 'Calendario', count: counts.calendario ?? null, requires: 'calendar' },
+    { id: 'calendario', href: '/calendario', icon: 'cal', label: 'Calendario', count: counts.calendario ?? null, requires: 'calendar', module: 'calendar' },
     { id: 'documentos', href: '/documentos', icon: 'doc', label: 'Documentos', requires: 'documents' },
-    { id: 'kb', href: '/kb', icon: 'badge', label: 'Conocimiento', requires: 'documents' },
-    { id: 'jueces', href: '/jueces', icon: 'scales', label: 'Jueces' },
-    { id: 'actividad', href: '/actividad', icon: 'bolt', label: 'Actividad' },
-    { id: 'menciones', href: '/menciones', icon: 'bell', label: 'Menciones', count: counts.menciones ?? null },
-    { id: 'inbox', href: '/notificaciones', icon: 'inbox', label: 'Notificaciones', count: counts.inbox ?? null, requires: 'inbox' },
+    { id: 'kb', href: '/kb', icon: 'badge', label: 'Conocimiento', requires: 'documents', module: 'knowledge_base' },
+    { id: 'jueces', href: '/jueces', icon: 'scales', label: 'Jueces', module: 'judges' },
+    { id: 'actividad', href: '/actividad', icon: 'bolt', label: 'Actividad', module: 'activity_feed' },
+    { id: 'menciones', href: '/menciones', icon: 'bell', label: 'Menciones', count: counts.menciones ?? null, module: 'mentions' },
+    { id: 'inbox', href: '/notificaciones', icon: 'inbox', label: 'Notificaciones', count: counts.inbox ?? null, requires: 'inbox', module: 'notifications' },
     { id: 'buscar', href: '/buscar', icon: 'search', label: 'Buscar' },
-    { id: 'reportes', href: '/reportes', icon: 'badge', label: 'Reportes' },
-    { id: 'facturacion', href: '/facturacion', icon: 'doc', label: 'Facturación' },
-    { id: 'trust', href: '/trust', icon: 'shield', label: 'Fondos cliente' },
-    { id: 'firmas', href: '/firmas', icon: 'edit', label: 'Firmas' },
-    { id: 'marketplace', href: '/marketplace', icon: 'badge', label: 'Marketplace' },
-    { id: 'leads', href: '/leads', icon: 'send', label: 'Leads' },
-    { id: 'intake', href: '/intake-forms', icon: 'link', label: 'Intake forms', count: counts.intake ?? null },
-    { id: 'insights', href: '/insights', icon: 'bolt', label: 'Insights', accent: true },
-    { id: 'automation', href: '/automation', icon: 'shield', label: 'Automatización' },
+    { id: 'reportes', href: '/reportes', icon: 'badge', label: 'Reportes', module: 'analytics_firm' },
+    { id: 'facturacion', href: '/facturacion', icon: 'doc', label: 'Facturación', module: 'invoices' },
+    { id: 'trust', href: '/trust', icon: 'shield', label: 'Fondos cliente', module: 'trust_accounts' },
+    { id: 'firmas', href: '/firmas', icon: 'edit', label: 'Firmas', module: 'signatures' },
+    { id: 'marketplace', href: '/marketplace', icon: 'badge', label: 'Marketplace', module: 'marketplace' },
+    { id: 'leads', href: '/leads', icon: 'send', label: 'Leads', module: 'leads_crm' },
+    { id: 'intake', href: '/intake-forms', icon: 'link', label: 'Intake forms', count: counts.intake ?? null, module: 'intake_forms' },
+    { id: 'insights', href: '/insights', icon: 'bolt', label: 'Insights', accent: true, module: 'ai_insights' },
+    { id: 'automation', href: '/automation', icon: 'shield', label: 'Automatización', module: 'automation_rules' },
   ];
 
   // Capability filter: e.g. funcionario_publico in_house don't get "Clientes".
@@ -117,7 +120,7 @@ export function Sidebar({
       <nav className="flex flex-col gap-px py-1">
         {items.map((it) => {
           const isActive = active === it.id;
-          return (
+          const link = (
             <Link
               key={it.id}
               href={it.href}
@@ -138,6 +141,9 @@ export function Sidebar({
               )}
             </Link>
           );
+          return it.module ? (
+            <EntitledOnly key={it.id} module={it.module} silent>{link}</EntitledOnly>
+          ) : link;
         })}
       </nav>
 

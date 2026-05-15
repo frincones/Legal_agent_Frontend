@@ -19,23 +19,35 @@ export function QuotaErrorWatcher() {
     const originalFetch = window.fetch.bind(window);
     window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       const res = await originalFetch(input, init);
-      if (res.status === 402) {
+      if (res.status === 402 || res.status === 403) {
         try {
-          // Clone so callers can still read the body.
           const cloned = res.clone();
           const data = await cloned.json().catch(() => ({}));
           const detail = data?.detail || data || {};
-          window.dispatchEvent(
-            new CustomEvent('lexai:upgrade-required', {
-              detail: {
-                kind: detail.kind,
-                used: detail.used,
-                quota: detail.quota,
-                plan: detail.plan,
-                message: detail.message,
-              },
-            }),
-          );
+          // 402 = quota_exceeded · 403 con error='module_not_entitled' = entitlements
+          if (detail.error === 'quota_exceeded' || res.status === 402) {
+            window.dispatchEvent(
+              new CustomEvent('lexai:upgrade-required', {
+                detail: {
+                  kind: detail.kind,
+                  used: detail.used,
+                  quota: detail.quota,
+                  plan: detail.plan,
+                  message: detail.message,
+                },
+              }),
+            );
+          } else if (detail.error === 'module_not_entitled') {
+            window.dispatchEvent(
+              new CustomEvent('lexai:upgrade-required', {
+                detail: {
+                  kind: detail.module,
+                  message: detail.message ||
+                    `El módulo "${detail.module}" no está incluido en tu plan actual.`,
+                },
+              }),
+            );
+          }
         } catch {
           // ignore
         }

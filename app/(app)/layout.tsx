@@ -11,6 +11,7 @@ import { QuotaErrorWatcher } from '@/components/billing/QuotaErrorWatcher';
 import { OfflineIndicator } from '@/components/shell/OfflineIndicator';
 import { PWAInstallPrompt } from '@/components/shell/PWAInstallPrompt';
 import { MobileBottomNav } from '@/components/shell/MobileBottomNav';
+import { EntitlementsProvider } from '@/lib/entitlements/EntitlementsContext';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   // Fast: reads cookie + decodes JWT locally · no Supabase roundtrip.
@@ -32,6 +33,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   return (
+    <EntitlementsProvider>
     <VoiceProvider>
       <div className="flex h-screen w-screen flex-col overflow-hidden bg-bg text-ink">
         <OfflineIndicator />
@@ -52,5 +54,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <QuotaErrorWatcher />
       </div>
     </VoiceProvider>
+    </EntitlementsProvider>
   );
 }
