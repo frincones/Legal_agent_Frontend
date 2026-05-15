@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { CalendarPlus, FolderPlus } from 'lucide-react';
+import { CalendarPlus, FolderPlus, FileSignature } from 'lucide-react';
 import { toast } from 'sonner';
 import { Ic } from '@/components/atoms/icons';
 import { AudienciaModal } from '@/components/casos/AudienciaModal';
 import { CloudPicker } from '@/components/cloud/CloudPicker';
+import { DocuSignEnvelopeModal } from '@/components/docusign/DocuSignEnvelopeModal';
 
 const SAVED_KEY = 'lexai:matters:saved';
 
@@ -44,6 +45,7 @@ export function MatterActions({
   const [uploading, setUploading] = useState(false);
   const [audienciaOpen, setAudienciaOpen] = useState(false);
   const [cloudPickerOpen, setCloudPickerOpen] = useState(false);
+  const [docuSignOpen, setDocuSignOpen] = useState(false);
 
   useEffect(() => {
     setSaved(readSaved().has(matterId));
@@ -137,6 +139,14 @@ export function MatterActions({
       >
         <FolderPlus size={14} /> Vincular nube
       </button>
+      <button
+        type="button"
+        onClick={() => setDocuSignOpen(true)}
+        className="btn"
+        title="Enviar documento a firma DocuSign"
+      >
+        <FileSignature size={14} /> Firma
+      </button>
       <Link href={canvasHref} className="btn btn-primary">
         {Ic.bolt} Trabajar en Canvas
       </Link>
@@ -151,6 +161,15 @@ export function MatterActions({
         matterId={matterId}
         open={cloudPickerOpen}
         onOpenChange={setCloudPickerOpen}
+      />
+      <DocuSignEnvelopeModal
+        matterId={matterId}
+        open={docuSignOpen}
+        onOpenChange={setDocuSignOpen}
+        defaultTitle={matterTitulo ? `Firma · ${matterTitulo}` : ''}
+        defaultSigners={
+          clientEmail ? [{ name: '', email: clientEmail, routing_order: 1 }] : undefined
+        }
       />
     </>
   );
