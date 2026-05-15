@@ -1,6 +1,9 @@
 /**
- * Sprint A · proxy `/api/integrations/[provider]/start`
+ * Sprint A · proxy `/api/integrations/start/[provider]`
  * POST → /v1/integrations/{provider}/start (genera state + auth_url)
+ *
+ * Nota: este path es /start/[provider] (no /[provider]/start) para
+ * evitar conflicto Next.js con [id] al mismo nivel.
  */
 import { proxyToRailway } from '@/lib/api/proxy';
 

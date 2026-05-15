@@ -125,7 +125,7 @@ export function IntegrationsGrid() {
   async function onConnect(provider: Provider) {
     setConnectingProvider(provider);
     try {
-      const r = await fetch(`/api/integrations/${provider}/start`, {
+      const r = await fetch(`/api/integrations/start/${provider}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ redirect_to: '/settings/integraciones' }),
