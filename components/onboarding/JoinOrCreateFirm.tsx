@@ -47,11 +47,10 @@ export function JoinOrCreateFirm({ userName }: { userName: string }) {
       const { createClient } = await import('@/lib/supabase/client');
       const supabase = createClient();
       await supabase.auth.refreshSession();
-      router.replace('/wizard');
-      router.refresh();
+      // Full reload · router.refresh() no siempre re-ejecuta server components con misma URL
+      window.location.href = '/wizard';
     } catch (e: any) {
       toast.error(e?.message || 'Error');
-    } finally {
       setBusy(false);
     }
   }
@@ -78,11 +77,9 @@ export function JoinOrCreateFirm({ userName }: { userName: string }) {
       const { createClient } = await import('@/lib/supabase/client');
       const supabase = createClient();
       await supabase.auth.refreshSession();
-      router.replace('/wizard');
-      router.refresh();
+      window.location.href = '/wizard';
     } catch (e: any) {
       toast.error(e?.message || 'Error');
-    } finally {
       setBusy(false);
     }
   }
