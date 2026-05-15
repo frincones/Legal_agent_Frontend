@@ -12,6 +12,7 @@ import { OfflineIndicator } from '@/components/shell/OfflineIndicator';
 import { PWAInstallPrompt } from '@/components/shell/PWAInstallPrompt';
 import { MobileBottomNav } from '@/components/shell/MobileBottomNav';
 import { EntitlementsProvider } from '@/lib/entitlements/EntitlementsContext';
+import { EntitledOnly } from '@/components/entitlements/EntitledOnly';
 import { ActivationChecklist } from '@/components/onboarding/ActivationChecklist';
 import { LexHelper } from '@/components/onboarding/LexHelper';
 import { WelcomeBanner } from '@/components/onboarding/WelcomeBanner';
@@ -43,11 +44,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <QuotaBanner />
         <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden md:grid-cols-[248px_1fr]">
         {children}
-        <div className="pointer-events-none fixed bottom-[16px] left-1/2 z-50 -translate-x-1/2 md:bottom-[22px]">
-          <div className="pointer-events-auto">
-            <VoiceHUD />
+        <EntitledOnly module="voice_agent" silent>
+          <div className="pointer-events-none fixed bottom-[16px] left-1/2 z-50 -translate-x-1/2 md:bottom-[22px]">
+            <div className="pointer-events-auto">
+              <VoiceHUD />
+            </div>
           </div>
-        </div>
+        </EntitledOnly>
         <CommandPalette />
         <HITLController />
         </div>

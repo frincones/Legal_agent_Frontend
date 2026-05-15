@@ -3,6 +3,7 @@ import { AppShell } from '@/components/shell/AppShell';
 import { TopBar } from '@/components/shell/TopBar';
 import { Ic } from '@/components/atoms/icons';
 import { CasesTable } from '@/components/cases/CasesTable';
+import { EntitledOnly } from '@/components/entitlements/EntitledOnly';
 import {
   InicioTopActions,
   GreetingActions,
@@ -124,11 +125,13 @@ export default async function InicioPage() {
                   sub={`Meta ${nsm.documentos_meta_mes} · ${nsm.documentos_verificados_mes >= nsm.documentos_meta_mes ? 'supera por' : 'faltan'} ${Math.abs(nsm.documentos_verificados_mes - nsm.documentos_meta_mes)}`}
                   tone={nsm.documentos_verificados_mes >= nsm.documentos_meta_mes ? 'ok' : undefined}
                 />
-                <Stat
-                  label="Voice / semana"
-                  big={String(nsm.voice_commands_semana)}
-                  sub="cmds · vs 75 meta"
-                />
+                <EntitledOnly module="voice_agent" silent>
+                  <Stat
+                    label="Voice / semana"
+                    big={String(nsm.voice_commands_semana)}
+                    sub="cmds · vs 75 meta"
+                  />
+                </EntitledOnly>
                 <Stat
                   label="Horas ahorradas"
                   big={`${nsm.horas_ahorradas_mes}h`}
@@ -196,13 +199,15 @@ function Greeting({ matterTitulo, matterId }: { matterTitulo: string; matterId: 
         </p>
         <GreetingActions matterId={matterId} />
       </div>
-      <div className="flex-none text-right">
-        <span className="chip chip-green">
-          <span className="dot" />
-          Voice listo · 840ms
-        </span>
-        <div className="mt-[6px] text-[11px] muted">OpenAI Realtime · gpt-realtime</div>
-      </div>
+      <EntitledOnly module="voice_agent" silent>
+        <div className="flex-none text-right">
+          <span className="chip chip-green">
+            <span className="dot" />
+            Voice listo · 840ms
+          </span>
+          <div className="mt-[6px] text-[11px] muted">OpenAI Realtime · gpt-realtime</div>
+        </div>
+      </EntitledOnly>
     </section>
   );
 }
