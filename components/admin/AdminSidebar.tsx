@@ -21,6 +21,7 @@ const ITEMS: Item[] = [
   { href: '/saas/feature-flags', label: 'Feature flags', icon: <Flag size={15} /> },
   { href: '/saas/support', label: 'Soporte', icon: <LifeBuoy size={15} /> },
   { href: '/saas/helper-tips', label: 'Helper Tips', icon: <LifeBuoy size={15} /> },
+  { href: '/saas/landing-content', label: 'Landing content', icon: <FileText size={15} /> },
   { href: '/saas/audit', label: 'Auditoría', icon: <FileText size={15} /> },
   { href: '/saas/admins', label: 'Admins SaaS', icon: <Shield size={15} />, roles: ['owner'] },
 ];

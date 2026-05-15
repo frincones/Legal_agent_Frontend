@@ -1,60 +1,193 @@
 import Link from 'next/link';
-import { Logo } from '@/components/atoms/Logo';
+import { Check, Sparkles, Scale, Zap, ShieldCheck, Bell, Quote } from 'lucide-react';
+import { PublicNav } from '@/components/public/PublicNav';
+import { PublicFooter } from '@/components/public/PublicFooter';
+import { LandingHero } from '@/components/landing/LandingHero';
 
-export default function LandingPage() {
+export const dynamic = 'force-dynamic';
+export const revalidate = 60;
+
+export const metadata = {
+  title: 'LexAI · Plataforma legal con IA verificada para abogados de habla hispana',
+  description: 'Asistente IA voice-first · investigación jurisprudencial con cero hallucination · Court Watcher · multi-país.',
+};
+
+async function fetchLandingData(origin: string) {
+  try {
+    const [stats, testimonials, changelog] = await Promise.all([
+      fetch(`${origin}/api/public/landing-stats`, { cache: 'no-store' }).then((r) => r.ok ? r.json() : null),
+      fetch(`${origin}/api/public/testimonials?featured_only=true&limit=3`, { cache: 'no-store' }).then((r) => r.ok ? r.json() : { items: [] }),
+      fetch(`${origin}/api/public/changelog?highlighted_only=true&limit=3`, { cache: 'no-store' }).then((r) => r.ok ? r.json() : { items: [] }),
+    ]);
+    return { stats, testimonials: testimonials?.items || [], changelog: changelog?.items || [] };
+  } catch {
+    return { stats: null, testimonials: [], changelog: [] };
+  }
+}
+
+export default async function LandingPage() {
+  const base =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '') ||
+    'http://localhost:3000';
+  const data = await fetchLandingData(base);
+
   return (
     <main className="min-h-screen bg-bg">
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-        <Logo size={20} />
-        <nav className="flex items-center gap-3">
-          <Link href="/login" className="btn btn-sm btn-ghost">
-            Iniciar sesión
-          </Link>
-          <Link href="/signup" className="btn btn-sm btn-primary">
-            Empezar prueba 14 días
-          </Link>
-        </nav>
-      </header>
+      <PublicNav />
 
-      <section className="mx-auto max-w-4xl px-6 pt-20 pb-16 text-center">
-        <span className="chip chip-purple">Beta privada · Bogotá D.C.</span>
-        <h1 className="font-serif text-5xl font-semibold tracking-tight md:text-6xl mt-6 leading-tight">
-          El primer asistente legal <span className="text-accent">voice-first</span> para abogados colombianos.
-        </h1>
-        <p className="mt-6 text-lg text-ink-2 leading-relaxed">
-          Dicta lo que necesitas y LexAI ejecuta investigación jurisprudencial, redacta la promoción
-          en tiempo real y verifica cada cita contra Corte Constitucional, Corte Suprema y Consejo
-          de Estado. Reemplaza el 60% del trabajo repetitivo de un paralegal junior.
+      <LandingHero stats={data.stats} />
+
+      {/* Killer features section */}
+      <section className="mx-auto max-w-6xl px-6 py-20">
+        <h2 className="serif mb-3 text-center text-[28px] font-semibold md:text-[36px]">
+          Lo que hace diferente a LexAI
+        </h2>
+        <p className="mb-12 text-center text-[14px] text-ink-2 max-w-2xl mx-auto leading-relaxed">
+          Si has usado ChatGPT para redactar un escrito legal y has tenido que reescribirlo desde cero
+          para validar cada cita, vamos a hablar el mismo idioma.
         </p>
-        <div className="mt-10 flex justify-center gap-3">
-          <Link href="/signup" className="btn btn-lg btn-primary">
-            Reservar demo · COP 950.000 reembolsable
+        <div className="grid gap-4 md:grid-cols-3">
+          <FeatureCard
+            icon={<Bell size={20} />}
+            title="Court Watcher · cero visitas al juzgado"
+            body="Monitoreo automático de tus expedientes en los portales judiciales. Audiencias, cambios de juez y notificaciones llegan antes que a la contraparte."
+            tone="accent"
+          />
+          <FeatureCard
+            icon={<Scale size={20} />}
+            title="Fundamentación con IA verificada"
+            body='Cero "jurisprudencia inventada". Cada cita viene con URL directa a Corte Constitucional, Corte Suprema y Consejo de Estado. Validación de derogaciones en vivo.'
+            tone="purple"
+          />
+          <FeatureCard
+            icon={<Sparkles size={20} />}
+            title="Simulador de jueces"
+            body="Antes de presentar tu escrito, simula cómo lo recibirá el juez asignado. 15 magistrados modelados · alignment score + fortalezas + riesgos."
+            tone="accent"
+          />
+          <FeatureCard
+            icon={<Zap size={20} />}
+            title="Voice-first · habla con tus casos"
+            body='"Abre el caso de María", "redacta una contestación" — el asistente IA ejecuta. Liquidaciones laborales en 30 segundos.'
+            tone="purple"
+          />
+          <FeatureCard
+            icon={<ShieldCheck size={20} />}
+            title="Validador de evidencia"
+            body="Análisis forense de documentos · detección de inconsistencias · scoring probativo. Identifica si la contraparte cita mal un artículo."
+            tone="accent"
+          />
+          <FeatureCard
+            icon={<Check size={20} />}
+            title="Multi-país desde el diseño"
+            body="Colombia · México · Honduras · Guatemala. Glosario procesal local + cuerpos normativos internos sectoriales soportados."
+            tone="purple"
+          />
+        </div>
+      </section>
+
+      {/* Social proof · testimonials */}
+      {data.testimonials.length > 0 && (
+        <section className="border-t border-line bg-bg-elev/40">
+          <div className="mx-auto max-w-6xl px-6 py-20">
+            <h2 className="serif mb-12 text-center text-[24px] font-semibold md:text-[30px]">
+              Lo que dicen nuestros clientes
+            </h2>
+            <div className="grid gap-4 md:grid-cols-3">
+              {data.testimonials.map((t: any) => (
+                <div key={t.slug} className="surface flex flex-col gap-3 p-5">
+                  <Quote size={18} className="text-accent opacity-40" />
+                  <p className="flex-1 text-[13px] text-ink-2 leading-relaxed italic">
+                    "{t.quote}"
+                  </p>
+                  <footer className="border-t border-line/40 pt-3">
+                    <div className="font-medium text-[12.5px]">{t.author_name}</div>
+                    <div className="text-[11px] muted">
+                      {t.author_role}{t.firm_name && ` · ${t.firm_name}`}
+                    </div>
+                  </footer>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Pricing teaser */}
+      <section className="mx-auto max-w-4xl px-6 py-20 text-center">
+        <h2 className="serif mb-3 text-[28px] font-semibold md:text-[34px]">
+          Empieza gratis. Sin tarjeta.
+        </h2>
+        <p className="mb-8 text-[14px] text-ink-2 max-w-xl mx-auto leading-relaxed">
+          14 días con acceso a Pro. Después tu cuenta pasa automáticamente al plan
+          Free (gratis, con límites). Nunca te cobramos sin tu autorización.
+        </p>
+        <div className="flex justify-center gap-3">
+          <Link href="/signup" className="btn btn-primary btn-lg">
+            Crear cuenta gratis
           </Link>
-          <Link href="/login" className="btn btn-lg">
-            Ya tengo cuenta
+          <Link href="/pricing" className="btn btn-lg">
+            Ver todos los planes
           </Link>
         </div>
-        <p className="mt-6 text-sm text-ink-3">
-          Verificación de tarjeta profesional · MFA obligatorio · Habeas Data Ley 1581/2012
-        </p>
       </section>
 
-      <section className="mx-auto grid max-w-5xl grid-cols-1 gap-6 px-6 pb-24 md:grid-cols-3">
-        {[
-          { k: '0%', l: 'jurisprudencia inventada · contra Corte Const., Suprema, CE' },
-          { k: '<840ms', l: 'latencia voz E2E p50 · OpenAI Realtime cascada híbrida' },
-          { k: '14 días', l: 'prueba gratuita · sin compromiso, cancela con un click' },
-        ].map((s) => (
-          <div key={s.k} className="surface p-6 text-center">
-            <div className="font-serif text-4xl font-semibold tabular text-ink">{s.k}</div>
-            <div className="mt-2 text-sm muted">{s.l}</div>
+      {/* What's new · changelog teaser */}
+      {data.changelog.length > 0 && (
+        <section className="border-t border-line">
+          <div className="mx-auto max-w-5xl px-6 py-16">
+            <header className="mb-8 flex items-center justify-between">
+              <h2 className="serif text-[22px] font-semibold">Últimas novedades</h2>
+              <Link href="/changelog" className="text-[12.5px] text-accent hover:underline">
+                Ver todas →
+              </Link>
+            </header>
+            <ul className="grid gap-3">
+              {data.changelog.map((c: any) => (
+                <li key={c.slug} className="surface p-4 hover:border-accent transition-colors">
+                  <Link href={`/changelog/${c.slug}`} className="block">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="chip chip-accent text-[10px]">{c.category}</span>
+                          {c.version && <span className="mono text-[10.5px] muted">{c.version}</span>}
+                        </div>
+                        <h3 className="serif mt-1 text-[15px] font-semibold">{c.title}</h3>
+                        {c.summary && <p className="mt-1 text-[12.5px] muted">{c.summary}</p>}
+                      </div>
+                      <span className="text-[10.5px] muted whitespace-nowrap">
+                        {new Date(c.released_at).toLocaleDateString('es-CO')}
+                      </span>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
-        ))}
-      </section>
+        </section>
+      )}
 
-      <footer className="border-t border-line py-6 text-center text-xs muted">
-        © 2026 LexAI · Asistencia documental con IA · No constituye representación legal.
-      </footer>
+      <PublicFooter />
     </main>
+  );
+}
+
+function FeatureCard({
+  icon, title, body, tone,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  body: string;
+  tone: 'accent' | 'purple';
+}) {
+  return (
+    <div className="surface p-5">
+      <span className={`inline-flex h-10 w-10 items-center justify-center rounded-md ${tone === 'accent' ? 'bg-accent-soft text-accent' : 'bg-purple-soft text-purple'}`}>
+        {icon}
+      </span>
+      <h3 className="serif mt-3 text-[16px] font-semibold leading-tight">{title}</h3>
+      <p className="mt-2 text-[12.5px] text-ink-2 leading-relaxed">{body}</p>
+    </div>
   );
 }
