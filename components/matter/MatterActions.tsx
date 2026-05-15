@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { CalendarPlus } from 'lucide-react';
+import { CalendarPlus, FolderPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Ic } from '@/components/atoms/icons';
 import { AudienciaModal } from '@/components/casos/AudienciaModal';
+import { CloudPicker } from '@/components/cloud/CloudPicker';
 
 const SAVED_KEY = 'lexai:matters:saved';
 
@@ -42,6 +43,7 @@ export function MatterActions({
   const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [audienciaOpen, setAudienciaOpen] = useState(false);
+  const [cloudPickerOpen, setCloudPickerOpen] = useState(false);
 
   useEffect(() => {
     setSaved(readSaved().has(matterId));
@@ -127,6 +129,14 @@ export function MatterActions({
       >
         <CalendarPlus size={14} /> Audiencia
       </button>
+      <button
+        type="button"
+        onClick={() => setCloudPickerOpen(true)}
+        className="btn"
+        title="Vincular carpeta de Drive/OneDrive/Dropbox al caso"
+      >
+        <FolderPlus size={14} /> Vincular nube
+      </button>
       <Link href={canvasHref} className="btn btn-primary">
         {Ic.bolt} Trabajar en Canvas
       </Link>
@@ -136,6 +146,11 @@ export function MatterActions({
         clientEmail={clientEmail}
         open={audienciaOpen}
         onOpenChange={setAudienciaOpen}
+      />
+      <CloudPicker
+        matterId={matterId}
+        open={cloudPickerOpen}
+        onOpenChange={setCloudPickerOpen}
       />
     </>
   );
