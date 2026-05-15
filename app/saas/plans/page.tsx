@@ -7,8 +7,9 @@ export default function AdminPlansPage() {
     <div className="p-6">
       <h1 className="serif mb-1 text-[22px] font-semibold">Catálogo de planes</h1>
       <p className="mb-6 text-[12.5px] muted">
-        Definición vigente de planes · para editar precios/cuotas, ajusta el seed en
-        <code className="ml-1 mono">backend/storage/schemas/2026_05_10_sprint6.sql</code> y reaplica la migración.
+        Vista resuelta de los 5 planes con módulos habilitados + cuotas vigentes
+        (fuente: <code className="mono">plan_modules</code> + <code className="mono">plan_quotas</code>).
+        Para editar, usa <strong>Módulos</strong> o <strong>Cuotas</strong> en el menú lateral.
       </p>
       <PlansViewer />
     </div>
