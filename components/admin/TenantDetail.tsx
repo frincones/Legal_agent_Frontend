@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2, Pause, Play } from 'lucide-react';
+import { Loader2, Pause, Play, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { ChangePlanModal } from '@/components/saas/ChangePlanModal';
 
 type TenantData = {
   firm: any;
@@ -22,6 +23,7 @@ export function TenantDetail({ firmId }: { firmId: string }) {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState<string | null>(null);
+  const [changePlanOpen, setChangePlanOpen] = useState(false);
 
   function load() {
     fetch(`/api/admin/tenants/${firmId}`, { cache: 'no-store' })
@@ -87,6 +89,14 @@ export function TenantDetail({ firmId }: { firmId: string }) {
           </div>
         </div>
         <div className="flex gap-2">
+          <button
+            className="btn btn-md"
+            onClick={() => setChangePlanOpen(true)}
+            disabled={!!submitting}
+            title="Cambiar plan de membresía"
+          >
+            <Sparkles size={14} /> Cambiar plan
+          </button>
           {overview?.status !== 'paused' ? (
             <button className="btn btn-md" onClick={suspend} disabled={!!submitting}>
               <Pause size={14} /> Suspender
@@ -98,6 +108,17 @@ export function TenantDetail({ firmId }: { firmId: string }) {
           )}
         </div>
       </header>
+
+      <ChangePlanModal
+        firmId={firmId}
+        firmName={firm.razon_social}
+        currentPlan={overview?.plan_code}
+        currentStatus={overview?.status}
+        hasPaddleSubscription={!!overview?.paddle_subscription_id}
+        open={changePlanOpen}
+        onOpenChange={setChangePlanOpen}
+        onChanged={() => load()}
+      />
 
       <nav className="surface flex flex-wrap gap-1 p-1">
         {TABS.map((t) => (
