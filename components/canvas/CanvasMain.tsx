@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { CanvasEditor } from '@/components/canvas/CanvasEditor';
+import { CanvasStreamRunner } from '@/components/canvas/CanvasStreamRunner';
 import { Ic } from '@/components/atoms/icons';
 
 type CanvasState = {
@@ -60,10 +61,15 @@ export function CanvasMain({ matterId }: { matterId: string }) {
   }
 
   return (
-    <CanvasEditor
-      matterId={matterId}
-      documentId={state.document_id}
-      initialContent={state.html}
-    />
+    <div className="flex h-full min-h-0 flex-col">
+      <CanvasStreamRunner matterId={matterId} />
+      <div className="flex-1 min-h-0">
+        <CanvasEditor
+          matterId={matterId}
+          documentId={state.document_id}
+          initialContent={state.html}
+        />
+      </div>
+    </div>
   );
 }

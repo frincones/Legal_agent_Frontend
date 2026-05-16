@@ -41,6 +41,10 @@ export type CanvasApi = {
   find_replace: (needle: string, replacement: string) => { count: number };
   select_section: (heading: string) => { found: boolean };
   save_version: () => Promise<void>;
+  /** Streaming: cada delta del SSE pasa el markdown acumulado completo.
+   *  Sin animación interna · el typing lo da la cadencia de chunks del SSE. */
+  stream_set_text?: (markdown: string) => void;
+  stream_finish?: () => void;
 };
 
 export type UIHandler = (command: UICommand) => boolean | Promise<boolean>;

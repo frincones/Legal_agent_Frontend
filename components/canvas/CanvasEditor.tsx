@@ -319,6 +319,21 @@ export function CanvasEditor({
           });
         });
       },
+      /** Streaming en vivo · cada delta del SSE llama esto con el markdown
+       *  acumulado hasta ahora. Sin animación interna ni queue de tipeo:
+       *  el efecto de typing lo produce la cadencia de los chunks del SSE. */
+      stream_set_text: (markdown: string) => {
+        setAgentBusy(true);
+        try {
+          const html = parseMarkdown(editor, markdown);
+          editor.commands.setContent(html, false, { preserveWhitespace: 'full' });
+        } catch (e) {
+          console.warn('[stream_set_text] parse error:', e);
+        }
+      },
+      stream_finish: () => {
+        setAgentBusy(false);
+      },
       append: (markdown: string) => {
         runOpRespectingUser(() => {
           setAgentBusy(true);

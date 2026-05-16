@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { CalendarPlus, FolderPlus, FileSignature, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
@@ -42,6 +43,7 @@ export function MatterActions({
   matterTitulo?: string;
   clientEmail?: string | null;
 }) {
+  const router = useRouter();
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -190,9 +192,9 @@ export function MatterActions({
         matterId={matterId}
         onSkillSelected={async (skill, palettePrompt) => {
           if (skillRunning) return;
-          // Si el skill es de drafting y no hay prompt, pedirlo explícito.
           let userPrompt = palettePrompt?.trim() || '';
-          if (skill.command.startsWith('/redactar') && !userPrompt) {
+          const isDrafting = skill.command.startsWith('/redactar');
+          if (isDrafting && !userPrompt) {
             const requested = window.prompt(
               `${skill.name}\n\nDescribe brevemente qué necesitas (partes, monto, plazo, condiciones…):`,
               '',
@@ -204,6 +206,31 @@ export function MatterActions({
               return;
             }
           }
+
+          // Skills de drafting → streaming en Canvas en vivo
+          if (isDrafting) {
+            try {
+              sessionStorage.setItem(
+                'lexai.canvas.stream',
+                JSON.stringify({
+                  command: skill.command,
+                  matterId,
+                  matterTitulo,
+                  prompt: userPrompt,
+                  skillName: skill.name,
+                }),
+              );
+            } catch {
+              /* sessionStorage no disponible · degradar a modal */
+            }
+            toast.message(`Abriendo Canvas para redactar en vivo…`, {
+              description: skill.name,
+            });
+            router.push(`/casos/${matterId}/canvas`);
+            return;
+          }
+
+          // Skills de review (con output_schema) → modal con resultado estructurado
           setSkillRunning(true);
           const toastId = toast.loading(`Ejecutando ${skill.name}…`, {
             description: skill.command,
