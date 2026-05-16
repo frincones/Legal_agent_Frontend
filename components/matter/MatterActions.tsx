@@ -9,6 +9,7 @@ import { AudienciaModal } from '@/components/casos/AudienciaModal';
 import { CloudPicker } from '@/components/cloud/CloudPicker';
 import { DocuSignEnvelopeModal } from '@/components/docusign/DocuSignEnvelopeModal';
 import { SlashCommandPalette } from '@/components/chat/SlashCommandPalette';
+import { SkillResultModal, type SkillResultData } from '@/components/skills/SkillResultModal';
 
 const SAVED_KEY = 'lexai:matters:saved';
 
@@ -48,6 +49,8 @@ export function MatterActions({
   const [cloudPickerOpen, setCloudPickerOpen] = useState(false);
   const [docuSignOpen, setDocuSignOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [skillResult, setSkillResult] = useState<SkillResultData | null>(null);
+  const [skillRunning, setSkillRunning] = useState(false);
 
   useEffect(() => {
     setSaved(readSaved().has(matterId));
@@ -186,7 +189,11 @@ export function MatterActions({
         onOpenChange={setPaletteOpen}
         matterId={matterId}
         onSkillSelected={async (skill) => {
-          toast.message(`Ejecutando ${skill.command}…`);
+          if (skillRunning) return;
+          setSkillRunning(true);
+          const toastId = toast.loading(`Ejecutando ${skill.name}…`, {
+            description: skill.command,
+          });
           try {
             const r = await fetch('/api/skills/execute', {
               method: 'POST',
@@ -199,19 +206,26 @@ export function MatterActions({
             });
             if (r.ok) {
               const data = await r.json();
-              if (data.warnings?.length) {
-                toast.warning(`${data.warnings.length} advertencia(s)`);
-              } else {
-                toast.success(`${skill.name} completada`);
-              }
+              toast.dismiss(toastId);
+              setSkillResult({ ...data, skill_name: skill.name });
             } else {
               const body = await r.json().catch(() => ({}));
+              toast.dismiss(toastId);
               toast.error(body?.detail?.reason || `Error ${r.status}`);
             }
           } catch (e: any) {
+            toast.dismiss(toastId);
             toast.error(e?.message || 'Error');
+          } finally {
+            setSkillRunning(false);
           }
         }}
+      />
+      <SkillResultModal
+        data={skillResult}
+        matterId={matterId}
+        open={!!skillResult}
+        onOpenChange={(o) => !o && setSkillResult(null)}
       />
     </>
   );
