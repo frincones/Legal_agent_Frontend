@@ -85,12 +85,29 @@ export function ChangePlanModal({
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
   const [extendTrialDays, setExtendTrialDays] = useState<number>(0);
   const [reason, setReason] = useState<string>('');
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadPlans = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const r = await fetch('/api/saas/subscription-plans', { cache: 'no-store' });
-      if (r.ok) setPlans(await r.json());
+      if (r.ok) {
+        const data = await r.json();
+        const list = Array.isArray(data) ? data : [];
+        setPlans(list);
+        if (list.length === 0) {
+          setLoadError('No se recibió ningún plan · revisa que seas admin SaaS');
+        }
+      } else {
+        const body = await r.json().catch(() => ({}));
+        setLoadError(
+          (typeof body?.detail === 'string' ? body.detail : null) ||
+          `Error ${r.status} · ¿eres admin SaaS?`
+        );
+      }
+    } catch (e: any) {
+      setLoadError(e?.message || 'Error de red');
     } finally {
       setLoading(false);
     }
@@ -195,6 +212,20 @@ export function ChangePlanModal({
           {loading ? (
             <div className="p-4 flex items-center gap-2 text-[12.5px] muted">
               <Loader2 size={14} className="animate-spin" /> Cargando planes…
+            </div>
+          ) : loadError ? (
+            <div className="p-4 surface bg-danger-soft/30 text-[12.5px]">
+              <div className="flex items-start gap-2">
+                <AlertCircle size={14} className="flex-none mt-0.5 text-danger" />
+                <div>
+                  <strong>No se pudieron cargar los planes.</strong>
+                  <p className="mt-1 text-ink-2">{loadError}</p>
+                  <p className="mt-2 text-[11px] muted">
+                    Verifica que estés logueado como admin SaaS. Si el problema persiste,
+                    espera 1-2 min y reabre el modal · podría ser propagación del deploy.
+                  </p>
+                </div>
+              </div>
             </div>
           ) : (
             <form onSubmit={onSubmit} className="grid gap-4">
