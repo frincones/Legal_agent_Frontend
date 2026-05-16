@@ -254,6 +254,105 @@
   to { opacity: 0; }
 }
 
+/* ───────────────────── Sprint I · Canvas Word-like page ───────────────────── */
+.lexai-word-shell {
+  background: rgb(var(--bg-sunken, 244 241 234));
+  overflow: auto;
+}
+.lexai-word-page {
+  background: #ffffff;
+  width: 8.5in;
+  max-width: calc(100vw - 32px);
+  margin: 24px auto;
+  min-height: 11in;
+  padding: 2.54cm; /* margen Word default 1" en todos los lados */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.10), 0 8px 24px rgba(0,0,0,0.06);
+  border-radius: 2px;
+  color: #1a1a1a;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 12pt;
+  line-height: 1.5;
+  text-align: justify;
+  hyphens: auto;
+}
+.lexai-word-page :focus-visible { outline: none; }
+
+/* Tipografía interna del documento legal */
+.lexai-word-page h1, .lexai-word-page h2, .lexai-word-page h3 {
+  font-family: "Times New Roman", Times, serif;
+  font-weight: 700;
+  text-align: center;
+  margin: 18pt 0 12pt;
+  line-height: 1.25;
+}
+.lexai-word-page h1 { font-size: 16pt; text-transform: uppercase; letter-spacing: 0.02em; }
+.lexai-word-page h2 { font-size: 14pt; }
+.lexai-word-page h3 { font-size: 12.5pt; }
+.lexai-word-page p { margin: 0 0 8pt; text-indent: 0; }
+.lexai-word-page ol, .lexai-word-page ul { margin: 0 0 8pt; padding-left: 1.5em; }
+.lexai-word-page li { margin-bottom: 4pt; }
+.lexai-word-page blockquote {
+  border-left: 3px solid #888;
+  margin: 8pt 0;
+  padding: 4pt 12pt;
+  color: #444;
+  font-style: italic;
+}
+.lexai-word-page code, .lexai-word-page pre code {
+  font-family: "JetBrains Mono", Consolas, "Courier New", monospace;
+  font-size: 0.92em;
+}
+.lexai-word-page pre {
+  background: #f4f4f5;
+  padding: 8pt;
+  border-radius: 3px;
+  overflow-x: auto;
+}
+.lexai-word-page table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 8pt 0;
+}
+.lexai-word-page th, .lexai-word-page td {
+  border: 1px solid #999;
+  padding: 4pt 6pt;
+  vertical-align: top;
+}
+.lexai-word-page th { background: #f0eee8; font-weight: 600; }
+.lexai-word-page hr {
+  border: none;
+  border-top: 1px solid #bbb;
+  margin: 12pt 0;
+}
+.lexai-word-page strong { font-weight: 700; }
+.lexai-word-page em { font-style: italic; }
+.lexai-word-page a { color: #1d4ed8; text-decoration: underline; }
+
+/* Cursor presencia colaborativa (Sprint J · Yjs CollaborationCursor) */
+.collaboration-cursor__caret {
+  border-left: 2px solid;
+  border-right: 1px solid;
+  margin-left: -1px;
+  margin-right: -1px;
+  pointer-events: none;
+  position: relative;
+  word-break: normal;
+}
+.collaboration-cursor__label {
+  border-radius: 3px 3px 3px 0;
+  color: white;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 600;
+  left: -1px;
+  line-height: normal;
+  padding: 1px 4px;
+  position: absolute;
+  top: -1.2em;
+  user-select: none;
+  white-space: nowrap;
+}
+
 /* ───────────────────────── tippy.js · LexAI theme ─────────────────────────── */
 .tippy-box[data-theme~='lexai'] {
   background: transparent;

@@ -16,7 +16,13 @@ type CanvasState = {
 /** Bridge entre la page canvas (server) y el editor (client).
  *  Resuelve el matter_document de tipo 'generado' (lo crea si no existe)
  *  y carga la última versión guardada para hidratar el editor. */
-export function CanvasMain({ matterId }: { matterId: string }) {
+export function CanvasMain({
+  matterId,
+  userInfo,
+}: {
+  matterId: string;
+  userInfo?: { name: string; email?: string };
+}) {
   const [state, setState] = useState<CanvasState | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,6 +74,7 @@ export function CanvasMain({ matterId }: { matterId: string }) {
           matterId={matterId}
           documentId={state.document_id}
           initialContent={state.html}
+          userInfo={userInfo}
         />
       </div>
     </div>

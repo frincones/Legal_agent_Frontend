@@ -16,7 +16,16 @@ import Typography from '@tiptap/extension-typography';
 import TextAlign from '@tiptap/extension-text-align';
 import Underline from '@tiptap/extension-underline';
 import Highlight from '@tiptap/extension-highlight';
+import TextStyle from '@tiptap/extension-text-style';
+import Color from '@tiptap/extension-color';
+import FontFamily from '@tiptap/extension-font-family';
 import { Markdown } from 'tiptap-markdown';
+import Collaboration from '@tiptap/extension-collaboration';
+import CollaborationCursor from '@tiptap/extension-collaboration-cursor';
+import { WordToolbar } from './WordToolbar';
+import { FontSize } from '@/lib/canvas/font-size-extension';
+import { useCollaboration } from '@/lib/canvas/use-collaboration';
+import { Users2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Ic } from '@/components/atoms/icons';
 import { uiCommandBus } from '@/lib/voice/ui-command-bus';
@@ -34,6 +43,17 @@ const AICursorExtension = Extension.create({
   },
 });
 
+const CURSOR_COLORS = [
+  '#9333ea', '#d97706', '#dc2626', '#0891b2', '#16a34a',
+  '#db2777', '#7c3aed', '#0284c7', '#65a30d', '#ea580c',
+];
+
+function hashColorForCursor(seed: string): string {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
+  return CURSOR_COLORS[Math.abs(h) % CURSOR_COLORS.length]!;
+}
+
 const AUTOSAVE_DEBOUNCE_MS = 3_000;
 
 type CanvasEditorProps = {
@@ -43,6 +63,8 @@ type CanvasEditorProps = {
   /** Si true, agente puede escribir; si false, sólo lectura. */
   agentCanWrite?: boolean;
   onSavedVersion?: (versionId: string) => void;
+  /** Info del usuario actual para la presencia colaborativa (Sprint J). */
+  userInfo?: { name: string; email?: string };
 };
 
 type TemplateMeta = {
@@ -58,6 +80,7 @@ export function CanvasEditor({
   initialContent = '',
   agentCanWrite = true,
   onSavedVersion,
+  userInfo,
 }: CanvasEditorProps) {
   const [agentBusy, setAgentBusy] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -71,11 +94,31 @@ export function CanvasEditor({
   const storePublishTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingOpsRef = useRef<Array<() => void>>([]);
 
+  // Sprint J · colaboración en vivo (no-op si NEXT_PUBLIC_COLLAB_ENABLED no está)
+  const collab = useCollaboration(matterId, userInfo);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
+        // Si hay collab, Yjs maneja la historia · desactivamos history nativo
+        history: collab ? false : undefined,
       }),
+      TextStyle,
+      Color.configure({ types: ['textStyle'] }),
+      FontFamily.configure({ types: ['textStyle'] }),
+      FontSize,
+      ...(collab
+        ? [
+            Collaboration.configure({ document: collab.ydoc }),
+            CollaborationCursor.configure({
+              provider: collab.provider,
+              user: userInfo
+                ? { name: userInfo.name, color: hashColorForCursor(userInfo.email || userInfo.name) }
+                : undefined,
+            }),
+          ]
+        : []),
       Placeholder.configure({
         placeholder: 'Empieza a escribir o dile a LexAI: "redacta una tutela"…',
       }),
@@ -132,19 +175,7 @@ export function CanvasEditor({
     content: initialContent,
     editorProps: {
       attributes: {
-        class:
-          'prose prose-sm max-w-none focus:outline-none min-h-[60vh] py-6 px-4 ' +
-          '[&_h1]:font-serif [&_h1]:text-[24px] [&_h1]:font-semibold [&_h1]:mt-6 ' +
-          '[&_h2]:font-serif [&_h2]:text-[18px] [&_h2]:font-semibold [&_h2]:mt-4 ' +
-          '[&_h3]:font-serif [&_h3]:text-[15px] [&_h3]:font-semibold [&_h3]:mt-3 ' +
-          '[&_p]:text-[14px] [&_p]:leading-relaxed [&_p]:mt-2 ' +
-          '[&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 ' +
-          '[&_blockquote]:border-l-2 [&_blockquote]:border-line [&_blockquote]:pl-3 [&_blockquote]:italic ' +
-          '[&_table]:border [&_table]:border-line [&_th]:border [&_th]:border-line [&_th]:px-2 [&_th]:py-1 [&_th]:bg-bg-sunken ' +
-          '[&_td]:border [&_td]:border-line [&_td]:px-2 [&_td]:py-1 ' +
-          '[&_mark]:bg-warn-soft [&_mark]:px-0.5 [&_mark]:rounded ' +
-          '[&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]]:pl-0 ' +
-          '[&_ul[data-type=taskList]_li]:flex [&_ul[data-type=taskList]_li]:gap-2 [&_ul[data-type=taskList]_li]:items-start',
+        class: 'lexai-word-page focus:outline-none',
       },
       handleDOMEvents: {
         keydown: () => {
@@ -390,15 +421,18 @@ export function CanvasEditor({
 
   return (
     <div className="surface flex h-full min-h-0 flex-col overflow-hidden">
-      {/* Toolbar manual */}
-      <div className="flex flex-wrap items-center gap-1 border-b border-line px-2 py-1.5">
+      {/* Toolbar Word-like principal · Sprint I */}
+      <WordToolbar editor={editor} />
+
+      {/* Segunda fila · plantillas + status + guardar */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-line px-2 py-1">
         <div ref={tplBtnRef} className="relative">
           <button
             type="button"
             onClick={() => setTplOpen((v) => !v)}
             disabled={tplLoading || templates.length === 0}
             className={cn(
-              'inline-flex h-7 items-center gap-1 rounded px-2 text-[12px] transition',
+              'inline-flex h-7 items-center gap-1 rounded px-2 text-[11.5px] transition',
               'hover:bg-bg-sunken disabled:cursor-not-allowed disabled:opacity-50',
               tplOpen && 'bg-accent-soft text-accent-ink',
             )}
@@ -444,64 +478,19 @@ export function CanvasEditor({
             </div>
           )}
         </div>
-        <Divider />
-        <ToolbarButton
-          active={editor.isActive('heading', { level: 1 })}
-          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-          label="H1"
-        />
-        <ToolbarButton
-          active={editor.isActive('heading', { level: 2 })}
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          label="H2"
-        />
-        <ToolbarButton
-          active={editor.isActive('heading', { level: 3 })}
-          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-          label="H3"
-        />
-        <Divider />
-        <ToolbarButton
-          active={editor.isActive('bold')}
-          onClick={() => editor.chain().focus().toggleBold().run()}
-          label="B"
-          bold
-        />
-        <ToolbarButton
-          active={editor.isActive('italic')}
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-          label="I"
-          italic
-        />
-        <Divider />
-        <ToolbarButton
-          active={editor.isActive('bulletList')}
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-          label="• Lista"
-        />
-        <ToolbarButton
-          active={editor.isActive('orderedList')}
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          label="1. Lista"
-        />
-        <ToolbarButton
-          active={editor.isActive('blockquote')}
-          onClick={() => editor.chain().focus().toggleBlockquote().run()}
-          label="❝"
-        />
-        <Divider />
-        <ToolbarButton
-          onClick={() => editor.chain().focus().undo().run()}
-          label="↶"
-          title="Deshacer"
-        />
-        <ToolbarButton
-          onClick={() => editor.chain().focus().redo().run()}
-          label="↷"
-          title="Rehacer"
-        />
 
         <div className="ml-auto flex items-center gap-2 text-[11px] muted">
+          {collab && (
+            <span
+              title={`Colaboración ${collab.connected ? 'conectada' : 'desconectada'} · ${collab.peers} usuario(s)`}
+              className={cn(
+                'inline-flex items-center gap-1 rounded px-1.5 py-0.5',
+                collab.connected ? 'bg-ok-soft text-ok' : 'bg-warn-soft text-warn',
+              )}
+            >
+              <Users2 size={11} /> {collab.peers}
+            </span>
+          )}
           {agentBusy && (
             <span className="chip chip-purple">
               <span className="dot" /> LexAI escribiendo…
@@ -522,64 +511,31 @@ export function CanvasEditor({
         </div>
       </div>
 
-      {/* Editor body + bubble menu inline IA */}
+      {/* Editor body en página A4 con sombra · efecto Word */}
       <AIBubbleMenu editor={editor} />
       <div
         className={cn(
-          'flex-1 overflow-auto',
-          agentBusy && 'pointer-events-none opacity-90 bg-purple-soft/10',
+          'lexai-word-shell flex-1 overflow-auto',
+          agentBusy && 'pointer-events-none opacity-95',
         )}
       >
         <EditorContent editor={editor} />
       </div>
 
-      <div className="border-t border-line px-3 py-1.5 text-[10.5px] muted">
-        {editor.storage.characterCount?.characters?.() ??
-          editor.getText().length}{' '}
-        caracteres · ~
-        {editor.getText().split(/\s+/).filter(Boolean).length} palabras ·
-        autoguardado cada 3s
+      <div className="flex items-center gap-3 border-t border-line px-3 py-1.5 text-[10.5px] muted">
+        <span>
+          {editor.storage.characterCount?.characters?.() ?? editor.getText().length}{' '}
+          caracteres · ~{editor.getText().split(/\s+/).filter(Boolean).length} palabras
+        </span>
+        <span>· Página A4 · Times 12pt</span>
+        <span>· Autoguardado cada 3s</span>
       </div>
     </div>
   );
 }
 
-function ToolbarButton({
-  active,
-  onClick,
-  label,
-  title,
-  bold,
-  italic,
-}: {
-  active?: boolean;
-  onClick: () => void;
-  label: string;
-  title?: string;
-  bold?: boolean;
-  italic?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={title ?? label}
-      className={cn(
-        'inline-flex h-7 min-w-7 items-center justify-center rounded px-2 text-[12px] transition',
-        'hover:bg-bg-sunken',
-        active && 'bg-accent-soft text-accent-ink',
-        bold && 'font-bold',
-        italic && 'italic',
-      )}
-    >
-      {label}
-    </button>
-  );
-}
-
-function Divider() {
-  return <div className="mx-1 h-5 w-px bg-line" aria-hidden />;
-}
+// Toolbar legacy reemplazada por WordToolbar (Sprint I).
+// ToolbarButton/Divider eliminados · si necesitas botones custom usa WordToolbar.
 
 // ─────────────────────────────────────────────────────────────────────
 // Helpers ProseMirror · usan tiptap-markdown como parser real

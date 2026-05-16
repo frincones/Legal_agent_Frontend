@@ -9,14 +9,21 @@ import { CanvasAIActions } from '@/components/canvas/CanvasAIActions';
 import { GenerateWritDialog } from '@/components/canvas/GenerateWritDialog';
 import { LegalToolbox } from '@/components/canvas/LegalToolbox';
 import { fetchMatter } from '@/lib/api/rsc-fetchers';
+import { getSessionPrincipal } from '@/lib/supabase/session';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
 export const revalidate = 30;
 
 export default async function CanvasPage({ params }: { params: { matterId: string } }) {
-  const matter = await fetchMatter(params.matterId);
+  const [matter, principal] = await Promise.all([
+    fetchMatter(params.matterId),
+    getSessionPrincipal(),
+  ]);
   if (!matter) return notFound();
+  const userInfo = principal
+    ? { name: principal.email?.split('@')[0] || 'Usuario', email: principal.email || undefined }
+    : undefined;
 
   return (
     <AppShell active="casos">
@@ -72,7 +79,7 @@ export default async function CanvasPage({ params }: { params: { matterId: strin
             <LegalToolbox />
           </aside>
           {/* Editor principal · TipTap con co-edición agente↔abogado */}
-          <CanvasMain matterId={matter.id} />
+          <CanvasMain matterId={matter.id} userInfo={userInfo} />
           {/* Rail derecho · Citas verificadas en vivo contra fuentes oficiales */}
           <aside className="hidden lg:block">
             <CitationsSidebar matterId={matter.id} />
