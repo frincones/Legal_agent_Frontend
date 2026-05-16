@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { createHash } from 'crypto';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getSessionPrincipal } from '@/lib/supabase/session';
 
@@ -128,27 +129,38 @@ export async function POST(req: Request) {
       .limit(1)
       .maybeSingle();
     const nextVersion = ((prev as { version?: number } | null)?.version ?? 0) + 1;
+    // matter_document_versions tiene storage_path y sha256 NOT NULL · para
+    // canvases inline (sin archivo en bucket) usamos virtual path + hash del HTML.
+    const sha = createHash('sha256').update(html).digest('hex');
+    const storagePath = `inline://canvas/${doc.id}/v${nextVersion}.html`;
     const { data: created, error } = await svc
       .from('matter_document_versions')
       .insert({
         matter_document_id: doc.id,
         firm_id: principal.firm_id,
         version: nextVersion,
+        storage_path: storagePath,
+        sha256: sha,
         generated_by: 'canvas_editor',
         diff_from_prev: { html, text, byte_size: html.length },
       })
       .select('id, version')
       .single();
-    if (error || !created) throw error ?? new Error('failed to insert version');
+    if (error || !created) {
+      const detail = error
+        ? `${error.message ?? 'unknown'} (code=${error.code ?? 'n/a'}, hint=${error.hint ?? 'n/a'})`
+        : 'failed to insert version (no row returned)';
+      console.error('[canvas POST] insert version failed:', detail, error);
+      return NextResponse.json({ error: detail }, { status: 500 });
+    }
     return NextResponse.json({
       document_id: doc.id,
       version_id: (created as { id: string }).id,
       version: (created as { version: number }).version,
     });
   } catch (e) {
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : 'error' },
-      { status: 500 },
-    );
+    const msg = e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e);
+    console.error('[canvas POST] exception:', msg, e);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

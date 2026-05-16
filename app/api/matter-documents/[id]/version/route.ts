@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { createHash } from 'crypto';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getSessionPrincipal } from '@/lib/supabase/session';
 
@@ -47,22 +48,27 @@ export async function POST(req: Request, ctx: { params: { id: string } }) {
 
   const text = html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
   const nextVersion = ((prev as { version?: number } | null)?.version ?? 0) + 1;
+  const sha = createHash('sha256').update(html).digest('hex');
+  const storagePath = `inline://canvas/${documentId}/v${nextVersion}.html`;
   const { data: created, error } = await svc
     .from('matter_document_versions')
     .insert({
       matter_document_id: documentId,
       firm_id: principal.firm_id,
       version: nextVersion,
+      storage_path: storagePath,
+      sha256: sha,
       generated_by: 'canvas_editor',
       diff_from_prev: { html, text, byte_size: html.length },
     })
     .select('id, version')
     .single();
   if (error || !created) {
-    return NextResponse.json(
-      { error: error?.message ?? 'failed to insert version' },
-      { status: 500 },
-    );
+    const detail = error
+      ? `${error.message ?? 'unknown'} (code=${error.code ?? 'n/a'}, hint=${error.hint ?? 'n/a'})`
+      : 'failed to insert version (no row returned)';
+    console.error('[matter-doc version POST]', detail, error);
+    return NextResponse.json({ error: detail }, { status: 500 });
   }
   return NextResponse.json({
     version_id: (created as { id: string }).id,

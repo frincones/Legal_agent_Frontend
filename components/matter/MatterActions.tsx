@@ -188,8 +188,22 @@ export function MatterActions({
         open={paletteOpen}
         onOpenChange={setPaletteOpen}
         matterId={matterId}
-        onSkillSelected={async (skill) => {
+        onSkillSelected={async (skill, palettePrompt) => {
           if (skillRunning) return;
+          // Si el skill es de drafting y no hay prompt, pedirlo explícito.
+          let userPrompt = palettePrompt?.trim() || '';
+          if (skill.command.startsWith('/redactar') && !userPrompt) {
+            const requested = window.prompt(
+              `${skill.name}\n\nDescribe brevemente qué necesitas (partes, monto, plazo, condiciones…):`,
+              '',
+            );
+            if (requested === null) return; // cancelado
+            userPrompt = requested.trim();
+            if (!userPrompt) {
+              toast.error('Necesito una descripción para redactar');
+              return;
+            }
+          }
           setSkillRunning(true);
           const toastId = toast.loading(`Ejecutando ${skill.name}…`, {
             description: skill.command,
@@ -201,7 +215,7 @@ export function MatterActions({
               body: JSON.stringify({
                 command: skill.command,
                 matter_id: matterId,
-                input: { matter_titulo: matterTitulo, prompt: '' },
+                input: { matter_titulo: matterTitulo, prompt: userPrompt },
               }),
             });
             if (r.ok) {

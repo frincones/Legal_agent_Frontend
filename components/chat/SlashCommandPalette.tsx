@@ -37,7 +37,7 @@ export function SlashCommandPalette({
   open: boolean;
   onOpenChange: (o: boolean) => void;
   matterId?: string;
-  onSkillSelected?: (skill: Skill) => void;
+  onSkillSelected?: (skill: Skill, prompt: string) => void;
 }) {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(false);
@@ -65,16 +65,33 @@ export function SlashCommandPalette({
     }
   }, [open]);
 
+  // El filtro busca tanto por comando-prefijo como por texto libre.
+  // Lo que el usuario escribe DESPUÉS del comando se considera el prompt
+  // adicional que se enviará al skill como contexto extra.
+  const isCommandSearch = filter.trim().startsWith('/');
   const filtered = useMemo(() => {
     const q = filter.toLowerCase().trim();
     if (!q) return skills.filter(s => s.user_invocable);
+    if (isCommandSearch) {
+      // Match por prefijo del comando exacto.
+      return skills.filter(s =>
+        s.user_invocable && s.command.toLowerCase().startsWith(q),
+      );
+    }
     return skills.filter(s =>
       s.user_invocable &&
       (s.command.toLowerCase().includes(q) ||
        s.name.toLowerCase().includes(q) ||
        (s.description || '').toLowerCase().includes(q))
     );
-  }, [skills, filter]);
+  }, [skills, filter, isCommandSearch]);
+
+  function selectSkill(skill: Skill) {
+    // Si el usuario escribió en lenguaje natural (no /comando), se usa como prompt.
+    const promptText = isCommandSearch ? '' : filter.trim();
+    onSkillSelected?.(skill, promptText);
+    onOpenChange(false);
+  }
 
   function onKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'ArrowDown') {
@@ -85,10 +102,7 @@ export function SlashCommandPalette({
       setActiveIndex(i => Math.max(i - 1, 0));
     } else if (e.key === 'Enter') {
       const skill = filtered[activeIndex];
-      if (skill) {
-        onSkillSelected?.(skill);
-        onOpenChange(false);
-      }
+      if (skill) selectSkill(skill);
     }
   }
 
@@ -96,7 +110,14 @@ export function SlashCommandPalette({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
-        <Dialog.Content className="fixed left-1/2 top-[20vh] z-50 w-full max-w-xl -translate-x-1/2 surface p-0 overflow-hidden">
+        <Dialog.Content
+          aria-describedby="slash-palette-desc"
+          className="fixed left-1/2 top-[20vh] z-50 w-full max-w-xl -translate-x-1/2 surface p-0 overflow-hidden"
+        >
+          <Dialog.Title className="sr-only">Paleta de skills LexAI</Dialog.Title>
+          <Dialog.Description id="slash-palette-desc" className="sr-only">
+            Buscar y ejecutar skills · / para comandos, texto libre como prompt
+          </Dialog.Description>
           <div className="border-b p-3 flex items-center gap-2">
             <Search size={14} className="text-ink-3" />
             <input
@@ -130,10 +151,7 @@ export function SlashCommandPalette({
                         i === activeIndex ? 'bg-bg-2' : ''
                       }`}
                       onMouseEnter={() => setActiveIndex(i)}
-                      onClick={() => {
-                        onSkillSelected?.(s);
-                        onOpenChange(false);
-                      }}
+                      onClick={() => selectSkill(s)}
                     >
                       <Icon size={14} className="flex-none text-accent" />
                       <div className="flex-1 min-w-0">
