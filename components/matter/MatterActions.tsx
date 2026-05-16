@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { CalendarPlus, FolderPlus, FileSignature } from 'lucide-react';
+import { CalendarPlus, FolderPlus, FileSignature, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { Ic } from '@/components/atoms/icons';
 import { AudienciaModal } from '@/components/casos/AudienciaModal';
 import { CloudPicker } from '@/components/cloud/CloudPicker';
 import { DocuSignEnvelopeModal } from '@/components/docusign/DocuSignEnvelopeModal';
+import { SlashCommandPalette } from '@/components/chat/SlashCommandPalette';
 
 const SAVED_KEY = 'lexai:matters:saved';
 
@@ -46,6 +47,7 @@ export function MatterActions({
   const [audienciaOpen, setAudienciaOpen] = useState(false);
   const [cloudPickerOpen, setCloudPickerOpen] = useState(false);
   const [docuSignOpen, setDocuSignOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   useEffect(() => {
     setSaved(readSaved().has(matterId));
@@ -147,6 +149,14 @@ export function MatterActions({
       >
         <FileSignature size={14} /> Firma
       </button>
+      <button
+        type="button"
+        onClick={() => setPaletteOpen(true)}
+        className="btn"
+        title="Skills LexAI (Cmd+K)"
+      >
+        <Sparkles size={14} /> Skills
+      </button>
       <Link href={canvasHref} className="btn btn-primary">
         {Ic.bolt} Trabajar en Canvas
       </Link>
@@ -170,6 +180,38 @@ export function MatterActions({
         defaultSigners={
           clientEmail ? [{ name: '', email: clientEmail, routing_order: 1 }] : undefined
         }
+      />
+      <SlashCommandPalette
+        open={paletteOpen}
+        onOpenChange={setPaletteOpen}
+        matterId={matterId}
+        onSkillSelected={async (skill) => {
+          toast.message(`Ejecutando ${skill.command}…`);
+          try {
+            const r = await fetch('/api/skills/execute', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                command: skill.command,
+                matter_id: matterId,
+                input: { matter_titulo: matterTitulo, prompt: '' },
+              }),
+            });
+            if (r.ok) {
+              const data = await r.json();
+              if (data.warnings?.length) {
+                toast.warning(`${data.warnings.length} advertencia(s)`);
+              } else {
+                toast.success(`${skill.name} completada`);
+              }
+            } else {
+              const body = await r.json().catch(() => ({}));
+              toast.error(body?.detail?.reason || `Error ${r.status}`);
+            }
+          } catch (e: any) {
+            toast.error(e?.message || 'Error');
+          }
+        }}
       />
     </>
   );

@@ -7,6 +7,7 @@ const TABS = [
   { id: 'equipo', href: '/settings/equipo', label: 'Equipos' },
   { id: 'plantillas', href: '/settings/templates', label: 'Plantillas' },
   { id: 'integraciones', href: '/settings/integraciones', label: 'Integraciones' },
+  { id: 'playbook', href: '/settings/playbook', label: 'Playbook' },
   { id: 'despacho', href: '/settings/despacho', label: 'Despacho' },
   { id: 'uso', href: '/settings/uso', label: 'Uso' },
   { id: 'billing', href: '/settings/billing', label: 'Plan y facturación' },
