@@ -356,10 +356,32 @@ export function CanvasEditor({
       stream_set_text: (markdown: string) => {
         setAgentBusy(true);
         try {
-          const html = parseMarkdown(editor, markdown);
-          editor.commands.setContent(html, false, { preserveWhitespace: 'full' });
+          // Sanitize: si el último char del markdown abre lista (`- `, `* `,
+          // `1. `, encabezado `# ` o tabla `|`), aún no hay contenido del item.
+          // TipTap rechaza nodos listItem/heading/table vacíos. Recortar la
+          // línea incompleta del final antes de parsear.
+          const lines = markdown.split('\n');
+          while (lines.length > 0) {
+            const last = lines[lines.length - 1]!;
+            // bullet/ordered/heading abierto sin contenido
+            if (/^\s*(?:[-*]\s*$|\d+\.\s*$|#{1,6}\s*$)/.test(last)) {
+              lines.pop();
+              continue;
+            }
+            break;
+          }
+          const safeMd = lines.join('\n');
+          const html = parseMarkdown(editor, safeMd);
+          // Quitar <li></li> vacíos por si quedó algún caso edge (markdown
+          // con `- algo \n - ` → último li vacío). Idem <p></p>.
+          const cleanHtml = html
+            .replace(/<li>\s*<\/li>/g, '')
+            .replace(/<li>\s*<p>\s*<\/p>\s*<\/li>/g, '')
+            .replace(/<(ul|ol)>\s*<\/\1>/g, '');
+          editor.commands.setContent(cleanHtml, false, { preserveWhitespace: 'full' });
         } catch (e) {
-          console.warn('[stream_set_text] parse error:', e);
+          // Silencio el log para no spammear durante el streaming · el siguiente
+          // chunk normalmente trae contenido válido y se recupera.
         }
       },
       stream_finish: () => {
