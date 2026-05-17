@@ -299,6 +299,13 @@ export function CanvasEditor({
           : true;
         if (!ok) return;
         editor.commands.setContent(parseMarkdown(editor, data.markdown));
+        // Sincronizar store · setContent NO triggea onUpdate por defecto en algunas
+        // versiones de TipTap · CitationsSidebar lee del store.
+        try {
+          useCanvasStore.getState().setMarkdown(getMarkdownSafe(editor));
+        } catch {
+          /* noop */
+        }
         toast.success(`Plantilla "${data.title}" cargada`);
         setTplOpen(false);
       } catch (e) {
@@ -386,6 +393,14 @@ export function CanvasEditor({
       },
       stream_finish: () => {
         setAgentBusy(false);
+        // Sincronizar store con el doc final para que CitationsSidebar
+        // detecte las nuevas citas (setContent con emitUpdate=false NO
+        // triggea onUpdate, así que el store quedaría stale).
+        try {
+          useCanvasStore.getState().setMarkdown(getMarkdownSafe(editor));
+        } catch {
+          /* noop */
+        }
       },
       append: (markdown: string) => {
         runOpRespectingUser(() => {

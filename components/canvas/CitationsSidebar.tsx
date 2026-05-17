@@ -147,18 +147,43 @@ export function CitationsSidebar({ matterId }: { matterId?: string }) {
   }, [contentVersion, verifyRefs]);
 
   const handleReverifyAll = useCallback(() => {
-    const refs = Array.from(verified.keys());
-    if (refs.length === 0) {
-      toast.info('No hay citas para reverificar.');
+    // Re-extraer SIEMPRE del documento actual del editor (no del Map cacheado).
+    // Solución al bug: cargar un template o cambiar el doc no triggea onUpdate
+    // de TipTap si setContent(html, false) se usa, así que el store podía estar
+    // desactualizado. Aquí pedimos al editor su markdown actual via uiCommandBus.
+    const editorApi = uiCommandBus.getCanvasApi();
+    let currentMd = markdown;
+    if (editorApi) {
+      try {
+        const snapshot = editorApi.get_current();
+        currentMd = snapshot.markdown || snapshot.text || currentMd;
+      } catch {
+        /* fallback al store markdown */
+      }
+    }
+    const freshExtracted = extractCitations(currentMd);
+    if (freshExtracted.length === 0) {
+      toast.info('No hay citas en el documento actual.');
+      setVerified(new Map()); // limpiar el Map cuando no hay citas en el doc real
       return;
     }
-    setVerified((prev) => {
-      const next = new Map(prev);
-      for (const [k, v] of next) next.set(k, { ...v, status: 'pending' });
-      return next;
-    });
-    void verifyRefs(refs);
-  }, [verified, verifyRefs]);
+    // Reemplazar TODO el Map · descartar citas que ya no están en el doc actual
+    const next = new Map<string, VerifiedCitation>();
+    for (const c of freshExtracted) {
+      const existing = verified.get(c.ref);
+      next.set(c.ref, {
+        ...(existing ?? c),
+        ...c,
+        status: 'pending',
+      });
+    }
+    setVerified(next);
+    // Sincronizar también el store para futuros renders
+    if (currentMd !== markdown) {
+      useCanvasStore.getState().setMarkdown(currentMd);
+    }
+    void verifyRefs(freshExtracted.map((c) => c.ref));
+  }, [markdown, verified, verifyRefs]);
 
   const items = Array.from(verified.values());
   const totals = useMemo(() => {
