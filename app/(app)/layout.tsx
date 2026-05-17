@@ -16,6 +16,14 @@ import { EntitledOnly } from '@/components/entitlements/EntitledOnly';
 import { ActivationChecklist } from '@/components/onboarding/ActivationChecklist';
 import { LexHelper } from '@/components/onboarding/LexHelper';
 import { WelcomeBanner } from '@/components/onboarding/WelcomeBanner';
+import { AssistantProvider } from '@/components/assistant';
+
+// Feature flag · sidebar derecho voz+chat unificado (Sprints 1-3).
+// When unset or 'false', AssistantProvider is not mounted and nothing changes
+// in the layout. When 'true', the right rail appears with chat + voice + ⌘K +
+// activity entries; the existing VoiceHUD at the bottom continues working.
+const ASSISTANT_SIDEBAR_ENABLED =
+  process.env.NEXT_PUBLIC_ASSISTANT_SIDEBAR_ENABLED === 'true';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   // Fast: reads cookie + decodes JWT locally · no Supabase roundtrip.
@@ -54,6 +62,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <CommandPalette />
         <HITLController />
         </div>
+        {ASSISTANT_SIDEBAR_ENABLED && <AssistantProvider />}
         <MobileBottomNav />
         <PWAInstallPrompt />
         <UpgradeModal />
