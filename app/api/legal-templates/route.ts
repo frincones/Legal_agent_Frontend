@@ -15,9 +15,11 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const kind = url.searchParams.get('kind');
   const apiBase = process.env.NEXT_PUBLIC_RAILWAY_API ?? 'http://localhost:8000';
+  // trailing slash importante: el backend lista en /v1/legal-templates/ y un
+  // 307 redirect quitaría el Authorization header.
   const target = kind
     ? `${apiBase}/v1/legal-templates/${encodeURIComponent(kind)}`
-    : `${apiBase}/v1/legal-templates`;
+    : `${apiBase}/v1/legal-templates/`;
   const res = await fetch(target, {
     headers: { authorization: `Bearer ${session.access_token}` },
     cache: 'no-store',
