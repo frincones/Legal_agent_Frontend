@@ -39,13 +39,27 @@ interface MarkdownContentProps {
 }
 
 export function MarkdownContent({ source, density = 'normal' }: MarkdownContentProps) {
-  const blocks = parseBlocks(source);
+  const blocks = parseBlocks(unwrapFullMessageFence(source));
   const gap = density === 'compact' ? 'gap-1.5' : 'gap-2.5';
   return (
     <div className={`flex flex-col ${gap} text-[13px] leading-[1.55] text-ink`}>
       {blocks.map((b, i) => renderBlock(b, i))}
     </div>
   );
+}
+
+// Defensive · if the whole reply is wrapped in a single ```fence``` block
+// (some models do this when the system prompt shows markdown templates inside
+// code fences), strip the outer fence so we render the inner markdown properly.
+// Only unwrap when the fence language is empty or "markdown"/"md" — never for
+// real code blocks (json, python, etc.).
+function unwrapFullMessageFence(source: string): string {
+  const trimmed = source.trim();
+  const match = trimmed.match(/^```(\w*)\s*\n([\s\S]*?)\n```\s*$/);
+  if (!match) return source;
+  const lang = (match[1] || '').toLowerCase();
+  if (lang && lang !== 'markdown' && lang !== 'md') return source;
+  return match[2];
 }
 
 // ──────────────────────────────────────────────────────────────
