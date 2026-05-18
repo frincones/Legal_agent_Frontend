@@ -76,11 +76,22 @@ export type SkillStreamEvent =
   | { event: 'done'; data: SkillStreamDone }
   | { event: 'error'; data: SkillStreamError };
 
+/** Conversation history entry forwarded to the backend so the agent has
+ *  memory between chat turns. role: 'user' o 'assistant'. */
+export interface ChatHistoryMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export interface RunSkillParams {
   command: string;
   input: Record<string, unknown>;
   matter_id?: string | null;
   document_id?: string | null;
+  /** Últimos N mensajes del thread (user + assistant alternados) para que
+   *  el backend los prependa al user_message actual · sin esto cada /ask
+   *  es stateless y el agente olvida el contexto turno a turno. */
+  history?: ChatHistoryMessage[];
   /** AbortSignal to cancel the stream. */
   signal?: AbortSignal;
 }
@@ -107,6 +118,7 @@ export async function* runSkillStream(
       input: params.input,
       matter_id: params.matter_id ?? null,
       document_id: params.document_id ?? null,
+      history: params.history ?? [],
     }),
     signal: params.signal,
     cache: 'no-store',

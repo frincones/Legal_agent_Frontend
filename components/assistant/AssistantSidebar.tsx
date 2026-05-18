@@ -151,6 +151,22 @@ export function AssistantSidebar() {
         active_tab: activeTab,
       });
 
+      // Conversation memory · pasa los últimos 8 turnos del thread como
+      // history para que el agente tenga contexto entre turnos. Sin esto,
+      // cuando el agente pregunta algo y el usuario responde, el siguiente
+      // /ask llega aislado y el agente olvida lo que estaba haciendo.
+      // Filtramos voice partials y mensajes vacíos.
+      const threadBefore = useAssistantStore.getState().thread;
+      const HISTORY_LIMIT = 8;
+      params.history = threadBefore
+        .filter((m) => !m.isPartial && (m.content || '').trim().length > 0
+                       && m.id !== userMsgId)
+        .slice(-HISTORY_LIMIT)
+        .map((m) => ({
+          role: m.role === 'assistant' ? ('assistant' as const) : ('user' as const),
+          content: m.content,
+        }));
+
       // Trace data collected as the stream progresses · rendered as a
       // collapsed ThinkingStep header above the assistant message.
       const toolsUsed: string[] = [];
