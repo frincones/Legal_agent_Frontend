@@ -171,24 +171,27 @@ export interface AssistantPreferences {
 
 export const ASSISTANT_DEFAULTS: AssistantPreferences = {
   isExpanded: false,
-  // Default chosen so a 1920px monitor leaves the host shell at ~1480px
-  // (still comfortable for the canvas editor's 3 columns).
-  expandedWidth: 380,
+  // Narrower default · the sidebar is a FLOATING panel (overlay) that the
+  // user can resize wider if needed. A small default minimizes how much of
+  // the underlying page is covered when the panel is open.
+  expandedWidth: 320,
   onboardingSeen: false,
   nudgeDismissCounts: {},
 };
 
-export const SIDEBAR_RAIL_WIDTH = 56;
-export const SIDEBAR_MIN_WIDTH = 320;
-export const SIDEBAR_MAX_WIDTH = 640;
+export const SIDEBAR_RAIL_WIDTH = 48;
+export const SIDEBAR_MIN_WIDTH = 280;
+export const SIDEBAR_MAX_WIDTH = 560;
 
-/** Breakpoints (revised after first usability pass):
- *   ≥ 1600 px → push  (true reflow · safe on ultrawide / 27" monitors)
- *   < 1600 px → overlay (floats on top of content, dismissable by clicking outside)
- *   <  768 px → bottom-sheet + floating orb (mobile)
+/** Breakpoints (final · floating overlay model):
  *
- * The previous 1280 push breakpoint crushed the canvas page on 13–15" laptops
- * because the canvas itself has a toolbox + editor + citations sidebar. Now
- * most laptops use overlay, only big screens push. */
+ *   ≥ 768 px → floating overlay on the right edge · NO push, NO backdrop ·
+ *              the user keeps working underneath. Click X or rail collapse
+ *              to close. This avoids fighting with host pages that have
+ *              their own right-side panels (canvas citations, etc.).
+ *   < 768 px → bottom-sheet with backdrop + floating orb when collapsed.
+ *
+ * BREAKPOINT_PUSH_PX is kept as a constant for backwards compatibility but
+ * is no longer used to enable push mode (we always overlay on desktop now). */
 export const BREAKPOINT_PUSH_PX = 1600;
 export const BREAKPOINT_BOTTOM_SHEET_PX = 768;

@@ -78,23 +78,16 @@ export function AssistantSidebar() {
   const voice = useVoice();
   const abortRef = useRef<AbortController | null>(null);
 
-  // Apply body padding only when push layout is active and panel expanded.
+  // Body padding effect was removed · the sidebar now ALWAYS overlays
+  // instead of pushing the shell. The previous push approach worked on
+  // the body width but broke the canvas page's internal layout (which has
+  // its own right-side citations panel competing for the same edge).
+  // Pattern adopted: Cursor / Notion AI / Spellbook · floating panel.
   useEffect(() => {
     if (typeof document === 'undefined') return;
-    if (viewport === 'push' && isExpanded) {
-      document.body.style.setProperty(
-        BODY_PADDING_VAR,
-        `${expandedWidth + SIDEBAR_RAIL_WIDTH}px`,
-      );
-    } else if (viewport === 'push') {
-      document.body.style.setProperty(BODY_PADDING_VAR, `${SIDEBAR_RAIL_WIDTH}px`);
-    } else {
-      document.body.style.removeProperty(BODY_PADDING_VAR);
-    }
-    return () => {
-      document.body.style.removeProperty(BODY_PADDING_VAR);
-    };
-  }, [isExpanded, expandedWidth, viewport]);
+    // Defensive cleanup in case any earlier build left the var set.
+    document.body.style.removeProperty(BODY_PADDING_VAR);
+  }, []);
 
   const safeExpanded = prefsHydrated && isExpanded;
 
@@ -357,11 +350,12 @@ export function AssistantSidebar() {
     onResizeStart, handleVoiceToggle, handleSend, mode,
   ]);
 
-  // ------- render by viewport -------
+  // ------- render -------
+  // Mobile (<768px): bottom sheet WITH backdrop · taps outside dismiss
+  // because there's no room to peek the underlying content anyway.
   if (viewport === 'bottom-sheet') {
     return (
       <>
-        {/* Backdrop when expanded · click closes */}
         {safeExpanded && (
           <div
             className="fixed inset-0 z-40 bg-black/30"
@@ -397,27 +391,20 @@ export function AssistantSidebar() {
     );
   }
 
-  // overlay or push
-  const isOverlay = viewport === 'overlay';
+  // Desktop / tablet: ALWAYS floating overlay · NO push (no body width hack),
+  // NO backdrop (the user can keep working on the underlying canvas / page).
+  // Visual cue that it's floating: shadow-2 + border-line on the left edge,
+  // matching how Cursor / Notion AI / Spellbook handle their right panel.
   return (
-    <>
-      {isOverlay && safeExpanded && (
-        <div
-          className="fixed inset-0 z-40 bg-black/10"
-          onClick={() => setExpanded(false)}
-          aria-hidden
-        />
-      )}
-      <div
-        data-lexai-assistant={viewport}
-        className="pointer-events-none fixed inset-y-0 right-0 z-40 flex"
-        aria-label="Asistente Lex"
-      >
-        <div className="pointer-events-auto relative flex h-full">
-          {expandedPanel}
-          <AssistantRail />
-        </div>
+    <div
+      data-lexai-assistant="floating"
+      className="pointer-events-none fixed inset-y-0 right-0 z-40 flex"
+      aria-label="Asistente Lex"
+    >
+      <div className="pointer-events-auto relative flex h-full">
+        {expandedPanel}
+        <AssistantRail />
       </div>
-    </>
+    </div>
   );
 }
