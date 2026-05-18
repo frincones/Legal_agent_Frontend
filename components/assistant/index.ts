@@ -18,3 +18,5 @@ export { TaskCard } from './TaskCard';
 export { ReadyToSendCard } from './ReadyToSendCard';
 export type { ReadyToSendData } from './ReadyToSendCard';
 export { ActivityTimeline } from './ActivityTimeline';
+export { MarkdownContent } from './MarkdownContent';
+export { ThinkingStep } from './ThinkingStep';

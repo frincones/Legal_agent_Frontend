@@ -136,12 +136,41 @@ export function AssistantSidebar() {
         document_id: canvasState.documentId ?? context?.documentId ?? null,
       });
 
-      const toolNotes: string[] = [];
+      // Trace data collected as the stream progresses · rendered as a
+      // collapsed ThinkingStep header above the assistant message.
+      const toolsUsed: string[] = [];
+      const contextAttached: string[] = [];
+      if (params.input.document_text) {
+        const kb = Math.round(
+          ((params.input.document_text as string).length / 1024) * 10,
+        ) / 10;
+        contextAttached.push(`Documento del canvas (${kb} KB)`);
+      }
+      if (params.matter_id && context?.matterMeta?.titulo) {
+        contextAttached.push(`Caso · ${context.matterMeta.titulo}`);
+      } else if (params.matter_id) {
+        contextAttached.push(`Caso #${params.matter_id.slice(0, 8)}`);
+      }
+
+      const updateThinking = (label: string) => {
+        updateMessage(assistantMsgId, {
+          thinking: {
+            label,
+            toolsUsed: toolsUsed.length ? [...toolsUsed] : undefined,
+            contextAttached: contextAttached.length ? [...contextAttached] : undefined,
+          },
+        });
+      };
+
+      // Seed an initial trace · gets refined as events arrive.
+      updateThinking(contextAttached.length > 0 ? 'Leyendo contexto…' : 'Pensando…');
+
       try {
         for await (const ev of runSkillStream({ ...params, signal: ac.signal })) {
           if (ac.signal.aborted) break;
           switch (ev.event) {
             case 'meta':
+              updateThinking(`Ejecutando ${ev.data.name}…`);
               break;
             case 'delta':
               receivedAnyDelta = true;
@@ -149,13 +178,10 @@ export function AssistantSidebar() {
               updateMessage(assistantMsgId, { content: assistantContent });
               break;
             case 'tool_started':
-              // Show inline "🛠 ejecutando tool…" indicator without
-              // polluting the assistant message itself.
-              toolNotes.push(`🛠 ${ev.data.name}…`);
-              updateMessage(assistantMsgId, {
-                content: assistantContent + (assistantContent ? '\n\n' : '')
-                  + toolNotes.join('  ·  '),
-              });
+              if (!toolsUsed.includes(ev.data.name)) {
+                toolsUsed.push(ev.data.name);
+              }
+              updateThinking(`Ejecutando ${ev.data.name}…`);
               setMode('acting');
               pushActivity({
                 id: `act-tool-${Date.now()}-${ev.data.name}`,
@@ -165,20 +191,12 @@ export function AssistantSidebar() {
               });
               break;
             case 'tool_finished':
-              // Replace the spinner with checkmark / failure marker.
-              {
-                const last = toolNotes[toolNotes.length - 1];
-                if (last && last.includes(ev.data.name)) {
-                  toolNotes[toolNotes.length - 1] = ev.data.ok
-                    ? `✓ ${ev.data.name}`
-                    : `✗ ${ev.data.name}`;
-                  updateMessage(assistantMsgId, {
-                    content: assistantContent + (assistantContent ? '\n\n' : '')
-                      + toolNotes.join('  ·  '),
-                  });
-                }
-                setMode('thinking');
-              }
+              setMode('thinking');
+              updateThinking(
+                toolsUsed.length === 1
+                  ? `Usó ${toolsUsed[0]}`
+                  : `Usó ${toolsUsed.length} herramientas`,
+              );
               break;
             case 'warning':
               warnings.push(`${ev.data.hook}: ${ev.data.reason}`);
@@ -191,6 +209,18 @@ export function AssistantSidebar() {
                 assistantContent = ev.data.full_text;
                 updateMessage(assistantMsgId, { content: assistantContent });
                 receivedAnyDelta = true;
+              }
+              // Final trace label · summarizes what happened.
+              if (toolsUsed.length > 0) {
+                updateThinking(
+                  toolsUsed.length === 1
+                    ? `Usó ${toolsUsed[0]}`
+                    : `Usó ${toolsUsed.length} herramientas: ${toolsUsed.slice(0, 3).join(', ')}${toolsUsed.length > 3 ? '…' : ''}`,
+                );
+              } else if (contextAttached.length > 0) {
+                updateThinking('Leyó contexto y respondió');
+              } else {
+                updateThinking('Respondió');
               }
               break;
             case 'error':
@@ -215,14 +245,15 @@ export function AssistantSidebar() {
           `🚫 Acción bloqueada: ${blockedReason}`;
       }
       if (!receivedAnyDelta && !blockedReason && !ac.signal.aborted) {
-        if (toolNotes.length > 0) {
-          finalContent = toolNotes.join('  ·  ') +
-            '\n\n_(El agente ejecutó tools pero no produjo respuesta de texto. Reintenta o reformula.)_';
+        if (toolsUsed.length > 0) {
+          finalContent =
+            `Ejecuté ${toolsUsed.join(', ')} pero no produje respuesta de texto. ` +
+            'Reintenta o reformula la pregunta.';
         } else {
           finalContent =
             params.command === '/ask'
-              ? 'No tengo aún una skill `/ask` configurada en tu firma. ' +
-                'Prueba con ⌘K para ver los comandos disponibles, o escribe `/` para autocompletar una skill.'
+              ? 'No pude generar una respuesta. Prueba con ⌘K para ver los comandos disponibles, ' +
+                'o escribe `/` para autocompletar una skill.'
               : `La skill \`${params.command}\` no devolvió contenido o no existe en este despacho.`;
         }
       }

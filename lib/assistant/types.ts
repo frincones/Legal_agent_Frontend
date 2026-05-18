@@ -17,6 +17,13 @@ export type MessageChannel = 'voice' | 'chat';
 
 export type MessageRole = 'user' | 'assistant' | 'system' | 'tool';
 
+export interface ThinkingTrace {
+  label: string;
+  toolsUsed?: string[];
+  contextAttached?: string[];
+  sources?: { ref: string; url?: string }[];
+}
+
 export interface Message {
   id: string;
   role: MessageRole;
@@ -29,6 +36,9 @@ export interface Message {
   citations?: Citation[];
   /** Tool call summary if assistant invoked tools to produce this message. */
   toolCalls?: ToolCallSummary[];
+  /** Optional "what I did before answering" trace · rendered as
+   * collapsible header above the message body (Claude Cowork style). */
+  thinking?: ThinkingTrace;
 }
 
 export interface Citation {

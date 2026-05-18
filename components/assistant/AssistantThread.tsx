@@ -14,6 +14,8 @@
 import { useEffect, useRef } from 'react';
 import { useAssistantStore } from '@/lib/stores/assistant-store';
 import type { Citation, Message } from '@/lib/assistant/types';
+import { MarkdownContent } from './MarkdownContent';
+import { ThinkingStep } from './ThinkingStep';
 
 function CitationChip({ citation }: { citation: Citation }) {
   const colorClass = {
@@ -43,39 +45,49 @@ function MessageBubble({ msg }: { msg: Message }) {
   const isUser = msg.role === 'user';
   const isVoice = msg.channel === 'voice';
 
+  if (isUser) {
+    // User messages stay as compact right-aligned bubbles.
+    return (
+      <div className="flex flex-col items-end gap-1">
+        <div className="text-ink-3 flex items-center gap-1 px-1 text-[10px]">
+          <span aria-hidden>{isVoice ? 'voz' : 'chat'}</span>
+          <span>· Tú</span>
+        </div>
+        <div className="bg-accent-soft text-accent-ink max-w-[88%] rounded-md px-3 py-2 text-[13px] leading-relaxed">
+          <div className="whitespace-pre-wrap break-words">{msg.content}</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Assistant messages render full-width (no bubble) for an article-like feel
+  // matching Claude Cowork. Markdown gets a real renderer with sections,
+  // tables, code chips, etc.
   return (
-    <div
-      className={`flex flex-col gap-1 ${isUser ? 'items-end' : 'items-start'}`}
-    >
-      <div className="text-ink-3 flex items-center gap-1 px-1 text-[10px]">
-        <span aria-hidden>{isVoice ? '🎙' : '💬'}</span>
-        <span>{isUser ? 'Tú' : 'Lex'}</span>
+    <article className="flex flex-col gap-2">
+      {msg.thinking && <ThinkingStep trace={msg.thinking} />}
+      <div className="text-ink-3 flex items-center gap-1 px-0 text-[10px]">
+        <span className="text-ink-2 font-medium">Lex</span>
+        {isVoice && <span>· voz</span>}
         {msg.isPartial && (
           <span className="text-ink-3 italic">· escribiendo…</span>
         )}
       </div>
-      <div
-        className={[
-          'max-w-[88%] rounded-md px-3 py-2 text-sm leading-relaxed',
-          isUser
-            ? 'bg-accent-soft text-accent-ink'
-            : 'bg-bg-elev text-ink border-line border',
-          msg.isPartial ? 'italic opacity-80' : '',
-        ].join(' ')}
-      >
-        {/* Sprint 1: render content as preformatted text to preserve newlines
-            without pulling in a markdown renderer. Markdown rendering joins
-            this in Sprint 3 alongside the canvas streaming pipeline. */}
-        <div className="whitespace-pre-wrap break-words">{msg.content}</div>
-        {msg.citations && msg.citations.length > 0 && (
-          <div className="border-line mt-2 flex flex-wrap gap-1 border-t pt-2">
-            {msg.citations.map((c, i) => (
-              <CitationChip key={`${c.ref}-${i}`} citation={c} />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+      {msg.content ? (
+        <div className="text-ink">
+          <MarkdownContent source={msg.content} />
+        </div>
+      ) : (
+        <div className="text-ink-3 italic text-[12px]">…</div>
+      )}
+      {msg.citations && msg.citations.length > 0 && (
+        <div className="border-line mt-1 flex flex-wrap gap-1 border-t pt-2">
+          {msg.citations.map((c, i) => (
+            <CitationChip key={`${c.ref}-${i}`} citation={c} />
+          ))}
+        </div>
+      )}
+    </article>
   );
 }
 
