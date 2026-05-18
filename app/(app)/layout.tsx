@@ -47,7 +47,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <EntitlementsProvider>
     <VoiceProvider>
-      <div className="flex h-screen w-screen flex-col overflow-hidden bg-bg text-ink">
+      {/* Outer shell · respects --lexai-assistant-pad-right (set by AssistantSidebar
+          when expanded on desktop ≥1280px) so the host layout reflows instead
+          of being covered. When the flag is off or the sidebar is collapsed,
+          the var resolves to 0 / 56px and the shell renders at full width. */}
+      <div
+        className="flex h-screen flex-col overflow-hidden bg-bg text-ink transition-[width] duration-200 ease-out"
+        style={{ width: 'calc(100vw - var(--lexai-assistant-pad-right, 0px))' }}
+      >
         <OfflineIndicator />
         <QuotaBanner />
         <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden md:grid-cols-[248px_1fr]">
