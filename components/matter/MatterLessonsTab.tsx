@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { BookOpen, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn, formatRelative } from '@/lib/utils';
+import { useDataChangeRefresh } from '@/lib/hooks/useDataChangeRefresh';
 
 type Lesson = {
   id: string;
@@ -57,6 +58,9 @@ export function MatterLessonsTab({ matterId }: { matterId: string }) {
   }, [matterId]);
 
   useEffect(() => { void refresh(); }, [refresh]);
+
+  // Refresca cuando el agente extrae lección vía tool.
+  useDataChangeRefresh('lessons', refresh, { matterId });
 
   async function extractWithLLM(force = false) {
     setExtracting(true);

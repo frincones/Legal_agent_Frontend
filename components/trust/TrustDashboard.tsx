@@ -6,6 +6,7 @@ import { AlertTriangle, Banknote, CheckCircle2, Loader2, Plus, RefreshCcw, Walle
 import { AccountsList } from './AccountsList';
 import { TransactionsList } from './TransactionsList';
 import { BankReconciliation } from './BankReconciliation';
+import { useDataChangeRefresh } from '@/lib/hooks/useDataChangeRefresh';
 
 type Summary = {
   accounts_count: number;
@@ -33,6 +34,9 @@ export function TrustDashboard() {
   }, []);
 
   useEffect(() => { void refreshSummary(); }, [refreshSummary]);
+
+  // Refresca summary cuando el agente registra depósito/pago vía tool.
+  useDataChangeRefresh('trust_transactions', refreshSummary);
 
   return (
     <div className="grid gap-4">

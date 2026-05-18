@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { AlertTriangle, CheckCircle2, Info, Loader2, RefreshCcw, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn, formatRelative } from '@/lib/utils';
+import { useDataChangeRefresh } from '@/lib/hooks/useDataChangeRefresh';
 
 type Insight = {
   id: string;
@@ -56,6 +57,9 @@ export function InsightsList({ compact = false, maxItems }: { compact?: boolean;
   }, []);
 
   useEffect(() => { void refresh(); }, [refresh]);
+
+  // Refresca lista cuando el agente regenera insights.
+  useDataChangeRefresh('insights', refresh);
 
   async function regenerate() {
     setRefreshing(true);

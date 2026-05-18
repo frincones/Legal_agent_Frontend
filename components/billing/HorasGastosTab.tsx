@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { TimerWidget } from './TimerWidget';
 import { TrustBalanceCard } from '@/components/trust/TrustBalanceCard';
 import { cn, formatCOP, formatRelative } from '@/lib/utils';
+import { useDataChangeRefresh } from '@/lib/hooks/useDataChangeRefresh';
 
 type TimeEntry = {
   id: string;
@@ -68,6 +69,13 @@ export function HorasGastosTab({ matterId }: { matterId: string }) {
   }, [matterId]);
 
   useEffect(() => { void refresh(); }, [refresh]);
+
+  // Refresca cuando el agente registra horas/gastos o cambia trust del matter.
+  useDataChangeRefresh(
+    ['time_entries', 'expenses', 'trust_transactions', 'invoices'],
+    refresh,
+    { matterId },
+  );
 
   async function deleteEntry(id: string) {
     if (!confirm('¿Eliminar entrada?')) return;

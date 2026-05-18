@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn, formatRelative } from '@/lib/utils';
+import { useDataChangeRefresh } from '@/lib/hooks/useDataChangeRefresh';
 
 type Task = {
   id: string;
@@ -67,6 +68,9 @@ export function TasksList({
   }, [matterId, filterStatus]);
 
   useEffect(() => { void refresh(); }, [refresh]);
+
+  // Refresca cuando el agente crea/completa una task vía tool.
+  useDataChangeRefresh('tasks', refresh, { matterId: matterId ?? undefined });
 
   useEffect(() => {
     void (async () => {

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn, formatRelative } from '@/lib/utils';
+import { useDataChangeRefresh } from '@/lib/hooks/useDataChangeRefresh';
 
 type Entry = {
   id: string;
@@ -99,6 +100,9 @@ export function KBBrowser() {
   }, [filterKind, filterCollection, filterPinned]);
 
   useEffect(() => { void refresh(); }, [refresh]);
+
+  // Refresca cuando el agente añade entrada vía tool.
+  useDataChangeRefresh('kb', refresh);
 
   async function togglePin(e: Entry) {
     const r = await fetch(`/api/kb/entries/${e.id}/${e.pinned ? 'unpin' : 'pin'}`, {

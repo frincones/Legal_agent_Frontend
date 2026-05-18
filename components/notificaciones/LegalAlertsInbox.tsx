@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, BellOff, Check, ExternalLink, Info, Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn, formatRelative } from '@/lib/utils';
+import { useDataChangeRefresh } from '@/lib/hooks/useDataChangeRefresh';
 
 type LegalAlert = {
   id: string;
@@ -49,6 +50,9 @@ export function LegalAlertsInbox() {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+
+  // Refresca alertas legales cuando el agente regenera insights.
+  useDataChangeRefresh('insights', load);
 
   const handleRead = useCallback(
     async (id: string) => {

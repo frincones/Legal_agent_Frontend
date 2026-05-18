@@ -30,7 +30,60 @@ export type UICommand =
   | { action: 'canvas_insert_at_cursor'; markdown: string }
   | { action: 'canvas_find_replace'; needle: string; replacement: string }
   | { action: 'canvas_select_section'; heading: string }
-  | { action: 'canvas_save_version' };
+  | { action: 'canvas_save_version' }
+  // Generic data refresh signal · emitido por las tools de escritura del
+  // agente (add_matter_note, create_task, generate_invoice, ...) para que
+  // el frontend invalide caches / refresque módulos. Ver
+  // `docs/agent-ui-sync-audit.md` para el contrato completo y la lista de
+  // resources válidos.
+  | {
+      action: 'data_changed';
+      resource: DataChangedResource;
+      matter_id?: string;
+      firm_id?: string;
+      op?: 'create' | 'update' | 'delete';
+      extra?: Record<string, unknown>;
+    };
+
+/** Lista canónica de resources que las tools de escritura pueden emitir.
+ *  Mantener sincronizada con `agent/tools/_ui_events.py` del backend. */
+export type DataChangedResource =
+  | 'deadlines'
+  | 'notes'
+  | 'tasks'
+  | 'comments'
+  | 'time_entries'
+  | 'expenses'
+  | 'invoices'
+  | 'trust_transactions'
+  | 'leads'
+  | 'documents'
+  | 'parties'
+  | 'predictions'
+  | 'lessons'
+  | 'kb'
+  | 'evidence'
+  | 'redlines'
+  | 'signatures'
+  | 'wizards'
+  | 'calendar_events'
+  | 'emails'
+  | 'judicial'
+  | 'insights'
+  | 'matters'
+  | 'calc_results';
+
+/** Detail shape of the `lexai:data-changed` CustomEvent dispatched by the
+ *  global handler. Components subscribe with
+ *  `window.addEventListener('lexai:data-changed', ...)` and inspect
+ *  `(e as CustomEvent<DataChangedEventDetail>).detail.resource`. */
+export interface DataChangedEventDetail {
+  resource: DataChangedResource;
+  matter_id?: string;
+  firm_id?: string;
+  op?: 'create' | 'update' | 'delete';
+  extra?: Record<string, unknown>;
+}
 
 export type CanvasApi = {
   get_current: () => { text: string; html: string; markdown: string; word_count: number };

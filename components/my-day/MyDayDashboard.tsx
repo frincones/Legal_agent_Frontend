@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn, formatRelative } from '@/lib/utils';
+import { useDataChangeRefresh } from '@/lib/hooks/useDataChangeRefresh';
 
 type TaskItem = {
   id: string;
@@ -79,6 +80,13 @@ export function MyDayDashboard() {
   }, [horizon]);
 
   useEffect(() => { void refresh(); }, [refresh]);
+
+  // Refresca My Day cuando el agente toca tasks, deadlines, comments,
+  // mentions o predictions vía tool.
+  useDataChangeRefresh(
+    ['tasks', 'deadlines', 'comments', 'predictions'],
+    refresh,
+  );
 
   async function completeTask(id: string) {
     const r = await fetch(`/api/tasks/${id}/complete`, { method: 'POST' });

@@ -6,6 +6,7 @@ import { Check, ExternalLink, FileText, Loader2, MoreHorizontal, Plus } from 'lu
 import { toast } from 'sonner';
 import { InvoiceWizard } from './InvoiceWizard';
 import { cn, formatCOP, formatRelative } from '@/lib/utils';
+import { useDataChangeRefresh } from '@/lib/hooks/useDataChangeRefresh';
 
 type Invoice = {
   id: string;
@@ -54,6 +55,9 @@ export function InvoicesList({ matters }: { matters: MatterOpt[] }) {
   }, [statusFilter]);
 
   useEffect(() => { void refresh(); }, [refresh]);
+
+  // Refresca cuando el agente factura, marca pagada, anula vía tool.
+  useDataChangeRefresh('invoices', refresh);
 
   async function finalize(id: string) {
     if (!confirm('Marcar factura como enviada? (no se puede deshacer fácil)')) return;

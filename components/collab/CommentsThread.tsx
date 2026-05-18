@@ -5,6 +5,7 @@ import { Check, CheckCircle2, MessageCircle, MoreHorizontal, Reply, Trash2, X } 
 import { toast } from 'sonner';
 import { cn, formatRelative } from '@/lib/utils';
 import { MentionAwareTextarea } from './MentionAwareTextarea';
+import { useDataChangeRefresh } from '@/lib/hooks/useDataChangeRefresh';
 
 type Comment = {
   id: string;
@@ -83,6 +84,15 @@ export function CommentsThread({
   }, [query]);
 
   useEffect(() => { void refresh(); }, [refresh]);
+
+  // Refresca thread cuando el agente agrega/resuelve comentario vía tool.
+  // Filtra por matter del anchor cuando aplica para evitar refetch innecesarios.
+  const matterFilter = (anchor.kind === 'matter' || anchor.kind === 'canvas')
+    ? anchor.matter_id
+    : (anchor.kind === 'matter_document' || anchor.kind === 'lesson')
+    ? anchor.matter_id
+    : undefined;
+  useDataChangeRefresh('comments', refresh, { matterId: matterFilter });
 
   async function createRoot() {
     if (!draft.trim() || submitting) return;

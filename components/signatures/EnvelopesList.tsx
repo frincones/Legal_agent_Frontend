@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { EnvelopeWizard } from './EnvelopeWizard';
 import { EnvelopeDetail } from './EnvelopeDetail';
 import { cn, formatRelative } from '@/lib/utils';
+import { useDataChangeRefresh } from '@/lib/hooks/useDataChangeRefresh';
 
 type Envelope = {
   id: string;
@@ -51,6 +52,9 @@ export function EnvelopesList() {
   }, []);
 
   useEffect(() => { void refresh(); }, [refresh]);
+
+  // Refresca lista cuando el agente envía un sobre nuevo vía tool.
+  useDataChangeRefresh('signatures', refresh);
 
   return (
     <div className="grid gap-3">

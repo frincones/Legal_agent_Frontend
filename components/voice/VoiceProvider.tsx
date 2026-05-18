@@ -196,6 +196,32 @@ export function VoiceProvider({ children, matterId }: { children: React.ReactNod
         toast.success('Versión guardada');
         return true;
       }),
+      // Generic data refresh · emitido por las tools de escritura del agente.
+      // Re-ejecuta el segmento actual (Server Components) y notifica a
+      // componentes client-side via CustomEvent para que hagan refresh
+      // quirúrgico de su lista. Ver docs/agent-ui-sync-audit.md.
+      uiCommandBus.register('data_changed', (cmd) => {
+        if (cmd.action !== 'data_changed') return false;
+        try {
+          router.refresh();
+        } catch (e) {
+          console.warn('[VoiceProvider] router.refresh failed', e);
+        }
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('lexai:data-changed', {
+              detail: {
+                resource: cmd.resource,
+                matter_id: cmd.matter_id,
+                firm_id: cmd.firm_id,
+                op: cmd.op ?? 'create',
+                extra: cmd.extra,
+              },
+            }),
+          );
+        }
+        return true;
+      }),
     ];
     return () => {
       unsubs.forEach((u) => u());

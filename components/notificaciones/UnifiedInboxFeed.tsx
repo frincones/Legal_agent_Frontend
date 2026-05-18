@@ -15,6 +15,7 @@ import {
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { cn, formatRelative } from '@/lib/utils';
+import { useDataChangeRefresh } from '@/lib/hooks/useDataChangeRefresh';
 
 type InboxKind = 'judicial' | 'email' | 'alert';
 type InboxItem = {
@@ -96,6 +97,10 @@ export function UnifiedInboxFeed() {
   }, [filter]);
 
   useEffect(() => { void refresh(); }, [refresh]);
+
+  // Refresca bandeja cuando el agente polea judicial, sincroniza emails,
+  // dispara SLA reminders o procesa alertas legales vía tool.
+  useDataChangeRefresh(['judicial', 'emails', 'insights'], refresh);
 
   async function markStatus(it: InboxItem, status: 'read' | 'archived') {
     try {

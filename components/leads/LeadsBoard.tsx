@@ -6,6 +6,7 @@ import { Briefcase, Loader2, Phone, Plus, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { LeadDrawer } from './LeadDrawer';
 import { cn, formatCOP, formatRelative } from '@/lib/utils';
+import { useDataChangeRefresh } from '@/lib/hooks/useDataChangeRefresh';
 
 type Lead = {
   id: string;
@@ -61,6 +62,9 @@ export function LeadsBoard() {
   }, []);
 
   useEffect(() => { void refresh(); }, [refresh]);
+
+  // Refresca board cuando el agente captura un lead nuevo vía tool.
+  useDataChangeRefresh('leads', refresh);
 
   async function moveLead(leadId: string, stageId: string) {
     try {
