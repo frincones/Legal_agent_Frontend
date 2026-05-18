@@ -32,6 +32,7 @@ import {
 } from '@/lib/assistant/skill-runner';
 import { useVoice } from '@/components/voice/VoiceProvider';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
+import { uiCommandBus, type UICommand } from '@/lib/voice/ui-command-bus';
 
 import { AssistantRail } from './AssistantRail';
 import { AssistantHeader } from './AssistantHeader';
@@ -198,6 +199,22 @@ export function AssistantSidebar() {
                   : `Usó ${toolsUsed.length} herramientas`,
               );
               break;
+            case 'ui_command': {
+              // Tool emitted a side-effect for the UI (canvas_set_text,
+              // ui_navigate, prefill_form, etc.). Route through the same
+              // bus that voice uses so the active components apply it.
+              const cmd = ev.data as unknown as UICommand;
+              if (cmd && typeof cmd === 'object' && 'action' in cmd) {
+                void uiCommandBus.dispatch(cmd);
+                pushActivity({
+                  id: `act-uicmd-${Date.now()}-${cmd.action}`,
+                  ts: new Date().toISOString(),
+                  kind: 'tool_called',
+                  label: `UI · ${cmd.action}`,
+                });
+              }
+              break;
+            }
             case 'warning':
               warnings.push(`${ev.data.hook}: ${ev.data.reason}`);
               break;

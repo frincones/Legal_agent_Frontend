@@ -56,6 +56,15 @@ export interface SkillStreamToolFinished {
   preview?: string;
 }
 
+/** Emitted right after `tool_finished` when the tool returned a `_ui_command`
+ *  payload (canvas_set_text, ui_navigate, prefill_form, etc.). Caller routes
+ *  it through uiCommandBus so the active components (CanvasEditor, router)
+ *  apply the side effect. */
+export interface SkillStreamUiCommand {
+  action: string;
+  [key: string]: unknown;
+}
+
 export type SkillStreamEvent =
   | { event: 'meta'; data: SkillStreamMeta }
   | { event: 'delta'; data: SkillStreamDelta }
@@ -63,6 +72,7 @@ export type SkillStreamEvent =
   | { event: 'blocked'; data: { hook?: string; reason?: string } }
   | { event: 'tool_started'; data: SkillStreamToolStarted }
   | { event: 'tool_finished'; data: SkillStreamToolFinished }
+  | { event: 'ui_command'; data: SkillStreamUiCommand }
   | { event: 'done'; data: SkillStreamDone }
   | { event: 'error'; data: SkillStreamError };
 
@@ -187,6 +197,8 @@ function parseSSEFrame(frame: string): SkillStreamEvent | null {
       return { event: 'tool_started', data: data as SkillStreamToolStarted };
     case 'tool_finished':
       return { event: 'tool_finished', data: data as SkillStreamToolFinished };
+    case 'ui_command':
+      return { event: 'ui_command', data: data as SkillStreamUiCommand };
     case 'done':
       return { event: 'done', data: data as SkillStreamDone };
     case 'error':
