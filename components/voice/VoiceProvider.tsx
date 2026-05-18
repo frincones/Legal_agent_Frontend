@@ -7,6 +7,7 @@ import { RealtimeClient } from '@/components/voice/RealtimeClient';
 import { useVoiceStore } from '@/lib/stores/voice-store';
 import { uiCommandBus, type UICommand } from '@/lib/voice/ui-command-bus';
 import { openCommandPalette } from '@/components/shell/SidebarSearchTrigger';
+import { useGlobalDataInvalidation } from '@/lib/hooks/useDataInvalidation';
 
 type VoiceCtx = {
   ready: boolean;
@@ -40,6 +41,13 @@ export function VoiceProvider({ children, matterId }: { children: React.ReactNod
   const clientRef = useRef<RealtimeClient | null>(null);
   const setHud = useVoiceStore((s) => s.setState);
   const setMatter = useVoiceStore((s) => s.setMatter);
+
+  // Capa 2 · escucha el bus `lexai:data-changed` y hace
+  // `queryClient.invalidateQueries` con la convención canónica de queryKey.
+  // No-op si no hay queries registradas (es el caso actual de la mayoría
+  // de componentes que aún usan useEffect+fetch). Lista para cuando se
+  // migren a useQuery sin tener que tocar este provider.
+  useGlobalDataInvalidation();
 
   useEffect(() => {
     setMatter(matterId ?? null);
