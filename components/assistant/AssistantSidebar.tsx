@@ -130,11 +130,25 @@ export function AssistantSidebar() {
         ? canvasState.markdown
         : null;
 
+      // UI context · qué pestaña/ruta mira el usuario. Ayuda al agente a
+      // desambiguar 'crea una nota' (→ add_matter_note si está en pestaña
+      // Notas) vs 'agrega al documento' (→ canvas_append si está en Canvas).
+      const currentPath = typeof window !== 'undefined' ? window.location.pathname : null;
+      let activeTab: string | null = null;
+      if (currentPath) {
+        // /casos/<id>/<tab> · captura el segmento después del matter id
+        const m = currentPath.match(/\/casos\/[^/]+\/([^/?#]+)/);
+        if (m) activeTab = m[1] ?? null;
+        else if (/^\/casos\/[^/]+\/?$/.test(currentPath)) activeTab = 'resumen';
+      }
+
       const params = parseUserMessage(text, {
         matter_id: context?.matterId ?? null,
         matter_titulo: context?.matterMeta?.titulo ?? null,
         document_text: documentText,
         document_id: canvasState.documentId ?? context?.documentId ?? null,
+        current_path: currentPath,
+        active_tab: activeTab,
       });
 
       // Trace data collected as the stream progresses · rendered as a

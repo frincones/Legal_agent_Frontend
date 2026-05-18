@@ -231,6 +231,12 @@ export interface ParseContext {
   document_text?: string | null;
   /** Optional id of the active canvas document. */
   document_id?: string | null;
+  /** Current page path · ej. '/casos/<id>/notas'. Permite al agente saber
+   *  qué pestaña está mirando el usuario para inferir intención. */
+  current_path?: string | null;
+  /** Pestaña activa dentro del caso · 'notas' | 'canvas' | 'documentos' |
+   *  'deadlines' | 'horas' | 'firmas' | 'comentarios' | ... */
+  active_tab?: string | null;
 }
 
 export function parseUserMessage(
@@ -245,6 +251,17 @@ export function parseUserMessage(
   if (context.matter_titulo) base.matter_titulo = context.matter_titulo;
   if (context.document_text && context.document_text.trim().length > 0) {
     base.document_text = context.document_text.slice(0, MAX_ATTACHED_DOCUMENT_CHARS);
+  }
+  // UI context · ayuda al agente a desambiguar (notes vs canvas, etc.)
+  const uiCtx: Record<string, unknown> = {};
+  if (context.current_path) uiCtx.current_path = context.current_path;
+  if (context.active_tab) uiCtx.active_tab = context.active_tab;
+  if (context.document_text != null) {
+    uiCtx.canvas_has_content = context.document_text.trim().length > 200;
+    uiCtx.canvas_chars = context.document_text.length;
+  }
+  if (Object.keys(uiCtx).length > 0) {
+    base.context = uiCtx;
   }
 
   if (isSlash) {
