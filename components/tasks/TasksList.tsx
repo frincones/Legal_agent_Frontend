@@ -8,6 +8,7 @@ import {
 import { toast } from 'sonner';
 import { cn, formatRelative } from '@/lib/utils';
 import { useDataChangeRefresh } from '@/lib/hooks/useDataChangeRefresh';
+import { useTableSubscription } from '@/lib/hooks/useTableSubscription';
 
 type Task = {
   id: string;
@@ -71,6 +72,9 @@ export function TasksList({
 
   // Refresca cuando el agente crea/completa una task vía tool.
   useDataChangeRefresh('tasks', refresh, { matterId: matterId ?? undefined });
+  // Capa 3 · red de seguridad multi-usuario · si otro colega crea task,
+  // o un worker backend (automation) la insertó, también lo vemos.
+  useTableSubscription('tasks', refresh, { matterId: matterId ?? undefined });
 
   useEffect(() => {
     void (async () => {

@@ -9,6 +9,7 @@ import {
 import { toast } from 'sonner';
 import { cn, formatRelative } from '@/lib/utils';
 import { useDataChangeRefresh } from '@/lib/hooks/useDataChangeRefresh';
+import { useTableSubscription } from '@/lib/hooks/useTableSubscription';
 
 type TaskItem = {
   id: string;
@@ -87,6 +88,11 @@ export function MyDayDashboard() {
     ['tasks', 'deadlines', 'comments', 'predictions'],
     refresh,
   );
+  // Capa 3 · subscripciones Realtime para writes externos (otros usuarios,
+  // workers backend, automation rules). Suficiente con tasks + deadlines
+  // que son las 2 con mayor flujo.
+  useTableSubscription('tasks', refresh);
+  useTableSubscription('matter_deadlines', refresh);
 
   async function completeTask(id: string) {
     const r = await fetch(`/api/tasks/${id}/complete`, { method: 'POST' });

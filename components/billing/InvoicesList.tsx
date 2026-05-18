@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { InvoiceWizard } from './InvoiceWizard';
 import { cn, formatCOP, formatRelative } from '@/lib/utils';
 import { useDataChangeRefresh } from '@/lib/hooks/useDataChangeRefresh';
+import { useTableSubscription } from '@/lib/hooks/useTableSubscription';
 
 type Invoice = {
   id: string;
@@ -58,6 +59,8 @@ export function InvoicesList({ matters }: { matters: MatterOpt[] }) {
 
   // Refresca cuando el agente factura, marca pagada, anula vía tool.
   useDataChangeRefresh('invoices', refresh);
+  // Capa 3 · si un webhook/worker emite cambio (cron de overdue, etc.).
+  useTableSubscription('invoices', refresh);
 
   async function finalize(id: string) {
     if (!confirm('Marcar factura como enviada? (no se puede deshacer fácil)')) return;
