@@ -20,6 +20,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAssistantStore } from '@/lib/stores/assistant-store';
+import { useCanvasStore } from '@/lib/stores/canvas-store';
 
 interface AssistantComposerProps {
   /** Fired when the user submits text. */
@@ -41,6 +42,13 @@ export function AssistantComposer({
   const taRef = useRef<HTMLTextAreaElement>(null);
   const mode = useAssistantStore((s) => s.mode);
   const context = useAssistantStore((s) => s.context);
+  // Subscribe to canvas markdown so the "doc attached" pill updates in
+  // realtime as the user types in the editor or switches matter.
+  const canvasMarkdown = useCanvasStore((s) => s.markdown);
+  const canvasHasContent = canvasMarkdown && canvasMarkdown.trim().length > 50;
+  const canvasSizeKB = canvasHasContent
+    ? Math.round((canvasMarkdown.length / 1024) * 10) / 10
+    : 0;
 
   // Auto-resize textarea up to MAX_TEXTAREA_HEIGHT.
   useEffect(() => {
@@ -84,6 +92,18 @@ export function AssistantComposer({
 
   return (
     <div className="border-line bg-bg flex flex-col gap-2 border-t p-3">
+      {/* Context pill · shown when the canvas has substantive content the
+          agent will receive as document_text on the next send. Lets the user
+          KNOW the agent has the open document in scope. */}
+      {canvasHasContent && (
+        <div
+          className="bg-accent-soft text-accent-ink flex items-center gap-1.5 self-start rounded-full px-2 py-0.5 text-[10px]"
+          title="El asistente recibirá el contenido del canvas como contexto en tu próximo mensaje"
+        >
+          <span aria-hidden>📎</span>
+          <span>Documento del canvas adjunto · {canvasSizeKB} KB</span>
+        </div>
+      )}
       <div className="border-line bg-bg-elev flex items-end gap-2 rounded-md border px-2 py-1.5 focus-within:border-accent/60 transition-colors">
         <textarea
           ref={taRef}

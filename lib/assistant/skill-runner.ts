@@ -44,11 +44,25 @@ export interface SkillStreamError {
   detail?: string;
 }
 
+export interface SkillStreamToolStarted {
+  name: string;
+  round: number;
+}
+
+export interface SkillStreamToolFinished {
+  name: string;
+  round: number;
+  ok: boolean;
+  preview?: string;
+}
+
 export type SkillStreamEvent =
   | { event: 'meta'; data: SkillStreamMeta }
   | { event: 'delta'; data: SkillStreamDelta }
   | { event: 'warning'; data: SkillStreamWarning }
   | { event: 'blocked'; data: { hook?: string; reason?: string } }
+  | { event: 'tool_started'; data: SkillStreamToolStarted }
+  | { event: 'tool_finished'; data: SkillStreamToolFinished }
   | { event: 'done'; data: SkillStreamDone }
   | { event: 'error'; data: SkillStreamError };
 
@@ -169,6 +183,10 @@ function parseSSEFrame(frame: string): SkillStreamEvent | null {
       return { event: 'warning', data: data as SkillStreamWarning };
     case 'blocked':
       return { event: 'blocked', data: data as { hook?: string; reason?: string } };
+    case 'tool_started':
+      return { event: 'tool_started', data: data as SkillStreamToolStarted };
+    case 'tool_finished':
+      return { event: 'tool_finished', data: data as SkillStreamToolFinished };
     case 'done':
       return { event: 'done', data: data as SkillStreamDone };
     case 'error':
@@ -188,33 +206,52 @@ function parseSSEFrame(frame: string): SkillStreamEvent | null {
  * questions. If your firm doesn't have an /ask skill seeded, the backend
  * will return skill_not_found and the UI shows a hint to use /skill names.
  */
+/** Maximum length of canvas document text we'll attach to a skill call.
+ * Skill runner truncates server-side at 25 000 chars · we trim slightly earlier
+ * so the user sees a "documento truncado" hint before the round-trip. */
+export const MAX_ATTACHED_DOCUMENT_CHARS = 24_000;
+
+export interface ParseContext {
+  matter_id?: string | null;
+  matter_titulo?: string | null;
+  /** Open canvas content (markdown) · automatically attached as
+   * input.document_text so /ask and /redactar/* skills can analyze it. */
+  document_text?: string | null;
+  /** Optional id of the active canvas document. */
+  document_id?: string | null;
+}
+
 export function parseUserMessage(
   text: string,
-  context: { matter_id?: string | null; matter_titulo?: string | null } = {},
+  context: ParseContext = {},
 ): RunSkillParams {
   const trimmed = text.trim();
-  if (trimmed.startsWith('/')) {
+  const isSlash = trimmed.startsWith('/');
+
+  // Build the base input bag · shared between slash and free text.
+  const base: Record<string, unknown> = {};
+  if (context.matter_titulo) base.matter_titulo = context.matter_titulo;
+  if (context.document_text && context.document_text.trim().length > 0) {
+    base.document_text = context.document_text.slice(0, MAX_ATTACHED_DOCUMENT_CHARS);
+  }
+
+  if (isSlash) {
     const firstSpace = trimmed.indexOf(' ');
     const command = firstSpace === -1 ? trimmed : trimmed.slice(0, firstSpace);
     const argsRaw = firstSpace === -1 ? '' : trimmed.slice(firstSpace + 1).trim();
     return {
       command,
       input: argsRaw
-        ? {
-            prompt: argsRaw,
-            args: { raw: argsRaw },
-            ...(context.matter_titulo ? { matter_titulo: context.matter_titulo } : {}),
-          }
-        : (context.matter_titulo ? { matter_titulo: context.matter_titulo } : {}),
+        ? { ...base, prompt: argsRaw, args: { raw: argsRaw } }
+        : base,
       matter_id: context.matter_id ?? null,
+      document_id: context.document_id ?? null,
     };
   }
   return {
     command: '/ask',
-    input: {
-      prompt: trimmed,
-      ...(context.matter_titulo ? { matter_titulo: context.matter_titulo } : {}),
-    },
+    input: { ...base, prompt: trimmed },
     matter_id: context.matter_id ?? null,
+    document_id: context.document_id ?? null,
   };
 }

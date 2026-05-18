@@ -31,6 +31,7 @@ import {
   runSkillStream,
 } from '@/lib/assistant/skill-runner';
 import { useVoice } from '@/components/voice/VoiceProvider';
+import { useCanvasStore } from '@/lib/stores/canvas-store';
 
 import { AssistantRail } from './AssistantRail';
 import { AssistantHeader } from './AssistantHeader';
@@ -128,11 +129,21 @@ export function AssistantSidebar() {
       const warnings: string[] = [];
       let blockedReason: string | null = null;
 
+      // Snapshot canvas content if user is on a canvas page · auto-attaches
+      // the open document so the agent can read/analyze/summarize it.
+      const canvasState = useCanvasStore.getState();
+      const documentText = canvasState.markdown && canvasState.markdown.trim().length > 50
+        ? canvasState.markdown
+        : null;
+
       const params = parseUserMessage(text, {
         matter_id: context?.matterId ?? null,
         matter_titulo: context?.matterMeta?.titulo ?? null,
+        document_text: documentText,
+        document_id: canvasState.documentId ?? context?.documentId ?? null,
       });
 
+      const toolNotes: string[] = [];
       try {
         for await (const ev of runSkillStream({ ...params, signal: ac.signal })) {
           if (ac.signal.aborted) break;
@@ -143,6 +154,38 @@ export function AssistantSidebar() {
               receivedAnyDelta = true;
               assistantContent += ev.data.text;
               updateMessage(assistantMsgId, { content: assistantContent });
+              break;
+            case 'tool_started':
+              // Show inline "🛠 ejecutando tool…" indicator without
+              // polluting the assistant message itself.
+              toolNotes.push(`🛠 ${ev.data.name}…`);
+              updateMessage(assistantMsgId, {
+                content: assistantContent + (assistantContent ? '\n\n' : '')
+                  + toolNotes.join('  ·  '),
+              });
+              setMode('acting');
+              pushActivity({
+                id: `act-tool-${Date.now()}-${ev.data.name}`,
+                ts: new Date().toISOString(),
+                kind: 'tool_called',
+                label: `Tool ${ev.data.name} (round ${ev.data.round})`,
+              });
+              break;
+            case 'tool_finished':
+              // Replace the spinner with checkmark / failure marker.
+              {
+                const last = toolNotes[toolNotes.length - 1];
+                if (last && last.includes(ev.data.name)) {
+                  toolNotes[toolNotes.length - 1] = ev.data.ok
+                    ? `✓ ${ev.data.name}`
+                    : `✗ ${ev.data.name}`;
+                  updateMessage(assistantMsgId, {
+                    content: assistantContent + (assistantContent ? '\n\n' : '')
+                      + toolNotes.join('  ·  '),
+                  });
+                }
+                setMode('thinking');
+              }
               break;
             case 'warning':
               warnings.push(`${ev.data.hook}: ${ev.data.reason}`);
@@ -170,6 +213,8 @@ export function AssistantSidebar() {
         }
       }
 
+      // Finalize the assistant message · tool-run indicators were ephemeral
+      // hints during streaming, the activity log keeps the audit trail.
       let finalContent = assistantContent;
       if (blockedReason) {
         finalContent =
@@ -177,20 +222,24 @@ export function AssistantSidebar() {
           `🚫 Acción bloqueada: ${blockedReason}`;
       }
       if (!receivedAnyDelta && !blockedReason && !ac.signal.aborted) {
-        finalContent =
-          params.command === '/ask'
-            ? 'No tengo aún una skill `/ask` configurada en tu firma. ' +
-              'Prueba con ⌘K para ver los comandos disponibles, o escribe `/` para autocompletar una skill.'
-            : `La skill \`${params.command}\` no devolvió contenido o no existe en este despacho.`;
+        if (toolNotes.length > 0) {
+          finalContent = toolNotes.join('  ·  ') +
+            '\n\n_(El agente ejecutó tools pero no produjo respuesta de texto. Reintenta o reformula.)_';
+        } else {
+          finalContent =
+            params.command === '/ask'
+              ? 'No tengo aún una skill `/ask` configurada en tu firma. ' +
+                'Prueba con ⌘K para ver los comandos disponibles, o escribe `/` para autocompletar una skill.'
+              : `La skill \`${params.command}\` no devolvió contenido o no existe en este despacho.`;
+        }
       }
       if (warnings.length) {
         finalContent =
           (finalContent ? finalContent + '\n\n' : '') +
           warnings.map((w) => `⚠️ ${w}`).join('\n');
       }
-      if (finalContent !== assistantContent) {
-        updateMessage(assistantMsgId, { content: finalContent });
-      }
+      // Always update at the end so ephemeral tool spinners get replaced.
+      updateMessage(assistantMsgId, { content: finalContent });
 
       pushActivity({
         id: `act-${Date.now()}`,

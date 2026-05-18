@@ -171,15 +171,24 @@ export interface AssistantPreferences {
 
 export const ASSISTANT_DEFAULTS: AssistantPreferences = {
   isExpanded: false,
-  expandedWidth: 440,
+  // Default chosen so a 1920px monitor leaves the host shell at ~1480px
+  // (still comfortable for the canvas editor's 3 columns).
+  expandedWidth: 380,
   onboardingSeen: false,
   nudgeDismissCounts: {},
 };
 
 export const SIDEBAR_RAIL_WIDTH = 56;
-export const SIDEBAR_MIN_WIDTH = 360;
-export const SIDEBAR_MAX_WIDTH = 720;
+export const SIDEBAR_MIN_WIDTH = 320;
+export const SIDEBAR_MAX_WIDTH = 640;
 
-/** Breakpoints aligned with U1 (push ≥1280, overlay <1280, bottom-sheet <768). */
-export const BREAKPOINT_PUSH_PX = 1280;
+/** Breakpoints (revised after first usability pass):
+ *   ≥ 1600 px → push  (true reflow · safe on ultrawide / 27" monitors)
+ *   < 1600 px → overlay (floats on top of content, dismissable by clicking outside)
+ *   <  768 px → bottom-sheet + floating orb (mobile)
+ *
+ * The previous 1280 push breakpoint crushed the canvas page on 13–15" laptops
+ * because the canvas itself has a toolbox + editor + citations sidebar. Now
+ * most laptops use overlay, only big screens push. */
+export const BREAKPOINT_PUSH_PX = 1600;
 export const BREAKPOINT_BOTTOM_SHEET_PX = 768;
