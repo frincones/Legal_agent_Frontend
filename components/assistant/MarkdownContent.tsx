@@ -59,7 +59,7 @@ function unwrapFullMessageFence(source: string): string {
   if (!match) return source;
   const lang = (match[1] || '').toLowerCase();
   if (lang && lang !== 'markdown' && lang !== 'md') return source;
-  return match[2];
+  return match[2] ?? source;
 }
 
 // ──────────────────────────────────────────────────────────────
