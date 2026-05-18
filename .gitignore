@@ -49,8 +49,12 @@ playwright-report/
 blob-report/
 tests/e2e/.report/
 
-# Claude Code scheduled-task lock
-.claude/
+# Claude Code · ignore local state, version agents + shared settings
+.claude/*
+!.claude/agents/
+!.claude/settings.json
+.claude/scheduled_tasks.lock
+.claude/settings.local.json
 
 # editor swap
 *.swp
