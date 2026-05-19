@@ -49,9 +49,10 @@ playwright-report/
 blob-report/
 tests/e2e/.report/
 
-# Claude Code · ignore local state, version agents + shared settings
+# Claude Code · ignore local state, version agents/commands + shared settings
 .claude/*
 !.claude/agents/
+!.claude/commands/
 !.claude/settings.json
 .claude/scheduled_tasks.lock
 .claude/settings.local.json
