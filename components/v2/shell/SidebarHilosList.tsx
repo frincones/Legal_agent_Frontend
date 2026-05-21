@@ -130,7 +130,7 @@ export function SidebarHilosList({ collapsed = false }: SidebarHilosListProps) {
   };
 
   return (
-    <div className="overflow-y-auto max-h-[280px]">
+    <div className="overflow-y-auto max-h-[220px]">
       {renderGroup('Hoy', groups.hoy)}
       {renderGroup('Ayer', groups.ayer)}
       {renderGroup('Esta semana', groups.semana)}

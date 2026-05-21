@@ -100,6 +100,7 @@ export function ComposerV2({
   const [searchJurisprudencia, setSearchJurisprudencia] = useState(false);
   const [activeSkill, setActiveSkill] = useState<string | null>(null);
   const [voiceRecording, setVoiceRecording] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const connectorInvocations = useRef<string[]>([]);
@@ -318,7 +319,7 @@ export function ComposerV2({
       {/* ── Textarea / Voice waveform ──
           min-height 40px garantiza que el composer sea visualmente prominente
           incluso cuando el prompt esta vacio (FIX D). */}
-      <div className="px-4 pt-4 pb-2">
+      <div className="px-4 pt-2.5 pb-1.5">
         {voiceRecording ? (
           /* Waveform inline cuando esta grabando */
           <VoiceRecorder
@@ -334,6 +335,8 @@ export function ComposerV2({
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={handleKeyDown}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
             placeholder={placeholder}
             disabled={isStreaming}
             rows={MIN_ROWS}
@@ -341,19 +344,19 @@ export function ComposerV2({
             aria-multiline="true"
             className={[
               'block w-full resize-none bg-transparent',
-              'text-[15px] leading-[1.6] text-[color:var(--v2-text-primary,#1A1916)]',
+              'text-[14px] leading-[1.5] text-[color:var(--v2-text-primary,#1A1916)]',
               'placeholder:text-[color:var(--v2-text-tertiary,#7A7870)]',
               'focus:outline-none',
               'disabled:cursor-not-allowed disabled:opacity-60',
               'scrollbar-none',
             ].join(' ')}
-            style={{ minHeight: '40px', overflow: 'hidden' }}
+            style={{ minHeight: '28px', overflow: 'hidden' }}
           />
         )}
       </div>
 
       {/* ── Bottom toolbar ── */}
-      <div className="flex items-center justify-between gap-2 px-3 pb-3 pt-1">
+      <div className="flex items-center justify-between gap-2 px-3 pb-2 pt-1">
         {/* Left: PlusMenu + ModelSelector */}
         <div className="flex items-center gap-1">
           <ComposerPlusMenu
@@ -391,7 +394,7 @@ export function ComposerV2({
               disabled={isStreaming}
               aria-label="Iniciar grabación de voz"
               className={[
-                'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+                'flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full',
                 'text-[color:var(--v2-text-secondary,#4A4944)]',
                 'hover:bg-[color:var(--v2-bg-subtle,#F2F1EC)] hover:text-[color:var(--v2-text-primary,#1A1916)]',
                 'focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--v2-accent-copper,#B8763C)]',
@@ -399,7 +402,7 @@ export function ComposerV2({
                 'transition-colors duration-150',
               ].join(' ')}
             >
-              <Mic className="h-4 w-4" aria-hidden />
+              <Mic className="h-[15px] w-[15px]" aria-hidden />
             </button>
           )}
 
@@ -428,7 +431,10 @@ export function ComposerV2({
       </div>
 
       {/* ── Hint footer ── */}
-      <div className="px-4 pb-3 text-[10px] text-[color:var(--v2-text-disabled,#B8B6AF)] select-none">
+      <div
+        className="px-4 pb-2 text-[10px] text-[color:var(--v2-text-disabled,#B8B6AF)] select-none transition-opacity duration-150"
+        style={{ opacity: isFocused ? 1 : 0 }}
+      >
         Enter para enviar &middot; Shift+Enter nueva linea &middot; ⌘K comandos
       </div>
     </div>

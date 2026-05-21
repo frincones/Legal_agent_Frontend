@@ -129,10 +129,10 @@ export const InlineComposerV2 = forwardRef<
           disabled={sending}
           rows={1}
           aria-label="Mensaje a LexAI"
-          className="min-h-[28px] flex-1 resize-none bg-transparent outline-none"
+          className="min-h-[24px] flex-1 resize-none bg-transparent outline-none"
           style={{
             fontFamily: 'var(--v2-font-sans, system-ui, sans-serif)',
-            fontSize: 'var(--v2-text-body, 16px)',
+            fontSize: '14px',
             lineHeight: 'var(--v2-text-body-lh, 26px)',
             color: 'var(--v2-text-primary, #1A1916)',
           }}

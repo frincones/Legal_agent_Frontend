@@ -42,7 +42,7 @@ export function SidebarItemV2({
     <span
       className={[
         'group flex items-center gap-[10px] rounded-lg transition-colors duration-150 cursor-pointer select-none',
-        collapsed ? 'w-10 h-10 justify-center p-0' : 'px-[10px] py-[8px] w-full',
+        collapsed ? 'w-10 h-10 justify-center p-0' : 'px-[8px] py-[6px] w-full',
         active
           ? 'bg-[var(--v2-brand-navy-soft,#E8EDF7)] text-[var(--v2-brand-navy,#0E2A5E)] border-l-[3px] border-[var(--v2-brand-navy,#0E2A5E)] pl-[7px]'
           : 'text-[var(--v2-text-secondary,#4A4944)] hover:bg-[var(--v2-bg-subtle,#F2F1EC)] hover:text-[var(--v2-text-primary,#1A1916)] border-l-[3px] border-transparent',
@@ -55,7 +55,7 @@ export function SidebarItemV2({
         aria-hidden
       />
       {!collapsed && (
-        <span className="flex-1 min-w-0 truncate text-[13px] font-medium leading-none">
+        <span className="flex-1 min-w-0 truncate text-[14px] font-normal leading-none">
           {label}
         </span>
       )}

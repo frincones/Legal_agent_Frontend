@@ -66,7 +66,7 @@ function ThreadPanel({
       {/* Header */}
       <div
         style={{
-          padding: '10px 14px',
+          padding: '8px 12px',
           borderBottom: '1px solid var(--v2-border-default, #DDDBD3)',
           display: 'flex',
           alignItems: 'center',
@@ -76,14 +76,12 @@ function ThreadPanel({
       >
         <span
           style={{
-            fontSize: 12,
-            fontWeight: 600,
-            color: 'var(--v2-text-secondary, #5A5850)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.06em',
+            fontSize: 11,
+            fontWeight: 500,
+            color: 'var(--v2-text-tertiary, #7A7870)',
           }}
         >
-          Conversacion
+          Conversación
         </span>
         {/* Chip de agente editando */}
         <AgentEditingChip isEditing={isAgentEditing} description={agentDescription} />

@@ -102,7 +102,7 @@ export function SidebarSkillsList({ collapsed = false }: SidebarSkillsListProps)
   }
 
   return (
-    <div className="flex flex-col gap-0.5 overflow-y-auto max-h-[200px]">
+    <div className="flex flex-col gap-0.5 overflow-y-auto max-h-[160px]">
       {skills.map((skill) => (
         <SidebarItemV2
           key={skill.id}

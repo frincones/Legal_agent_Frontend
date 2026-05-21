@@ -102,9 +102,9 @@ function TipBtn({ label, active, disabled, onClick, children }: TipBtnProps) {
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: 28,
-            height: 28,
-            borderRadius: 5,
+            width: 26,
+            height: 26,
+            borderRadius: 4,
             border: 'none',
             cursor: disabled ? 'not-allowed' : 'pointer',
             opacity: disabled ? 0.4 : 1,
@@ -322,13 +322,13 @@ function LexaiBtn({ label, icon, onClick, variant = 'default' }: LexaiBtnProps) 
         display: 'inline-flex',
         alignItems: 'center',
         gap: 5,
-        height: 28,
-        padding: '0 10px',
+        height: 24,
+        padding: '0 8px',
         borderRadius: 5,
         border: `1px solid ${isAccent ? 'var(--v2-accent-copper, #B8763C)' : 'var(--v2-border-default, #DDDBD3)'}`,
         backgroundColor: 'transparent',
         color: isAccent ? 'var(--v2-accent-copper, #B8763C)' : 'var(--v2-text-secondary, #5A5850)',
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: 500,
         cursor: 'pointer',
         transition: 'background-color 120ms',
@@ -378,11 +378,13 @@ export function CanvasToolbar({
           display: 'flex',
           alignItems: 'center',
           gap: 2,
-          padding: '4px 8px',
+          padding: '3px 8px',
           borderBottom: '1px solid var(--v2-border-default, #DDDBD3)',
           backgroundColor: 'var(--v2-bg-base, #FAFAF7)',
-          flexWrap: 'wrap',
-          minHeight: 40,
+          flexWrap: 'nowrap',
+          overflowX: 'auto',
+          scrollbarWidth: 'none',
+          minHeight: 36,
           rowGap: 2,
         }}
       >
@@ -392,7 +394,7 @@ export function CanvasToolbar({
           active={editor.isActive('bold')}
           onClick={() => editor.chain().focus().toggleBold().run()}
         >
-          <Bold size={14} />
+          <Bold size={13} />
         </TipBtn>
 
         <TipBtn
@@ -400,7 +402,7 @@ export function CanvasToolbar({
           active={editor.isActive('italic')}
           onClick={() => editor.chain().focus().toggleItalic().run()}
         >
-          <Italic size={14} />
+          <Italic size={13} />
         </TipBtn>
 
         <TipBtn
@@ -408,7 +410,7 @@ export function CanvasToolbar({
           active={editor.isActive('underline')}
           onClick={() => editor.chain().focus().toggleUnderline().run()}
         >
-          <Underline size={14} />
+          <Underline size={13} />
         </TipBtn>
 
         <TipBtn
@@ -416,7 +418,7 @@ export function CanvasToolbar({
           active={editor.isActive('strike')}
           onClick={() => editor.chain().focus().toggleStrike().run()}
         >
-          <Strikethrough size={14} />
+          <Strikethrough size={13} />
         </TipBtn>
 
         <SEP />
@@ -427,7 +429,7 @@ export function CanvasToolbar({
           active={editor.isActive('heading', { level: 1 })}
           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
         >
-          <Heading1 size={14} />
+          <Heading1 size={13} />
         </TipBtn>
 
         <TipBtn
@@ -435,7 +437,7 @@ export function CanvasToolbar({
           active={editor.isActive('heading', { level: 2 })}
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
         >
-          <Heading2 size={14} />
+          <Heading2 size={13} />
         </TipBtn>
 
         <TipBtn
@@ -443,7 +445,7 @@ export function CanvasToolbar({
           active={editor.isActive('heading', { level: 3 })}
           onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
         >
-          <Heading3 size={14} />
+          <Heading3 size={13} />
         </TipBtn>
 
         <SEP />
@@ -454,7 +456,7 @@ export function CanvasToolbar({
           active={editor.isActive('bulletList')}
           onClick={() => editor.chain().focus().toggleBulletList().run()}
         >
-          <List size={14} />
+          <List size={13} />
         </TipBtn>
 
         <TipBtn
@@ -462,7 +464,7 @@ export function CanvasToolbar({
           active={editor.isActive('orderedList')}
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
         >
-          <ListOrdered size={14} />
+          <ListOrdered size={13} />
         </TipBtn>
 
         <TipBtn
@@ -470,7 +472,7 @@ export function CanvasToolbar({
           onClick={() => editor.chain().focus().liftListItem('listItem').run()}
           disabled={!editor.can().liftListItem('listItem')}
         >
-          <IndentDecrease size={14} />
+          <IndentDecrease size={13} />
         </TipBtn>
 
         <TipBtn
@@ -478,7 +480,7 @@ export function CanvasToolbar({
           onClick={() => editor.chain().focus().sinkListItem('listItem').run()}
           disabled={!editor.can().sinkListItem('listItem')}
         >
-          <IndentIncrease size={14} />
+          <IndentIncrease size={13} />
         </TipBtn>
 
         <SEP />
@@ -489,7 +491,7 @@ export function CanvasToolbar({
           active={editor.isActive({ textAlign: 'left' })}
           onClick={() => editor.chain().focus().setTextAlign('left').run()}
         >
-          <AlignLeft size={14} />
+          <AlignLeft size={13} />
         </TipBtn>
 
         <TipBtn
@@ -497,7 +499,7 @@ export function CanvasToolbar({
           active={editor.isActive({ textAlign: 'center' })}
           onClick={() => editor.chain().focus().setTextAlign('center').run()}
         >
-          <AlignCenter size={14} />
+          <AlignCenter size={13} />
         </TipBtn>
 
         <TipBtn
@@ -505,7 +507,7 @@ export function CanvasToolbar({
           active={editor.isActive({ textAlign: 'right' })}
           onClick={() => editor.chain().focus().setTextAlign('right').run()}
         >
-          <AlignRight size={14} />
+          <AlignRight size={13} />
         </TipBtn>
 
         <TipBtn
@@ -513,7 +515,7 @@ export function CanvasToolbar({
           active={editor.isActive({ textAlign: 'justify' })}
           onClick={() => editor.chain().focus().setTextAlign('justify').run()}
         >
-          <AlignJustify size={14} />
+          <AlignJustify size={13} />
         </TipBtn>
 
         <SEP />
@@ -524,7 +526,7 @@ export function CanvasToolbar({
           currentColor="#000000"
           onColorChange={(color) => editor.chain().focus().setColor(color).run()}
         >
-          <Palette size={14} />
+          <Palette size={13} />
         </ColorPickerBtn>
 
         <ColorPickerBtn
@@ -534,7 +536,7 @@ export function CanvasToolbar({
             editor.chain().focus().setHighlight({ color }).run()
           }
         >
-          <Highlighter size={14} />
+          <Highlighter size={13} />
         </ColorPickerBtn>
 
         <FontSizeSelect editor={editor} />
@@ -547,21 +549,21 @@ export function CanvasToolbar({
           active={editor.isActive('link')}
           onClick={setLink}
         >
-          <Link2 size={14} />
+          <Link2 size={13} />
         </TipBtn>
 
         <TipBtn
           label="Insertar tabla"
           onClick={insertTable}
         >
-          <Table2 size={14} />
+          <Table2 size={13} />
         </TipBtn>
 
         <TipBtn
           label="Línea horizontal"
           onClick={() => editor.chain().focus().setHorizontalRule().run()}
         >
-          <Minus size={14} />
+          <Minus size={13} />
         </TipBtn>
 
         <TipBtn
@@ -569,7 +571,7 @@ export function CanvasToolbar({
           active={editor.isActive('blockquote')}
           onClick={() => editor.chain().focus().toggleBlockquote().run()}
         >
-          <Quote size={14} />
+          <Quote size={13} />
         </TipBtn>
 
         <TipBtn
@@ -577,7 +579,7 @@ export function CanvasToolbar({
           active={editor.isActive('code')}
           onClick={() => editor.chain().focus().toggleCode().run()}
         >
-          <Code size={14} />
+          <Code size={13} />
         </TipBtn>
 
         <TipBtn
@@ -585,7 +587,7 @@ export function CanvasToolbar({
           active={editor.isActive('codeBlock')}
           onClick={() => editor.chain().focus().toggleCodeBlock().run()}
         >
-          <FileCode size={14} />
+          <FileCode size={13} />
         </TipBtn>
 
         <SEP />
@@ -593,14 +595,14 @@ export function CanvasToolbar({
         {/* ── Grupo 7: Herramientas LexAI ── */}
         <LexaiBtn
           label="Verificar citas"
-          icon={<ScanLine size={13} />}
+          icon={<ScanLine size={12} />}
           onClick={onVerifyCitations}
           variant="accent"
         />
 
         <LexaiBtn
           label="Detectar derogación"
-          icon={<AlertTriangle size={13} />}
+          icon={<AlertTriangle size={12} />}
           onClick={onDetectDerogation}
         />
 
@@ -613,7 +615,7 @@ export function CanvasToolbar({
           disabled={!editor.can().undo()}
           onClick={() => editor.chain().focus().undo().run()}
         >
-          <Undo2 size={14} />
+          <Undo2 size={13} />
         </TipBtn>
 
         <TipBtn
@@ -621,7 +623,7 @@ export function CanvasToolbar({
           disabled={!editor.can().redo()}
           onClick={() => editor.chain().focus().redo().run()}
         >
-          <Redo2 size={14} />
+          <Redo2 size={13} />
         </TipBtn>
 
         <SEP />

@@ -398,7 +398,7 @@ export function ComposerV2WithStream({
         aria-atomic="false"
       >
         {/* Contenedor centrado con reading-width controlado */}
-        <div className="mx-auto max-w-[720px] px-4 py-6 space-y-6">
+        <div className="mx-auto max-w-[720px] px-4 py-4 space-y-4">
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center py-8 gap-2 text-center">
               <p className="text-[15px] text-[color:var(--v2-text-tertiary,#7A7870)]">
@@ -452,7 +452,7 @@ export function ComposerV2WithStream({
                 {(displayContent || (!msg.streaming)) && (
                   <div
                     className={[
-                      'rounded-2xl px-5 py-3.5 text-[14.5px] leading-[1.65]',
+                      'rounded-2xl px-4 py-3 text-[14px] leading-[1.65]',
                       msg.role === 'user'
                         ? 'ml-auto max-w-[560px] bg-[color:var(--v2-brand-navy,#0E2A5E)] text-white rounded-tr-sm shadow-sm'
                         : 'max-w-[680px] bg-[color:var(--v2-bg-subtle,#F2F1EC)] text-[color:var(--v2-text-primary,#1A1916)] rounded-tl-sm shadow-sm',
@@ -479,7 +479,7 @@ export function ComposerV2WithStream({
       </div>
 
       {/* ── Composer ── sticky bottom, prominente (min 64px) */}
-      <div className="shrink-0 px-4 pb-5 pt-3">
+      <div className="shrink-0 px-4 pb-4 pt-2">
         <div className="mx-auto max-w-[720px]">
           <ComposerV2
             matterId={matterId}

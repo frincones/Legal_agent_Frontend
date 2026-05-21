@@ -107,7 +107,7 @@ export function SidebarV2({
       {/* ── Header: Logo + Nombre firm + Toggle ── */}
       <div
         className={[
-          'flex items-center border-b border-[var(--v2-border-subtle,#E8E7E1)] px-3 py-4',
+          'flex items-center border-b border-[var(--v2-border-subtle,#E8E7E1)] px-3 py-3',
           collapsed ? 'justify-center' : 'gap-2',
         ].join(' ')}
       >
@@ -165,7 +165,7 @@ export function SidebarV2({
         </nav>
 
         {/* Separador — gap-6 (24px) entre grupos distintos */}
-        <div className="my-3 border-t border-[var(--v2-border-subtle,#E8E7E1)]" />
+        <div className="my-2 border-t border-[var(--v2-border-subtle,#E8E7E1)]" />
 
         {/* Sección: Mis hilos (oculta en colapsado) */}
         {!collapsed && (
@@ -179,7 +179,7 @@ export function SidebarV2({
             </div>
 
             {/* Separador entre secciones */}
-            <div className="my-3 border-t border-[var(--v2-border-subtle,#E8E7E1)]" />
+            <div className="my-2 border-t border-[var(--v2-border-subtle,#E8E7E1)]" />
 
             {/* Sección: Plantillas y Skills */}
             <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--v2-text-tertiary,#807E76)]">
@@ -195,7 +195,7 @@ export function SidebarV2({
       {/* ── Footer: ThemeToggle + Usuario ── gap-1 entre elementos del footer */}
       <div
         className={[
-          'border-t border-[var(--v2-border-subtle,#E8E7E1)] px-2 py-3 flex flex-col gap-1',
+          'border-t border-[var(--v2-border-subtle,#E8E7E1)] px-2 py-2 flex flex-col gap-1',
         ].join(' ')}
       >
         <ThemeToggle collapsed={collapsed} />
