@@ -21,12 +21,14 @@ export async function POST(req: Request): Promise<NextResponse> {
   }
 
   // Envolver en el formato que acepta /v1/skills/execute
+  // Contrato real validado en MatterActions.tsx:239:
+  //   { command: '/ask', matter_id, input: { prompt, matter_titulo } }
   const payload = {
-    skill: '/ask',
-    input_data: {
-      query: (body as Record<string, unknown>).input,
-      matter_id: (body as Record<string, unknown>).matter_id ?? null,
-      context: (body as Record<string, unknown>).context ?? {},
+    command: '/ask',
+    matter_id: (body as Record<string, unknown>).matter_id ?? null,
+    input: {
+      prompt: (body as Record<string, unknown>).input,
+      matter_titulo: (body as Record<string, unknown>).matter_titulo ?? undefined,
     },
   };
 

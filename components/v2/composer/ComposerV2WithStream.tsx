@@ -56,6 +56,11 @@ export interface ComposerV2WithStreamProps {
   className?: string;
   /** Mensajes iniciales (por ejemplo, day briefing cargado desde el servidor) */
   initialMessages?: ThreadMessage[];
+  /**
+   * Prompt prefilled en el composer (sincronizado cuando cambia).
+   * Usado por los SuggestionChips de la home v2.
+   */
+  initialPrompt?: string;
 }
 
 // ─── Simple markdown → text renderer (sin dependencias extra) ────────────────
@@ -93,6 +98,7 @@ export function ComposerV2WithStream({
   activeTab,
   className,
   initialMessages = [],
+  initialPrompt = '',
 }: ComposerV2WithStreamProps) {
   const [messages, setMessages] = useState<ThreadMessage[]>(initialMessages);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -350,6 +356,7 @@ export function ComposerV2WithStream({
           isStreaming={isStreaming}
           history={composerHistory}
           activeTab={activeTab}
+          initialPrompt={initialPrompt}
         />
       </div>
     </div>

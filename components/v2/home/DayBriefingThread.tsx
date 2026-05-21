@@ -224,6 +224,7 @@ export function DayBriefingThread({ data, onPrompt }: DayBriefingThreadProps) {
           </span>
           <span
             className="text-xs"
+            suppressHydrationWarning
             style={{ color: 'var(--v2-text-tertiary, #807E76)', fontSize: '11px' }}
           >
             {new Date().toLocaleDateString('es-CO', {
