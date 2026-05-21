@@ -99,11 +99,14 @@ export function DayBriefingPageClient({ data }: DayBriefingPageClientProps) {
     <div className="flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden">
       {/*
        * Zona scroll: header + briefing proactivo del agente.
+       * Patrón Claude.ai/ChatGPT: cuando NO hay mensajes (estado inicial)
+       * centramos el contenido verticalmente para evitar el gap enorme entre
+       * briefing y composer. Cuando hay mensajes en el thread, top-align
+       * normal con scroll.
        * min-h-0 es critico para que flex no crezca infinito.
-       * max-w-[720px] centraliza el contenido con ancho de lectura controlado.
        */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="mx-auto max-w-[720px] px-6 pt-6 pb-4">
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col justify-center">
+        <div className="mx-auto w-full max-w-[720px] px-6 py-8">
           {/* Header de pagina — saludo + fecha. suppressHydrationWarning evita mismatch SSR/CSR. */}
           <header className="mb-6">
             <h1
