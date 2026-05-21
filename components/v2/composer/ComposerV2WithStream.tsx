@@ -58,19 +58,32 @@ interface ThreadMessage {
 }
 
 /** Regex para detectar y extraer bloques <plantilla-doc>...</plantilla-doc>. */
-const PLANTILLA_DOC_RE = /<plantilla-doc>([\s\S]*?)<\/plantilla-doc>/i;
+const PLANTILLA_DOC_FULL_RE = /<plantilla-doc>([\s\S]*?)<\/plantilla-doc>/i;
+/** Regex tolerante: <plantilla-doc> sin cierre — toma todo hasta el final del texto. */
+const PLANTILLA_DOC_OPEN_RE = /<plantilla-doc>([\s\S]*)$/i;
 
 /**
  * Extrae el contenido del bloque <plantilla-doc> si existe.
- * Retorna { docContent, cleanContent } donde cleanContent tiene el bloque removido.
+ * Acepta tanto la forma completa con cierre como la forma sin cierre
+ * (el LLM frecuentemente omite el </plantilla-doc>). Retorna
+ * { docContent, cleanContent } donde cleanContent tiene el bloque removido.
  */
 function extractPlantillaDoc(text: string): { docContent: string | null; cleanContent: string } {
-  const match = PLANTILLA_DOC_RE.exec(text);
-  if (!match) return { docContent: null, cleanContent: text };
-  const docContent = (match[1] ?? '').trim();
-  // Quitar el bloque completo del content visible + whitespace adyacente
-  const cleanContent = text.replace(PLANTILLA_DOC_RE, '').replace(/\n{3,}/g, '\n\n').trim();
-  return { docContent, cleanContent };
+  // 1) Intentar match completo con cierre
+  let match = PLANTILLA_DOC_FULL_RE.exec(text);
+  if (match) {
+    const docContent = (match[1] ?? '').trim();
+    const cleanContent = text.replace(PLANTILLA_DOC_FULL_RE, '').replace(/\n{3,}/g, '\n\n').trim();
+    return { docContent, cleanContent };
+  }
+  // 2) Intentar match sin cierre — toma todo desde <plantilla-doc> hasta EOF
+  match = PLANTILLA_DOC_OPEN_RE.exec(text);
+  if (match) {
+    const docContent = (match[1] ?? '').trim();
+    const cleanContent = text.replace(PLANTILLA_DOC_OPEN_RE, '').replace(/\n{3,}/g, '\n\n').trim();
+    return { docContent, cleanContent };
+  }
+  return { docContent: null, cleanContent: text };
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -408,11 +421,15 @@ export function ComposerV2WithStream({
           )}
 
           {messages.map((msg) => {
-            // Durante streaming, ocultar el bloque <plantilla-doc> del render inline
-            // para evitar que se muestre como texto crudo mientras se reciben tokens.
-            const displayContent = msg.streaming
-              ? msg.content.replace(/<plantilla-doc[\s\S]*$/i, '').trimEnd()
-              : msg.content;
+            // SIEMPRE ocultar el bloque <plantilla-doc>...</plantilla-doc> y
+            // también el tag abierto sin cierre. Si el done event ya lo
+            // extrajo, msg.content ya está limpio. Si no (race condition o
+            // LLM omitió el cierre), este replace lo cubre como safety net.
+            const displayContent = msg.content
+              .replace(/<plantilla-doc>[\s\S]*?<\/plantilla-doc>/gi, '')
+              .replace(/<plantilla-doc>[\s\S]*$/i, '')
+              .replace(/\n{3,}/g, '\n\n')
+              .trimEnd();
 
             return (
               <div
