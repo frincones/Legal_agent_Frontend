@@ -1,3 +1,13 @@
+/**
+ * F4-T08 · Switch de feature flag NEXT_PUBLIC_UX_V2_MATTER.
+ *
+ * Si el flag está activo → redirect a /v2/casos/[matterId] (MatterArtifact).
+ * Si está inactivo → renderiza el legacy con los 16 tabs (sin cambio alguno).
+ *
+ * CRÍTICO: el código legacy NO se modifica, solo se agrega el bloque condicional
+ * al inicio de la función. Los imports permanecen intactos.
+ */
+import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
 import { AppShell } from '@/components/shell/AppShell';
 import { TopBar } from '@/components/shell/TopBar';
@@ -24,11 +34,21 @@ import { DocumentRowActions } from '@/components/matter/DocumentRowActions';
 import { fetchMatter, fetchMatterTimeline } from '@/lib/api/rsc-fetchers';
 import { createClient } from '@/lib/supabase/server';
 import { cn, formatCOP, formatRelative } from '@/lib/utils';
-import { notFound } from 'next/navigation';
 
 export const revalidate = 30;
 
+/** F4-T08 · Flag leído en server-side. */
+const UX_V2_MATTER = process.env.NEXT_PUBLIC_UX_V2_MATTER === 'true';
+
 export default async function CasoDetallePage({ params }: { params: { matterId: string } }) {
+  // ── F4-T08: switch de flag ────────────────────────────────────────────────
+  // Si el flag está activo, delega a la página v2 que renderiza MatterArtifact.
+  // El código legacy no se ejecuta en ese caso.
+  if (UX_V2_MATTER) {
+    redirect(`/v2/casos/${params.matterId}`);
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   const supabase = createClient();
   const matterId = params.matterId;
   const [matter, timelineRes, partesRes, deadlinesRes, docsRes, citationsRes, notesRes, analysesRes] =

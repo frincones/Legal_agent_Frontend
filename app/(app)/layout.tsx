@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { VoiceHUD } from '@/components/voice/VoiceHUD';
 import { VoiceProvider } from '@/components/voice/VoiceProvider';
 import { CommandPalette } from '@/components/command/CommandPalette';
+import { CommandPaletteV2 } from '@/components/v2/commandk/CommandPaletteV2';
 import { HITLController } from '@/components/hitl/HITLController';
 import { QuotaBanner } from '@/components/billing/QuotaBanner';
 import { UpgradeModal } from '@/components/billing/UpgradeModal';
@@ -24,6 +25,10 @@ import { AssistantProvider } from '@/components/assistant';
 // activity entries; the existing VoiceHUD at the bottom continues working.
 const ASSISTANT_SIDEBAR_ENABLED =
   process.env.NEXT_PUBLIC_ASSISTANT_SIDEBAR_ENABLED === 'true';
+
+// F1-T08 · UX v2: cuando UX_V2_SHELL=true, se monta CommandPaletteV2 en lugar
+// del CommandPalette legacy. Flag OFF → cero cambios.
+const UX_V2_SHELL = process.env.NEXT_PUBLIC_UX_V2_SHELL === 'true';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   // Fast: reads cookie + decodes JWT locally · no Supabase roundtrip.
@@ -54,7 +59,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="flex h-screen w-screen flex-col overflow-hidden bg-bg text-ink">
         <OfflineIndicator />
         <QuotaBanner />
-        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden md:grid-cols-[248px_1fr]">
+        {/*
+          F1-T07: cuando UX_V2_SHELL=true usamos flex (el sidebar v2 controla
+          su propio ancho con framer-motion). Con flag OFF, el grid legacy de
+          248px queda intacto — cero regresión.
+        */}
+        <div
+          className={
+            UX_V2_SHELL
+              ? 'flex min-h-0 flex-1 overflow-hidden'
+              : 'grid min-h-0 flex-1 grid-cols-1 overflow-hidden md:grid-cols-[248px_1fr]'
+          }
+        >
         {children}
         <EntitledOnly module="voice_agent" silent>
           <div className="pointer-events-none fixed bottom-[16px] left-1/2 z-50 -translate-x-1/2 md:bottom-[22px]">
@@ -63,7 +79,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </div>
           </div>
         </EntitledOnly>
-        <CommandPalette />
+        {/* F1-T08: Switch CommandPalette → CommandPaletteV2 con flag */}
+        {UX_V2_SHELL ? <CommandPaletteV2 /> : <CommandPalette />}
         <HITLController />
         </div>
         {ASSISTANT_SIDEBAR_ENABLED && <AssistantProvider />}

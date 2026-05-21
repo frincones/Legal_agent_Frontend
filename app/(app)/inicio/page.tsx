@@ -1,3 +1,11 @@
+/**
+ * F2-T05 · LexAI UX v2 — Switch de feature flag en la home.
+ *
+ * Cuando NEXT_PUBLIC_UX_V2_HOME=true, hace redirect a /v2/inicio
+ * (el DayBriefingThread). Con el flag OFF, renderiza el dashboard legacy
+ * sin ningún cambio — cero riesgo de regresión.
+ */
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { AppShell } from '@/components/shell/AppShell';
 import { TopBar } from '@/components/shell/TopBar';
@@ -19,7 +27,16 @@ import { Suspense } from 'react';
 
 export const revalidate = 30;
 
+// ─── F2-T05: Feature flag switch ─────────────────────────────────────────────
+// CRÍTICO: solo se evalúa en server-side. Con flag OFF el dashboard legacy
+// renderiza exactamente igual que hoy (cero cambios en el árbol JSX).
+const UX_V2_HOME = process.env.NEXT_PUBLIC_UX_V2_HOME === 'true';
+
 export default async function InicioPage() {
+  // Redirect temprano al Day Briefing v2 cuando el flag está activo.
+  if (UX_V2_HOME) {
+    redirect('/v2/inicio');
+  }
   // Shell data is already cached by AppShell · we reuse it here.
   const [matters, shell] = await Promise.all([
     fetchMatters({ limit: 50 }),

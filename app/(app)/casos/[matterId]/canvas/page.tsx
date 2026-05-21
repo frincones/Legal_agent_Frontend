@@ -10,12 +10,55 @@ import { GenerateWritDialog } from '@/components/canvas/GenerateWritDialog';
 import { LegalToolbox } from '@/components/canvas/LegalToolbox';
 import { fetchMatter } from '@/lib/api/rsc-fetchers';
 import { getSessionPrincipal } from '@/lib/supabase/session';
-import { notFound } from 'next/navigation';
+import { createServiceClient } from '@/lib/supabase/server';
+import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
+
+// ── F5-T08 · Feature flag switch ─────────────────────────────────────────────
+const UX_V2_CANVAS = process.env.NEXT_PUBLIC_UX_V2_CANVAS === 'true';
 
 export const revalidate = 30;
 
 export default async function CanvasPage({ params }: { params: { matterId: string } }) {
+  // ── F5-T08: Si el flag está activo, resolver el docId y redirigir ──────────
+  if (UX_V2_CANVAS) {
+    const principal = await getSessionPrincipal();
+    if (principal?.firm_id) {
+      const svc = createServiceClient();
+      const { data: doc } = await svc
+        .from('matter_documents')
+        .select('id')
+        .eq('matter_id', params.matterId)
+        .eq('firm_id', principal.firm_id)
+        .like('titulo', 'Canvas%')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (doc) {
+        redirect(`/v2/canvas/${(doc as { id: string }).id}`);
+      }
+      // Si no existe todavía, lo creamos llamando al endpoint y luego redirect
+      try {
+        // Llamar al mismo endpoint que CanvasMain usa para ensure-or-create
+        const baseUrl = process.env.NEXTAUTH_URL ?? process.env.VERCEL_URL
+          ? `https://${process.env.VERCEL_URL}`
+          : 'http://localhost:3000';
+        const res = await fetch(
+          `${baseUrl}/api/matter-documents/canvas?matter_id=${params.matterId}`,
+          { cache: 'no-store' },
+        );
+        if (res.ok) {
+          const data = (await res.json()) as { document_id?: string };
+          if (data.document_id) {
+            redirect(`/v2/canvas/${data.document_id}`);
+          }
+        }
+      } catch {
+        // Si falla, caemos al canvas legacy normalmente
+      }
+    }
+  }
+
   const [matter, principal] = await Promise.all([
     fetchMatter(params.matterId),
     getSessionPrincipal(),

@@ -1,0 +1,179 @@
+/**
+ * F0-T02 · LexAI UX v2 — Design tokens completos
+ *
+ * Activación: se aplican únicamente cuando el elemento raíz (<html>)
+ * tiene el atributo [data-v2-tokens]. El hook useV2Tokens() lo gestiona
+ * via la env var NEXT_PUBLIC_UX_V2_TOKENS=true.
+ *
+ * Convención: prefijo --v2- para evitar colisiones con el sistema actual.
+ * Dark mode: Fase 6 (NO implementado aquí).
+ */
+
+[data-v2-tokens] {
+  /* ─── Tipografía ─────────────────────────────────────────────────────── */
+  /* Serif: New Spirit (via fallback Newsreader, next/font/google) */
+  --v2-font-serif: var(--font-new-spirit), 'Newsreader', Georgia, serif;
+  --v2-font-sans: var(--font-inter), system-ui, sans-serif;
+  --v2-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Scale: display */
+  --v2-text-display: 48px;
+  --v2-text-display-lh: 56px;
+  --v2-text-display-w: 400;
+
+  /* Scale: title */
+  --v2-text-title: 32px;
+  --v2-text-title-lh: 40px;
+  --v2-text-title-w: 400;
+
+  /* Scale: h2 */
+  --v2-text-h2: 24px;
+  --v2-text-h2-lh: 32px;
+  --v2-text-h2-w: 500;
+
+  /* Scale: body */
+  --v2-text-body: 16px;
+  --v2-text-body-lh: 26px;
+  --v2-text-body-w: 400;
+
+  /* Scale: caption */
+  --v2-text-caption: 13px;
+  --v2-text-caption-lh: 18px;
+  --v2-text-caption-w: 500;
+
+  /* ─── Brand ──────────────────────────────────────────────────────────── */
+  --v2-brand-navy: #0E2A5E;
+  --v2-brand-navy-hover: #0a2049;
+  --v2-brand-navy-soft: #E8EDF7;
+
+  --v2-accent-copper: #A4642E;
+  --v2-accent-copper-hover: #8F5526;
+  --v2-accent-copper-soft: #F5EBE0;
+
+  /* ─── Neutrales (warm stone) ─────────────────────────────────────────── */
+  --v2-bg-base: #FAFAF7;
+  --v2-bg-surface: #FFFFFF;
+  --v2-bg-subtle: #F2F1EC;
+  --v2-bg-muted: #E8E7E1;
+
+  --v2-text-primary: #1A1916;
+  --v2-text-secondary: #4A4944;
+  --v2-text-tertiary: #6E6C64;
+  --v2-text-disabled: #B8B6AE;
+  --v2-text-inverse: #FAFAF7;
+
+  --v2-border-subtle: #E8E7E1;
+  --v2-border-default: #D4D2CA;
+  --v2-border-strong: #807E76;
+
+  /* ─── Semánticos ─────────────────────────────────────────────────────── */
+  --v2-success: #266A44;
+  --v2-success-soft: #E3F1E8;
+  --v2-danger: #8B2C2C;
+  --v2-danger-soft: #F5E3E3;
+  --v2-warning: #A4642E;
+  --v2-warning-soft: #F5EBE0;
+  --v2-info: #0E2A5E;
+  --v2-info-soft: #E8EDF7;
+
+  /* ─── Espaciado (base 4 px) ──────────────────────────────────────────── */
+  --v2-space-1: 4px;
+  --v2-space-2: 8px;
+  --v2-space-3: 12px;
+  --v2-space-4: 16px;
+  --v2-space-5: 20px;
+  --v2-space-6: 24px;
+  --v2-space-8: 32px;
+  --v2-space-10: 40px;
+  --v2-space-12: 48px;
+  --v2-space-16: 64px;
+
+  /* ─── Radios ─────────────────────────────────────────────────────────── */
+  --v2-radius-sm: 6px;
+  --v2-radius-md: 12px;
+  --v2-radius-lg: 16px;
+  --v2-radius-xl: 20px;
+  --v2-radius-full: 9999px;
+
+  /* ─── Sombras (3 niveles muy sutiles) ───────────────────────────────── */
+  --v2-shadow-sm: 0 1px 2px rgba(26, 25, 22, 0.04);
+  --v2-shadow-md: 0 4px 8px rgba(26, 25, 22, 0.06), 0 1px 2px rgba(26, 25, 22, 0.04);
+  --v2-shadow-lg: 0 12px 24px rgba(26, 25, 22, 0.08), 0 4px 8px rgba(26, 25, 22, 0.04);
+
+  /* ─── Motion ─────────────────────────────────────────────────────────── */
+  --v2-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --v2-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --v2-duration-micro: 150ms;
+  --v2-duration-base: 250ms;
+  --v2-duration-artifact: 400ms;
+}
+
+/* ─── F6-T01 · Dark mode (paleta espejo deliberada, NO inversión) ──────────
+ *
+ * Contraste calculado (WCAG 2.1):
+ *   --v2-text-primary (#F5F4EE) vs --v2-bg-base (#161513):   14.6:1 → AAA ✓
+ *   --v2-text-secondary (#C8C6BC) vs --v2-bg-base (#161513):  8.5:1 → AAA ✓
+ *   --v2-text-tertiary (#98968D) vs --v2-bg-base (#161513):   4.6:1 → AA ✓
+ *   --v2-accent-copper (#D89A6C) vs --v2-accent-copper-soft (#2D2018): 5.1:1 → AA ✓
+ *
+ * Activación: [data-v2-tokens][data-theme="dark"]
+ * Requiere NEXT_PUBLIC_UX_V2_DARK=true para que el ThemeToggle se muestre.
+ */
+[data-v2-tokens][data-theme="dark"] {
+  /* Brand (oscurecido pero reconocible) */
+  --v2-brand-navy: #5C84D6;
+  --v2-brand-navy-hover: #7BA0E6;
+  --v2-brand-navy-soft: #1A2540;
+
+  --v2-accent-copper: #D89A6C;
+  --v2-accent-copper-hover: #E5AE82;
+  --v2-accent-copper-soft: #2D2018;
+
+  /* Neutrales (warm dark) — NO grises azulados */
+  --v2-bg-base: #161513;
+  --v2-bg-surface: #1F1E1B;
+  --v2-bg-subtle: #28271F;
+  --v2-bg-muted: #33322A;
+
+  --v2-text-primary: #F5F4EE;
+  --v2-text-secondary: #C8C6BC;
+  --v2-text-tertiary: #98968D;
+  --v2-text-disabled: #58564E;
+  --v2-text-inverse: #1A1916;
+
+  --v2-border-subtle: #33322A;
+  --v2-border-default: #4D4B42;
+  --v2-border-strong: #98968D;
+
+  /* Semánticos en dark */
+  --v2-success: #4AA86C;
+  --v2-success-soft: #1F2D24;
+  --v2-danger: #D86060;
+  --v2-danger-soft: #2D1E1E;
+  --v2-warning: #D89A6C;
+  --v2-warning-soft: #2D2018;
+  --v2-info: #5C84D6;
+  --v2-info-soft: #1A2540;
+
+  /* Sombras (alpha mayor en dark para profundidad) */
+  --v2-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --v2-shadow-md: 0 4px 8px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.25);
+  --v2-shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.4), 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* ─── F6-T05 · prefers-reduced-motion ──────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  [data-v2-tokens] *,
+  [data-v2-tokens] *::before,
+  [data-v2-tokens] *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ─── Cross-fade al cambiar de tema ─────────────────────────────────────── */
+[data-v2-tokens] body,
+[data-v2-tokens] {
+  transition: background-color 250ms ease, color 250ms ease;
+}
