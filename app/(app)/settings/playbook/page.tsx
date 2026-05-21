@@ -27,10 +27,12 @@ export default async function SettingsPlaybookPage() {
           subtitle="Reglas que LexAI aplica al redactar y revisar documentos · todas las skills lo leen automáticamente."
         />
         <div className="flex-1 overflow-auto p-[var(--pad-screen)]">
-          <div className="mb-4">
-            <SettingsTabs active="playbook" />
+          <div className="mx-auto w-full max-w-5xl">
+            <div className="mb-4">
+              <SettingsTabs active="playbook" />
+            </div>
+            <PlaybookEditor />
           </div>
-          <PlaybookEditor />
         </div>
       </main>
     </AppShell>

@@ -143,9 +143,14 @@ function ThinkingIndicator({ label }: { label: string }) {
 // ─── LocalStorage key helpers ────────────────────────────────────────────────
 
 const LS_THREAD_BASE = 'lexai-v2-current-thread';
+const LS_SESSION_BASE = 'lexai-v2-current-session';
 
 function getThreadStorageKey(matterId?: string): string {
   return matterId ? `${LS_THREAD_BASE}:${matterId}` : LS_THREAD_BASE;
+}
+
+function getSessionStorageKey(matterId?: string): string {
+  return matterId ? `${LS_SESSION_BASE}:${matterId}` : LS_SESSION_BASE;
 }
 
 function readThreadFromStorage(key: string, fallback: ThreadMessage[]): ThreadMessage[] {
@@ -157,6 +162,28 @@ function readThreadFromStorage(key: string, fallback: ThreadMessage[]): ThreadMe
     /* noop */
   }
   return fallback;
+}
+
+/**
+ * Lee (o genera) un session_id estable persistido en localStorage. El backend
+ * usa este id para agrupar las ejecuciones del thread en GET /v1/threads, lo
+ * que permite que el sidebar "Mis hilos" muestre los hilos del usuario.
+ */
+function readOrCreateSessionId(key: string): string {
+  if (typeof window === 'undefined') {
+    return `s-${Date.now()}`;
+  }
+  try {
+    const stored = localStorage.getItem(key);
+    if (stored && stored.length > 0) return stored;
+    const fresh = (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+      ? crypto.randomUUID()
+      : `s-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    localStorage.setItem(key, fresh);
+    return fresh;
+  } catch {
+    return `s-${Date.now()}`;
+  }
 }
 
 // ─── ComposerV2WithStream ─────────────────────────────────────────────────────
@@ -172,6 +199,7 @@ export function ComposerV2WithStream({
   initialPrompt = '',
 }: ComposerV2WithStreamProps) {
   const storageKey = getThreadStorageKey(matterId);
+  const sessionKey = getSessionStorageKey(matterId);
 
   // LEXAI_HYDRATION_FIX_V2_CACHEBUST
   // CLIENT-ONLY hydration pattern para evitar hydration mismatch.
@@ -181,6 +209,7 @@ export function ComposerV2WithStream({
   // persistidos) y dispara error #418/#422 + re-renderiza desde cero.
   const [messages, setMessages] = useState<ThreadMessage[]>(initialMessages);
   const [hasHydrated, setHasHydrated] = useState(false);
+  const [activeSessionId, setActiveSessionId] = useState<string>(sessionId ?? '');
 
   useEffect(() => {
     // Tras el mount, leemos localStorage y reemplazamos el estado si hay datos.
@@ -188,9 +217,13 @@ export function ComposerV2WithStream({
     if (stored.length > 0 || initialMessages.length === 0) {
       setMessages(stored);
     }
+    // Leer (o crear) session_id estable para este thread
+    if (!sessionId) {
+      setActiveSessionId(readOrCreateSessionId(sessionKey));
+    }
     setHasHydrated(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storageKey]);
+  }, [storageKey, sessionKey]);
 
   // Persist thread to localStorage whenever messages change (post-hydration).
   useEffect(() => {
@@ -219,6 +252,29 @@ export function ComposerV2WithStream({
     window.addEventListener('lexai:open-composer-with-skill', handler);
     return () => window.removeEventListener('lexai:open-composer-with-skill', handler);
   }, []);
+
+  // Escuchar evento global 'lexai:new-thread' (botón Nueva conversación del sidebar)
+  // para resetear el hilo local sin necesidad de remount.
+  useEffect(() => {
+    const handler = () => {
+      // Solo resetea el hilo "principal" (sin matter). Si este composer está
+      // ligado a un matter, se ignora el evento global.
+      if (matterId) return;
+      setMessages([]);
+      setExternalPrompt('');
+      try {
+        localStorage.removeItem(storageKey);
+        localStorage.removeItem(sessionKey);
+      } catch {
+        /* noop */
+      }
+      // Generar un nuevo session_id para el siguiente turno
+      const fresh = readOrCreateSessionId(sessionKey);
+      setActiveSessionId(fresh);
+    };
+    window.addEventListener('lexai:new-thread', handler);
+    return () => window.removeEventListener('lexai:new-thread', handler);
+  }, [matterId, storageKey, sessionKey]);
 
   // Scroll to bottom after message update
   const scrollToBottom = useCallback(() => {
@@ -276,6 +332,9 @@ export function ComposerV2WithStream({
         .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
       // Build RunSkillParams from ComposerPayload
+      // session_id se forwardea SIEMPRE al backend para que pueda agrupar
+      // ejecuciones del mismo hilo y devolverlas en GET /v1/threads.
+      const effectiveSessionId = payload.session_id || activeSessionId || undefined;
       const params = {
         command: payload.command,
         input: {
@@ -291,7 +350,7 @@ export function ComposerV2WithStream({
         history: historyToSend,
         signal: ac.signal,
         model: payload.model,
-        session_id: payload.session_id,
+        session_id: effectiveSessionId,
       };
 
       let assistantContent = '';

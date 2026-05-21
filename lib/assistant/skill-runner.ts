@@ -92,6 +92,14 @@ export interface RunSkillParams {
    *  el backend los prependa al user_message actual · sin esto cada /ask
    *  es stateless y el agente olvida el contexto turno a turno. */
   history?: ChatHistoryMessage[];
+  /**
+   * Identificador estable del hilo (UUID generado en el cliente y persistido
+   * en localStorage). Permite al backend agrupar varias ejecuciones bajo el
+   * mismo thread y devolverlas en GET /v1/threads para el sidebar "Mis hilos".
+   */
+  session_id?: string | null;
+  /** Modelo seleccionado por el usuario (gpt-4o, claude-opus, etc.) */
+  model?: string;
   /** AbortSignal to cancel the stream. */
   signal?: AbortSignal;
 }
@@ -119,6 +127,10 @@ export async function* runSkillStream(
       matter_id: params.matter_id ?? null,
       document_id: params.document_id ?? null,
       history: params.history ?? [],
+      // session_id agrupa ejecuciones en un mismo thread (sidebar "Mis hilos").
+      // Sin esto el backend no puede devolver el listado de hilos del usuario.
+      ...(params.session_id ? { session_id: params.session_id } : {}),
+      ...(params.model ? { model: params.model } : {}),
     }),
     signal: params.signal,
     cache: 'no-store',

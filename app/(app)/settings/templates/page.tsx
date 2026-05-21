@@ -27,10 +27,12 @@ export default async function SettingsTemplates() {
           subtitle="Sube tus formatos .docx y reusa con variables · {{nombre_cliente}}, {{expediente}}, etc."
         />
         <div className="flex-1 overflow-auto p-[var(--pad-screen)]">
-          <div className="mb-4">
-            <SettingsTabs active="plantillas" />
+          <div className="mx-auto w-full max-w-5xl">
+            <div className="mb-4">
+              <SettingsTabs active="plantillas" />
+            </div>
+            <TemplatesManager currentUserId={principal.user_id} />
           </div>
-          <TemplatesManager currentUserId={principal.user_id} />
         </div>
       </main>
     </AppShell>

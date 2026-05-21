@@ -27,10 +27,12 @@ export default async function SettingsEquipo() {
           subtitle="Cada socio puede armar su 'equipito' con asociados y paralegales a cargo."
         />
         <div className="flex-1 overflow-auto p-[var(--pad-screen)]">
-          <div className="mb-4">
-            <SettingsTabs active="equipo" />
+          <div className="mx-auto w-full max-w-5xl">
+            <div className="mb-4">
+              <SettingsTabs active="equipo" />
+            </div>
+            <TeamsManager userRole={principal.role ?? 'lawyer'} />
           </div>
-          <TeamsManager userRole={principal.role ?? 'lawyer'} />
         </div>
       </main>
     </AppShell>

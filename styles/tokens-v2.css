@@ -177,3 +177,18 @@
 [data-v2-tokens] {
   transition: background-color 250ms ease, color 250ms ease;
 }
+
+
+/* ─── Composer compacto en canvas (ThreadCanvasSplit) ───────────────────────
+ * Cuando ComposerV2WithStream se monta dentro del panel izquierdo del canvas,
+ * el composer ocupa demasiada altura porque el wrapper interno crece. Esta
+ * regla limita la altura del area inferior del composer y fuerza la textarea
+ * a respetar la misma altura que el composer de home/inicio (1-3 lineas).
+ */
+.v2-composer-compact > .shrink-0 {
+  max-height: 140px;
+}
+
+.v2-composer-compact textarea {
+  max-height: 80px !important;
+}

@@ -28,15 +28,17 @@ export default async function SettingsUsuarios() {
           subtitle="Invita nuevos abogados, cambia roles o desactiva accesos."
         />
         <div className="flex-1 overflow-auto p-[var(--pad-screen)]">
-          <div className="mb-4">
-            <SettingsTabs active="usuarios" />
-          </div>
-          <UsersManager
-            currentUserId={principal.user_id}
-            currentUserRole={principal.role ?? 'lawyer'}
-          />
-          <div className="mt-6">
-            <InviteCodesPanel currentRole={principal.role ?? 'lawyer'} />
+          <div className="mx-auto w-full max-w-5xl">
+            <div className="mb-4">
+              <SettingsTabs active="usuarios" />
+            </div>
+            <UsersManager
+              currentUserId={principal.user_id}
+              currentUserRole={principal.role ?? 'lawyer'}
+            />
+            <div className="mt-6">
+              <InviteCodesPanel currentRole={principal.role ?? 'lawyer'} />
+            </div>
           </div>
         </div>
       </main>

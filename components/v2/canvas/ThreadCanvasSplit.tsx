@@ -87,13 +87,15 @@ function ThreadPanel({
         <AgentEditingChip isEditing={isAgentEditing} description={agentDescription} />
       </div>
 
-      {/* Thread + Composer */}
+      {/* Thread + Composer — el ComposerV2WithStream maneja thread+composer.
+          Le pasamos className="h-full compact-canvas" para que el composer
+          interno se mantenga compacto (igual altura que en home/inicio). */}
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         <ComposerV2WithStream
           matterId={matterId ?? undefined}
           activeTab="canvas"
           placeholder="Pregúntale a LexAI sobre este documento…"
-          className="h-full"
+          className="h-full v2-composer-compact"
         />
       </div>
     </div>

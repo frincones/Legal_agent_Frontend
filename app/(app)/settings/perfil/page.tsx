@@ -27,10 +27,12 @@ export default async function SettingsPerfil() {
           subtitle="Modo de ejercicio, áreas de práctica y datos de contacto profesional."
         />
         <div className="flex-1 overflow-auto p-[var(--pad-screen)]">
-          <div className="mb-4">
-            <SettingsTabs active="perfil" />
+          <div className="mx-auto w-full max-w-5xl">
+            <div className="mb-4">
+              <SettingsTabs active="perfil" />
+            </div>
+            <ProfileEditor />
           </div>
-          <ProfileEditor />
         </div>
       </main>
     </AppShell>

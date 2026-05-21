@@ -30,14 +30,16 @@ export default async function SettingsIntegraciones() {
           subtitle="Conecta tu correo y recibe notificaciones del juzgado clasificadas automáticamente."
         />
         <div className="flex-1 overflow-auto p-[var(--pad-screen)]">
-          <div className="mb-4">
-            <SettingsTabs active="integraciones" />
-          </div>
-          <div className="grid gap-6">
-            <IntegrationsManager />
-            <CalendarIntegrationsManager />
-            <WhatsAppIntegrationPanel />
-            <IntegrationsGrid />
+          <div className="mx-auto w-full max-w-5xl">
+            <div className="mb-4">
+              <SettingsTabs active="integraciones" />
+            </div>
+            <div className="grid gap-6">
+              <IntegrationsManager />
+              <CalendarIntegrationsManager />
+              <WhatsAppIntegrationPanel />
+              <IntegrationsGrid />
+            </div>
           </div>
         </div>
       </main>

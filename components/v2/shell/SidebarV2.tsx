@@ -13,7 +13,7 @@
  * Estado colapsado: persiste en localStorage (key: lexai-v2-sidebar-collapsed).
  */
 import { useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   Home,
@@ -21,7 +21,9 @@ import {
   FileText,
   Calendar,
   Sparkles,
+  PenSquare,
 } from 'lucide-react';
+import * as Tooltip from '@radix-ui/react-tooltip';
 import { SidebarItemV2 } from './SidebarItemV2';
 import { SidebarHilosList } from './SidebarHilosList';
 import { SidebarSkillsList } from './SidebarSkillsList';
@@ -52,10 +54,36 @@ export function SidebarV2({
   userEmail,
 }: SidebarV2Props) {
   const pathname = usePathname();
+  const router = useRouter();
   // collapsed comienza siempre en false (expandido).
   // El useEffect posterior lee localStorage: si el usuario lo colapsó antes,
   // se respeta; si no hay valor, queda en false (expandido).
   const [collapsed, setCollapsed] = useState(false);
+
+  /**
+   * Inicia una conversación nueva:
+   *  1) Limpia el thread persistido en localStorage para que el composer
+   *     arranque vacío al montar.
+   *  2) Navega a /v2/inicio (forzando reload si ya estamos ahí, para que
+   *     ComposerV2WithStream re-lea el storage vacío y se resetee).
+   */
+  const handleNewChat = () => {
+    try {
+      // Limpiar el thread principal (sin matter)
+      localStorage.removeItem('lexai-v2-current-thread');
+      // Disparar evento para que cualquier ComposerV2WithStream montado se resetee
+      window.dispatchEvent(new CustomEvent('lexai:new-thread'));
+    } catch {
+      /* noop */
+    }
+    if (pathname?.startsWith('/v2/inicio') || pathname?.startsWith('/inicio')) {
+      // Ya estamos en inicio — refrescar para resetear el state local del composer
+      router.refresh();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      router.push('/v2/inicio');
+    }
+  };
 
   // Leer estado inicial desde localStorage (solo en el cliente).
   // Si nunca se guardó un valor, readSidebarCollapsed() retorna false → expandido.
@@ -104,24 +132,26 @@ export function SidebarV2({
       className="relative flex h-full min-h-0 flex-col border-r border-[var(--v2-border-subtle,#E8E7E1)] bg-[var(--v2-bg-base,#FAFAF7)]"
       aria-label="Barra lateral principal"
     >
-      {/* ── Header: Logo + Nombre firm + Toggle (solo expandido) ── */}
+      {/* ── Header: Logo + Nombre firm (solo expandido) / Toggle solo (colapsado) ── */}
       <div
-        className="flex items-center border-b border-[var(--v2-border-subtle,#E8E7E1)] px-3 py-3"
+        className={[
+          'flex items-center border-b border-[var(--v2-border-subtle,#E8E7E1)] py-3',
+          collapsed ? 'justify-center px-2' : 'px-3',
+        ].join(' ')}
         style={{ minHeight: '52px' }}
       >
-        {/* Logo LexAI — siempre visible */}
-        <span
-          aria-label="LexAI"
-          className="grid h-[28px] w-[28px] shrink-0 place-items-center rounded-md text-[11px] font-bold text-white"
-          style={{
-            background: 'linear-gradient(135deg, var(--v2-brand-navy,#0E2A5E), var(--v2-accent-copper,#B8763C))',
-          }}
-        >
-          L
-        </span>
-
-        {!collapsed && (
+        {!collapsed ? (
           <>
+            {/* Logo LexAI — solo visible en expandido */}
+            <span
+              aria-label="LexAI"
+              className="grid h-[28px] w-[28px] shrink-0 place-items-center rounded-md text-[11px] font-bold text-white"
+              style={{
+                background: 'linear-gradient(135deg, var(--v2-brand-navy,#0E2A5E), var(--v2-accent-copper,#B8763C))',
+              }}
+            >
+              L
+            </span>
             <div className="min-w-0 flex-1 ml-2">
               <div className="truncate text-[12px] font-semibold text-[var(--v2-brand-navy,#0E2A5E)] leading-none">
                 LexAI
@@ -130,18 +160,73 @@ export function SidebarV2({
                 {firmName}
               </div>
             </div>
-            {/* Toggle solo visible en modo expandido, alineado a la derecha */}
             <SidebarToggle collapsed={collapsed} onToggle={handleToggle} />
           </>
+        ) : (
+          /* Colapsado: SOLO el toggle centrado — el logo se oculta para evitar el doble icono */
+          <SidebarToggle collapsed={collapsed} onToggle={handleToggle} />
         )}
       </div>
 
-      {/* Toggle flotante para modo colapsado — en el borde derecho del aside */}
-      {collapsed && (
-        <div className="absolute right-0 top-[14px] translate-x-1/2 z-10">
-          <SidebarToggle collapsed={collapsed} onToggle={handleToggle} />
-        </div>
-      )}
+      {/* ── Botón Nueva conversación — prominente, justo bajo el header ── */}
+      <div className={collapsed ? 'flex justify-center px-2 pt-3 pb-2' : 'px-3 pt-3 pb-2'}>
+        {collapsed ? (
+          <Tooltip.Provider delayDuration={300}>
+            <Tooltip.Root>
+              <Tooltip.Trigger asChild>
+                <button
+                  type="button"
+                  onClick={handleNewChat}
+                  aria-label="Nueva conversación"
+                  className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                  style={{
+                    background: 'var(--v2-brand-navy,#0E2A5E)',
+                    color: '#fff',
+                  }}
+                  onMouseOver={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = 'var(--v2-brand-navy-hover,#0a2049)';
+                  }}
+                  onMouseOut={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = 'var(--v2-brand-navy,#0E2A5E)';
+                  }}
+                >
+                  <PenSquare size={16} strokeWidth={1.9} aria-hidden />
+                </button>
+              </Tooltip.Trigger>
+              <Tooltip.Portal>
+                <Tooltip.Content
+                  side="right"
+                  sideOffset={8}
+                  className="z-50 rounded-md bg-[var(--v2-text-primary,#1A1916)] px-[10px] py-[6px] text-[12px] font-medium text-[var(--v2-text-inverse,#FAFAF7)] shadow-lg"
+                >
+                  Nueva conversación
+                  <Tooltip.Arrow className="fill-[var(--v2-text-primary,#1A1916)]" />
+                </Tooltip.Content>
+              </Tooltip.Portal>
+            </Tooltip.Root>
+          </Tooltip.Provider>
+        ) : (
+          <button
+            type="button"
+            onClick={handleNewChat}
+            aria-label="Iniciar nueva conversación"
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+            style={{
+              background: 'var(--v2-brand-navy,#0E2A5E)',
+              color: '#fff',
+            }}
+            onMouseOver={(e) => {
+              (e.currentTarget as HTMLElement).style.background = 'var(--v2-brand-navy-hover,#0a2049)';
+            }}
+            onMouseOut={(e) => {
+              (e.currentTarget as HTMLElement).style.background = 'var(--v2-brand-navy,#0E2A5E)';
+            }}
+          >
+            <PenSquare size={15} strokeWidth={1.9} aria-hidden />
+            <span className="leading-none">Nueva conversación</span>
+          </button>
+        )}
+      </div>
 
       {/* ── Cuerpo scrollable ── */}
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden py-2">
