@@ -75,9 +75,9 @@ export function DayBriefingPageClient({ data }: DayBriefingPageClientProps) {
   }, []);
 
   return (
-    <>
-      {/* Zona scroll: header + thread */}
-      <div className="flex-1 overflow-y-auto">
+    <div className="flex h-full flex-col">
+      {/* Zona scroll: header + thread — min-h-0 es crítico para que flex no crezca infinito */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="mx-auto max-w-4xl px-8 pt-10 pb-6">
           {/* Header de página visible — saludo encima del bubble del agente */}
           <header className="mb-8">
@@ -138,6 +138,6 @@ export function DayBriefingPageClient({ data }: DayBriefingPageClientProps) {
           />
         </div>
       </div>
-    </>
+    </div>
   );
 }

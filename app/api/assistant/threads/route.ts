@@ -2,13 +2,10 @@
  * GET /api/assistant/threads
  *
  * Lista los threads (hilos) de conversación del asistente para el firm actual.
+ * Proxy al backend real GET /v1/threads?limit=50 (disponible desde commit 6f258c9).
  *
- * TODO (F2): conectar con el backend real cuando exista GET /v1/threads.
- * El backend necesitaría la tabla assistant_threads o similar con campos:
- *   id, firm_id, user_id, title, created_at, updated_at
- *
- * Por ahora retorna lista vacía para que SidebarHilosList muestre el
- * estado vacío sin errores.
+ * Fallback silencioso a lista vacía si el backend no responde,
+ * para no romper el sidebar en caso de error transitorio.
  */
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
@@ -23,14 +20,23 @@ export async function GET() {
     return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
   }
 
-  // TODO: cuando el backend tenga el endpoint /v1/threads, hacer proxy aquí:
-  // const apiBase = process.env.NEXT_PUBLIC_RAILWAY_API ?? 'http://localhost:8000';
-  // const res = await fetch(`${apiBase}/v1/threads`, {
-  //   headers: { authorization: `Bearer ${session.access_token}` },
-  //   cache: 'no-store',
-  // });
-  // if (res.ok) return NextResponse.json(await res.json());
+  const apiBase = process.env.NEXT_PUBLIC_RAILWAY_API ?? 'http://localhost:8000';
 
-  // Stub: retorna vacío para activar el estado "Aún no tiene hilos"
-  return NextResponse.json({ threads: [] });
+  try {
+    const res = await fetch(`${apiBase}/v1/threads?limit=50`, {
+      headers: { authorization: `Bearer ${session.access_token}` },
+      cache: 'no-store',
+    });
+
+    if (!res.ok) {
+      // Fallback silencioso — no romper el sidebar con un error de backend
+      return NextResponse.json({ threads: [] });
+    }
+
+    const data = await res.json();
+    return NextResponse.json(data);
+  } catch {
+    // Error de red — fallback silencioso
+    return NextResponse.json({ threads: [] });
+  }
 }

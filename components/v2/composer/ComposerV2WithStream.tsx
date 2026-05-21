@@ -32,9 +32,15 @@ import {
 } from '@/lib/assistant/skill-runner';
 import { ComposerV2, type ComposerPayload } from './ComposerV2';
 import { StreamingCursor } from './StreamingCursor';
+import { DocumentArtifact } from './DocumentArtifact';
 import { MarkdownContent } from '@/components/assistant/MarkdownContent';
 
 // ─── Message types (local, no deps on assistant-store) ───────────────────────
+
+interface DocumentArtifactData {
+  type: 'document';
+  content: string;
+}
 
 interface ThreadMessage {
   id: string;
@@ -44,6 +50,27 @@ interface ThreadMessage {
   streaming?: boolean;
   /** Herramientas usadas */
   toolsUsed?: string[];
+  /**
+   * Artifact detectado en el content del asistente.
+   * Actualmente soporta type 'document' para bloques <plantilla-doc>.
+   */
+  artifact?: DocumentArtifactData;
+}
+
+/** Regex para detectar y extraer bloques <plantilla-doc>...</plantilla-doc>. */
+const PLANTILLA_DOC_RE = /<plantilla-doc>([\s\S]*?)<\/plantilla-doc>/i;
+
+/**
+ * Extrae el contenido del bloque <plantilla-doc> si existe.
+ * Retorna { docContent, cleanContent } donde cleanContent tiene el bloque removido.
+ */
+function extractPlantillaDoc(text: string): { docContent: string | null; cleanContent: string } {
+  const match = PLANTILLA_DOC_RE.exec(text);
+  if (!match) return { docContent: null, cleanContent: text };
+  const docContent = (match[1] ?? '').trim();
+  // Quitar el bloque completo del content visible + whitespace adyacente
+  const cleanContent = text.replace(PLANTILLA_DOC_RE, '').replace(/\n{3,}/g, '\n\n').trim();
+  return { docContent, cleanContent };
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -246,7 +273,17 @@ export function ComposerV2WithStream({
                 const toolPattern = new RegExp(`^(${toolsUsed.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\s*\\n`, 'i');
                 assistantContent = assistantContent.replace(toolPattern, '');
               }
-              updateLastAssistant({ content: assistantContent, streaming: false, toolsUsed });
+              // Detectar bloque <plantilla-doc> y extraer como artifact
+              const { docContent, cleanContent } = extractPlantillaDoc(assistantContent);
+              const artifact: DocumentArtifactData | undefined = docContent
+                ? { type: 'document', content: docContent }
+                : undefined;
+              updateLastAssistant({
+                content: cleanContent,
+                streaming: false,
+                toolsUsed,
+                ...(artifact ? { artifact } : {}),
+              });
               setIsStreaming(false);
               setThinkingLabel(null);
               break;
@@ -305,10 +342,10 @@ export function ComposerV2WithStream({
 
   return (
     <div className={['flex flex-col h-full', className].filter(Boolean).join(' ')}>
-      {/* ── Thread ── */}
+      {/* ── Thread ── min-h-0 necesario para que flex no crezca infinito */}
       <div
         ref={threadRef}
-        className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
+        className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4"
         aria-label="Hilo de conversación"
         aria-live="polite"
         aria-atomic="false"
@@ -321,57 +358,72 @@ export function ComposerV2WithStream({
           </div>
         )}
 
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={[
-              'flex flex-col gap-1',
-              msg.role === 'user' ? 'items-end' : 'items-start',
-            ].join(' ')}
-          >
-            {/* Role label */}
-            <span className="text-[11px] font-medium text-[color:var(--v2-text-tertiary,#7A7870)] px-1">
-              {msg.role === 'user' ? 'Usted' : 'LexAI'}
-            </span>
+        {messages.map((msg) => {
+          // Durante streaming, ocultar el bloque <plantilla-doc> del render inline
+          // para evitar que se muestre como texto crudo mientras se reciben tokens.
+          const displayContent = msg.streaming
+            ? msg.content.replace(/<plantilla-doc[\s\S]*$/i, '').trimEnd()
+            : msg.content;
 
-            {/* Tools used indicator (assistant only) */}
-            {msg.role === 'assistant' && msg.toolsUsed && msg.toolsUsed.length > 0 && (
-              <div className="flex flex-wrap gap-1 px-1 mb-0.5">
-                {msg.toolsUsed.map((tool) => (
-                  <span
-                    key={tool}
-                    className="inline-block text-[10px] rounded-full bg-[color:var(--v2-bg-subtle,#F2F1EC)] text-[color:var(--v2-text-tertiary,#7A7870)] px-2 py-0.5"
-                  >
-                    {tool}
-                  </span>
-                ))}
-              </div>
-            )}
+          return (
+            <div
+              key={msg.id}
+              className={[
+                'flex flex-col gap-1',
+                msg.role === 'user' ? 'items-end' : 'items-start',
+              ].join(' ')}
+            >
+              {/* Role label */}
+              <span className="text-[11px] font-medium text-[color:var(--v2-text-tertiary,#7A7870)] px-1">
+                {msg.role === 'user' ? 'Usted' : 'LexAI'}
+              </span>
 
-            {/* Thinking indicator */}
-            {msg.role === 'assistant' && msg.streaming && !msg.content && thinkingLabel && (
-              <ThinkingIndicator label={thinkingLabel} />
-            )}
+              {/* Tools used indicator (assistant only) */}
+              {msg.role === 'assistant' && msg.toolsUsed && msg.toolsUsed.length > 0 && (
+                <div className="flex flex-wrap gap-1 px-1 mb-0.5">
+                  {msg.toolsUsed.map((tool) => (
+                    <span
+                      key={tool}
+                      className="inline-block text-[10px] rounded-full bg-[color:var(--v2-bg-subtle,#F2F1EC)] text-[color:var(--v2-text-tertiary,#7A7870)] px-2 py-0.5"
+                    >
+                      {tool}
+                    </span>
+                  ))}
+                </div>
+              )}
 
-            {/* Bubble */}
-            {(msg.content || (!msg.streaming)) && (
-              <div
-                className={[
-                  'max-w-[85%] rounded-2xl px-4 py-2.5 text-[14px] leading-[1.6]',
-                  msg.role === 'user'
-                    ? 'bg-[color:var(--v2-brand-navy,#0E2A5E)] text-white rounded-tr-sm'
-                    : 'bg-[color:var(--v2-bg-subtle,#F2F1EC)] text-[color:var(--v2-text-primary,#1A1916)] rounded-tl-sm',
-                ].join(' ')}
-              >
-                {msg.role === 'assistant' ? (
-                  <AssistantMessage content={msg.content} streaming={msg.streaming} />
-                ) : (
-                  <SimpleMessage content={msg.content} streaming={msg.streaming} />
-                )}
-              </div>
-            )}
-          </div>
-        ))}
+              {/* Thinking indicator */}
+              {msg.role === 'assistant' && msg.streaming && !displayContent && thinkingLabel && (
+                <ThinkingIndicator label={thinkingLabel} />
+              )}
+
+              {/* Bubble */}
+              {(displayContent || (!msg.streaming)) && (
+                <div
+                  className={[
+                    'max-w-[85%] rounded-2xl px-4 py-2.5 text-[14px] leading-[1.6]',
+                    msg.role === 'user'
+                      ? 'bg-[color:var(--v2-brand-navy,#0E2A5E)] text-white rounded-tr-sm'
+                      : 'bg-[color:var(--v2-bg-subtle,#F2F1EC)] text-[color:var(--v2-text-primary,#1A1916)] rounded-tl-sm',
+                  ].join(' ')}
+                >
+                  {msg.role === 'assistant' ? (
+                    <AssistantMessage content={displayContent} streaming={msg.streaming} />
+                  ) : (
+                    <SimpleMessage content={displayContent} streaming={msg.streaming} />
+                  )}
+                </div>
+              )}
+
+              {/* DocumentArtifact: se muestra cuando el agente retornó un bloque <plantilla-doc> */}
+              {msg.role === 'assistant' && msg.artifact?.type === 'document' && !msg.streaming && (
+                <div className="max-w-[85%] w-full">
+                  <DocumentArtifact content={msg.artifact.content} />
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* ── Composer ── */}
