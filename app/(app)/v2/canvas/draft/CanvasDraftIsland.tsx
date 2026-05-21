@@ -3,12 +3,15 @@
 /**
  * Client island del Canvas Draft.
  * Recibe el contenido ya decodificado del Server Component padre y renderiza
- * el header + CanvasV2.
+ * el split view: thread del agente (izq) + editor TipTap (der).
+ *
+ * BUG #1 FIX: usa ThreadCanvasSplit en lugar de CanvasV2 solo, para que el
+ * thread del agente esté visible a la izquierda mientras se edita el documento.
  */
 
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { CanvasV2 } from '@/components/v2/canvas/CanvasV2';
+import { ThreadCanvasSplit } from '@/components/v2/canvas/ThreadCanvasSplit';
 
 interface CanvasDraftIslandProps {
   initialContent: string;
@@ -37,6 +40,7 @@ export function CanvasDraftIsland({ initialContent }: CanvasDraftIslandProps) {
           borderBottom: '1px solid var(--v2-border-default, #DDDBD3)',
           backgroundColor: 'var(--v2-bg-base, #FAFAF7)',
           flexShrink: 0,
+          zIndex: 10,
         }}
       >
         <button
@@ -80,10 +84,14 @@ export function CanvasDraftIsland({ initialContent }: CanvasDraftIslandProps) {
         </span>
       </div>
 
-      {/* Editor canvas con el contenido decodificado */}
+      {/* Split view: thread + canvas */}
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         {initialContent ? (
-          <CanvasV2 docId="draft" initialContent={initialContent} readonly={false} />
+          <ThreadCanvasSplit
+            matterId={null}
+            docId="draft"
+            initialContent={initialContent}
+          />
         ) : (
           <div
             style={{

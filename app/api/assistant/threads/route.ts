@@ -29,14 +29,17 @@ export async function GET() {
     });
 
     if (!res.ok) {
-      // Fallback silencioso — no romper el sidebar con un error de backend
-      return NextResponse.json({ threads: [] });
+      // Log error para diagnóstico — retorna lista vacía para no romper el sidebar
+      const errText = await res.text().catch(() => '');
+      console.error('[threads proxy] backend error', res.status, errText.slice(0, 300));
+      return NextResponse.json({ threads: [], _upstream_status: res.status });
     }
 
     const data = await res.json();
     return NextResponse.json(data);
-  } catch {
-    // Error de red — fallback silencioso
-    return NextResponse.json({ threads: [] });
+  } catch (err) {
+    // Error de red — loguear y retornar lista vacía
+    console.error('[threads proxy] network error', err);
+    return NextResponse.json({ threads: [], _network_error: String(err) });
   }
 }

@@ -79,9 +79,14 @@ export function SidebarSkillsList({ collapsed = false }: SidebarSkillsListProps)
   if (collapsed) return null;
 
   const handleSkillClick = (skill: Skill) => {
-    // Emite un evento global que el Composer puede escuchar para pre-completarse.
+    // Emite evento global que ComposerV2WithStream escucha para pre-completarse.
     window.dispatchEvent(
-      new CustomEvent('v2:skill-select', { detail: { path: skill.path, name: skill.name } }),
+      new CustomEvent('lexai:open-composer-with-skill', {
+        detail: {
+          command: skill.path,  // ej. "/redactar/poderEspecial"
+          prompt: skill.description ?? '',
+        },
+      }),
     );
     toast.info(`Skill seleccionada: ${skill.name}`);
   };

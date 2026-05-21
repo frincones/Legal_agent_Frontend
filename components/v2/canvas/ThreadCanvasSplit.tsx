@@ -27,7 +27,7 @@ import { uiCommandBus } from '@/lib/voice/ui-command-bus';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface ThreadCanvasSplitProps {
-  matterId: string;
+  matterId: string | null;
   docId: string;
   initialContent?: string;
 }
@@ -47,7 +47,7 @@ function ThreadPanel({
   isAgentEditing,
   agentDescription,
 }: {
-  matterId: string;
+  matterId: string | null;
   docId: string;
   isAgentEditing: boolean;
   agentDescription?: string;
@@ -92,7 +92,7 @@ function ThreadPanel({
       {/* Thread + Composer */}
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         <ComposerV2WithStream
-          matterId={matterId}
+          matterId={matterId ?? undefined}
           activeTab="canvas"
           placeholder="Pregúntale a LexAI sobre este documento…"
           className="h-full"
@@ -206,7 +206,7 @@ export function ThreadCanvasSplit({
         <CanvasV2
           docId={docId}
           initialContent={initialContent}
-          matterId={matterId}
+          matterId={matterId ?? undefined}
           readonly={false}
         />
       </Panel>

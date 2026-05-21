@@ -30,6 +30,8 @@ import Highlight from '@tiptap/extension-highlight';
 import Typography from '@tiptap/extension-typography';
 import TextAlign from '@tiptap/extension-text-align';
 import TextStyle from '@tiptap/extension-text-style';
+import Color from '@tiptap/extension-color';
+import { FontSize } from '@/lib/canvas/font-size-extension';
 import { Markdown } from 'tiptap-markdown';
 import Table from '@tiptap/extension-table';
 import TableRow from '@tiptap/extension-table-row';
@@ -99,6 +101,8 @@ export function CanvasV2({
         heading: { levels: [1, 2, 3] },
       }),
       TextStyle,
+      Color,
+      FontSize,
       Placeholder.configure({
         placeholder: readonly
           ? 'Documento en solo lectura.'

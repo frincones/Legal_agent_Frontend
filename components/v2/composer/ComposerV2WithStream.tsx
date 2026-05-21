@@ -24,7 +24,7 @@
  * Feature flag: NEXT_PUBLIC_UX_V2_COMPOSER
  */
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { uiCommandBus, type UICommand } from '@/lib/voice/ui-command-bus';
 import {
@@ -127,6 +127,25 @@ function ThinkingIndicator({ label }: { label: string }) {
   );
 }
 
+// ─── LocalStorage key helpers ────────────────────────────────────────────────
+
+const LS_THREAD_BASE = 'lexai-v2-current-thread';
+
+function getThreadStorageKey(matterId?: string): string {
+  return matterId ? `${LS_THREAD_BASE}:${matterId}` : LS_THREAD_BASE;
+}
+
+function readThreadFromStorage(key: string, fallback: ThreadMessage[]): ThreadMessage[] {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const stored = localStorage.getItem(key);
+    if (stored) return JSON.parse(stored) as ThreadMessage[];
+  } catch {
+    /* noop */
+  }
+  return fallback;
+}
+
 // ─── ComposerV2WithStream ─────────────────────────────────────────────────────
 
 export function ComposerV2WithStream({
@@ -139,11 +158,39 @@ export function ComposerV2WithStream({
   initialMessages = [],
   initialPrompt = '',
 }: ComposerV2WithStreamProps) {
-  const [messages, setMessages] = useState<ThreadMessage[]>(initialMessages);
+  const storageKey = getThreadStorageKey(matterId);
+
+  const [messages, setMessages] = useState<ThreadMessage[]>(() =>
+    readThreadFromStorage(storageKey, initialMessages),
+  );
+
+  // Persist thread to localStorage whenever messages change.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(messages));
+    } catch {
+      /* noop — storage quota */
+    }
+  }, [messages, storageKey]);
+  const [externalPrompt, setExternalPrompt] = useState(initialPrompt);
   const [isStreaming, setIsStreaming] = useState(false);
   const [thinkingLabel, setThinkingLabel] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const threadRef = useRef<HTMLDivElement>(null);
+
+  // Escuchar evento global para abrir el composer pre-completado con un skill.
+  // Disparado por SidebarSkillsList (y cualquier otro componente que necesite
+  // inyectar un comando directamente al composer).
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { command, prompt: skillPrompt } = (e as CustomEvent<{ command: string; prompt: string }>).detail;
+      const text = [command, skillPrompt].filter(Boolean).join(' ');
+      setExternalPrompt(text);
+    };
+    window.addEventListener('lexai:open-composer-with-skill', handler);
+    return () => window.removeEventListener('lexai:open-composer-with-skill', handler);
+  }, []);
 
   // Scroll to bottom after message update
   const scrollToBottom = useCallback(() => {
@@ -443,7 +490,7 @@ export function ComposerV2WithStream({
             isStreaming={isStreaming}
             history={composerHistory}
             activeTab={activeTab}
-            initialPrompt={initialPrompt}
+            initialPrompt={externalPrompt}
           />
         </div>
       </div>
