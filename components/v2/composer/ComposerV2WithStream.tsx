@@ -412,14 +412,6 @@ export function ComposerV2WithStream({
       >
         {/* Contenedor centrado con reading-width controlado */}
         <div className="mx-auto max-w-[720px] px-4 py-4 space-y-4">
-          {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-8 gap-2 text-center">
-              <p className="text-[15px] text-[color:var(--v2-text-tertiary,#7A7870)]">
-                Pregúntale algo a LexAI
-              </p>
-            </div>
-          )}
-
           {messages.map((msg) => {
             // SIEMPRE ocultar el bloque <plantilla-doc>...</plantilla-doc> y
             // también el tag abierto sin cierre. Si el done event ya lo

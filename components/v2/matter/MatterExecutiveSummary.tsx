@@ -86,8 +86,16 @@ export function MatterExecutiveSummary({ matterId, matterTitulo }: Props) {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       const data = await res.json().catch(() => null);
+      // Backend /v1/skills/execute responde { output: { text: "..." } }.
+      // Mantenemos fallbacks por si el contrato cambia o tests usan otro shape.
       const text: string =
-        data?.output ?? data?.text ?? data?.result ?? data?.response ?? '';
+        data?.output?.text ??
+        data?.output?.message_md ??
+        (typeof data?.output === 'string' ? data.output : undefined) ??
+        data?.text ??
+        data?.result ??
+        data?.response ??
+        '';
 
       if (text && text.length > 20) {
         summaryCache.set(matterId, { text, ts: Date.now() });

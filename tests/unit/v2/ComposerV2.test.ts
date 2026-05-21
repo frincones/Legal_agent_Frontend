@@ -272,6 +272,65 @@ describe('ComposerPlusMenu — 10 opciones del menú', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// F3 · ComposerV2WithStream — thread vacío sin placeholder redundante
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('ComposerV2WithStream — thread empty state', () => {
+  /**
+   * Regresión: cuando messages.length === 0 se renderizaba un div con
+   * "Pregúntale algo a LexAI" dentro del thread, duplicando el placeholder
+   * del textarea y creando un gap visual de ~250px entre el Day Briefing
+   * y el compositor en /v2/inicio.
+   *
+   * Fix: el bloque messages.length === 0 fue eliminado del JSX del thread.
+   * El placeholder del textarea es suficiente (prop `placeholder` del ComposerV2).
+   *
+   * Este test valida la lógica de filtrado de mensajes para el historial,
+   * que sigue funcionando correctamente con array vacío.
+   */
+  it('historial vacío produce composerHistory vacío (no crash)', () => {
+    const messages: Array<{ role: string; content: string }> = [];
+    const composerHistory = messages
+      .filter((m) => m.content.trim().length > 0)
+      .slice(-8)
+      .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+
+    expect(composerHistory).toHaveLength(0);
+  });
+
+  it('mensajes con content vacío se filtran del historial', () => {
+    const messages = [
+      { role: 'user', content: 'hola' },
+      { role: 'assistant', content: '' }, // en streaming initial → se filtra
+      { role: 'user', content: 'gracias' },
+    ];
+    const composerHistory = messages
+      .filter((m) => m.content.trim().length > 0)
+      .slice(-8)
+      .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+
+    expect(composerHistory).toHaveLength(2);
+    expect(composerHistory[0]?.content).toBe('hola');
+    expect(composerHistory[1]?.content).toBe('gracias');
+  });
+
+  it('historial se limita a los últimos 8 mensajes', () => {
+    const messages = Array.from({ length: 12 }, (_, i) => ({
+      role: i % 2 === 0 ? 'user' : 'assistant',
+      content: `Mensaje ${i + 1}`,
+    }));
+    const composerHistory = messages
+      .filter((m) => m.content.trim().length > 0)
+      .slice(-8)
+      .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+
+    expect(composerHistory).toHaveLength(8);
+    expect(composerHistory[0]?.content).toBe('Mensaje 5');
+    expect(composerHistory[7]?.content).toBe('Mensaje 12');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // F3 · Feature flag
 // ─────────────────────────────────────────────────────────────────────────────
 

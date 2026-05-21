@@ -62,3 +62,9 @@ tests/e2e/.report/
 
 # Discovery docs (PRDs, transcripts) — internal only
 Transcripciones/
+
+# Playwright MCP outputs (local only)
+.playwright-mcp/
+*.png
+!public/**/*.png
+tmpfirm_skills_list.json

@@ -291,6 +291,51 @@ describe('CommandPaletteV2 — handler close()', () => {
   });
 });
 
+describe('CommandPaletteV2 — fetch de plazos con respuesta vacía', () => {
+  /**
+   * Regresión: /api/deadlines retornaba 404 generando error en consola.
+   * El endpoint stub ahora retorna { items: [] } con HTTP 200.
+   * El componente maneja data?.items con setDeadlines solo si truthy.
+   */
+  it('data null (404 anterior) NO rellena deadlines', () => {
+    // Simula la lógica del .then en el fetch de deadlines
+    // El componente ejecuta: if (data?.items) setDeadlines(data.items)
+    // Con data=null, data?.items es undefined → condición falsa → no se llama setDeadlines
+    let deadlines: unknown[] = [];
+    const applyDeadlines = (data: { items?: unknown[] } | null) => {
+      if (data?.items) deadlines = data.items;
+    };
+
+    applyDeadlines(null);
+    expect(deadlines).toHaveLength(0);
+  });
+
+  it('data.items = [] (stub nuevo) NO rellena la lista de plazos', () => {
+    let deadlines: unknown[] = [];
+    const applyDeadlines = (data: { items?: unknown[] } | null) => {
+      if (data?.items) deadlines = data.items;
+    };
+
+    // Stub retorna { items: [] } — [] es truthy pero length=0, deadlines queda []
+    applyDeadlines({ items: [] });
+    expect(deadlines).toHaveLength(0);
+  });
+
+  it('data.items con plazos reales rellena la lista', () => {
+    let deadlines: unknown[] = [];
+    const setDeadlines = (items: unknown[]) => { deadlines = items; };
+
+    const data3 = {
+      items: [
+        { id: 'd1', titulo: 'Contestar demanda', fecha: '2026-05-28', matter_id: 'm1' },
+        { id: 'd2', titulo: 'Audiencia inicial', fecha: '2026-05-30', matter_id: 'm2' },
+      ],
+    };
+    if (data3?.items) setDeadlines(data3.items);
+    expect(deadlines).toHaveLength(2);
+  });
+});
+
 describe('CommandPaletteV2 — normalización de skills del backend', () => {
   /**
    * El componente normaliza el array crudo del backend al formato

@@ -50,7 +50,7 @@ export function PWAInstallPrompt() {
   }
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-40 mx-auto max-w-md surface border-accent/40 p-3 shadow-2xl md:left-auto md:right-4">
+    <div className="fixed bottom-20 right-4 z-40 w-[min(360px,calc(100vw-2rem))] surface border-accent/40 p-3 shadow-2xl md:bottom-6">
       <div className="flex items-start gap-3">
         <Download size={18} className="mt-0.5 flex-none text-accent" aria-hidden="true" />
         <div className="min-w-0 flex-1">
