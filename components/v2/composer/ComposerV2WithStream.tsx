@@ -32,6 +32,7 @@ import {
 } from '@/lib/assistant/skill-runner';
 import { ComposerV2, type ComposerPayload } from './ComposerV2';
 import { StreamingCursor } from './StreamingCursor';
+import { MarkdownContent } from '@/components/assistant/MarkdownContent';
 
 // ─── Message types (local, no deps on assistant-store) ───────────────────────
 
@@ -63,7 +64,7 @@ export interface ComposerV2WithStreamProps {
   initialPrompt?: string;
 }
 
-// ─── Simple markdown → text renderer (sin dependencias extra) ────────────────
+// ─── Simple renderer para mensajes del usuario (plain text) ──────────────────
 
 function SimpleMessage({ content, streaming }: { content: string; streaming?: boolean }) {
   return (
@@ -71,6 +72,17 @@ function SimpleMessage({ content, streaming }: { content: string; streaming?: bo
       {content}
       {streaming && <StreamingCursor streaming={streaming} />}
     </span>
+  );
+}
+
+// ─── Markdown renderer para mensajes del asistente ────────────────────────────
+
+function AssistantMessage({ content, streaming }: { content: string; streaming?: boolean }) {
+  return (
+    <div className="break-words min-w-0">
+      <MarkdownContent source={content} density="compact" />
+      {streaming && <StreamingCursor streaming={streaming} />}
+    </div>
   );
 }
 
@@ -224,13 +236,21 @@ export function ComposerV2WithStream({
               break;
             }
 
-            case 'done':
+            case 'done': {
               if (!receivedAnyDelta && ev.data.full_text) {
                 assistantContent = ev.data.full_text;
-                updateLastAssistant({ content: assistantContent });
                 receivedAnyDelta = true;
               }
+              // Limpiar tool name que el backend puede prefijar antes del texto real
+              if (toolsUsed.length > 0) {
+                const toolPattern = new RegExp(`^(${toolsUsed.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\s*\\n`, 'i');
+                assistantContent = assistantContent.replace(toolPattern, '');
+              }
+              updateLastAssistant({ content: assistantContent, streaming: false, toolsUsed });
+              setIsStreaming(false);
+              setThinkingLabel(null);
               break;
+            }
 
             case 'warning':
               console.warn('[ComposerV2WithStream] warning:', ev.data);
@@ -238,7 +258,9 @@ export function ComposerV2WithStream({
 
             case 'blocked':
               assistantContent += `\n\nAcción bloqueada: ${ev.data?.reason ?? 'sin motivo'}`;
-              updateLastAssistant({ content: assistantContent });
+              updateLastAssistant({ content: assistantContent, streaming: false });
+              setIsStreaming(false);
+              setThinkingLabel(null);
               break;
 
             case 'error':
@@ -246,6 +268,9 @@ export function ComposerV2WithStream({
               if (!receivedAnyDelta) {
                 assistantContent = 'No pude procesar la solicitud. Reintenta.';
               }
+              updateLastAssistant({ content: assistantContent, streaming: false, toolsUsed });
+              setIsStreaming(false);
+              setThinkingLabel(null);
               break;
           }
         }
@@ -338,7 +363,11 @@ export function ComposerV2WithStream({
                     : 'bg-[color:var(--v2-bg-subtle,#F2F1EC)] text-[color:var(--v2-text-primary,#1A1916)] rounded-tl-sm',
                 ].join(' ')}
               >
-                <SimpleMessage content={msg.content} streaming={msg.streaming} />
+                {msg.role === 'assistant' ? (
+                  <AssistantMessage content={msg.content} streaming={msg.streaming} />
+                ) : (
+                  <SimpleMessage content={msg.content} streaming={msg.streaming} />
+                )}
               </div>
             )}
           </div>
