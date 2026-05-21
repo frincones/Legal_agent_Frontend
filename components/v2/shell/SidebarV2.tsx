@@ -114,7 +114,7 @@ export function SidebarV2({
         {/* Logo LexAI */}
         <span
           aria-label="LexAI"
-          className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-[11px] font-bold text-white"
+          className="grid h-[28px] w-[28px] shrink-0 place-items-center rounded-md text-[11px] font-bold text-white"
           style={{
             background: 'linear-gradient(135deg, var(--v2-brand-navy,#0E2A5E), var(--v2-accent-copper,#B8763C))',
           }}

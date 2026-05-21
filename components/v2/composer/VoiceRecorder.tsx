@@ -240,7 +240,7 @@ export function VoiceRecorder({
           onClick={cancelRecording}
           aria-label="Cancelar grabación"
           className={[
-            'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+            'flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-full',
             'bg-[color:var(--v2-bg-muted,#E8E7E1)] text-[color:var(--v2-text-secondary,#4A4944)]',
             'hover:bg-red-50 hover:text-red-600',
             'focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400',
@@ -252,7 +252,7 @@ export function VoiceRecorder({
 
         {/* Waveform */}
         <div
-          className="flex flex-1 items-end justify-center gap-[2px] h-8"
+          className="flex flex-1 items-end justify-center gap-[2px] h-[32px]"
           aria-hidden
         >
           {bars.map((amplitude, i) => {
@@ -286,7 +286,7 @@ export function VoiceRecorder({
           onClick={confirmRecording}
           aria-label="Confirmar grabación y transcribir"
           className={[
-            'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+            'flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-full',
             'bg-[color:var(--v2-accent-copper,#B8763C)] text-white',
             'hover:bg-[color:var(--v2-accent-copper-hover,#a16732)]',
             'focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--v2-accent-copper,#B8763C)]',
@@ -307,7 +307,7 @@ export function VoiceRecorder({
       disabled={disabled}
       aria-label="Iniciar grabación de voz"
       className={[
-        'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+        'flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-full',
         'text-[color:var(--v2-text-secondary,#4A4944)]',
         'hover:bg-[color:var(--v2-bg-subtle,#F2F1EC)] hover:text-[color:var(--v2-text-primary,#1A1916)]',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--v2-accent-copper,#B8763C)]',

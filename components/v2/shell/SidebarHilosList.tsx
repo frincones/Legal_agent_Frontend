@@ -88,7 +88,7 @@ export function SidebarHilosList({ collapsed = false }: SidebarHilosListProps) {
         {[...Array(3)].map((_, i) => (
           <div
             key={i}
-            className="mb-1 h-8 rounded-lg bg-[var(--v2-bg-subtle,#F2F1EC)] animate-pulse"
+            className="mb-1 h-[32px] rounded-lg bg-[var(--v2-bg-subtle,#F2F1EC)] animate-pulse"
           />
         ))}
       </div>

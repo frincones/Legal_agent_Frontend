@@ -36,7 +36,7 @@ export function SidebarToggle({ collapsed, onToggle }: SidebarToggleProps) {
       onClick={onToggle}
       aria-label={collapsed ? 'Expandir barra lateral' : 'Colapsar barra lateral'}
       title={collapsed ? 'Expandir (Ctrl+B)' : 'Colapsar (Ctrl+B)'}
-      className="flex h-7 w-7 items-center justify-center rounded-md text-[var(--v2-text-tertiary,#6E6C64)] transition-colors hover:bg-[var(--v2-bg-subtle,#F2F1EC)] hover:text-[var(--v2-text-primary,#1A1916)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--v2-brand-navy,#0E2A5E)] focus-visible:ring-offset-2"
+      className="flex h-[28px] w-[28px] items-center justify-center rounded-md text-[var(--v2-text-tertiary,#6E6C64)] transition-colors hover:bg-[var(--v2-bg-subtle,#F2F1EC)] hover:text-[var(--v2-text-primary,#1A1916)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--v2-brand-navy,#0E2A5E)] focus-visible:ring-offset-2"
     >
       {collapsed ? (
         <PanelLeftOpen size={15} strokeWidth={1.8} />

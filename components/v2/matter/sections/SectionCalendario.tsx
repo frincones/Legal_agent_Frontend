@@ -62,7 +62,7 @@ export function SectionCalendario({ deadlines }: Props) {
 
             {/* Separador vertical */}
             <div
-              className="h-8 w-px flex-none"
+              className="h-[32px] w-px flex-none"
               style={{ background: 'var(--v2-bg-muted, #E8E7E1)' }}
               aria-hidden="true"
             />

@@ -128,7 +128,7 @@ export function MatterExecutiveSummary({ matterId, matterTitulo }: Props) {
       {/* Header del agente */}
       <div className="mb-4 flex items-center gap-2.5">
         <span
-          className="grid h-8 w-8 flex-none place-items-center rounded-full text-white"
+          className="grid h-[32px] w-[32px] flex-none place-items-center rounded-full text-white"
           style={{ background: 'var(--v2-brand-navy, #0E2A5E)' }}
           aria-hidden="true"
         >

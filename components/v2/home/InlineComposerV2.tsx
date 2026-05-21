@@ -144,7 +144,7 @@ export const InlineComposerV2 = forwardRef<
           disabled={sending}
           aria-label="Activar voz (disponible próximamente)"
           title="Voz — disponible en Fase 3"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors"
+          className="flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-lg transition-colors"
           style={{ color: 'var(--v2-text-tertiary, #807E76)' }}
           onMouseEnter={(e) => {
             (e.currentTarget as HTMLButtonElement).style.backgroundColor =
@@ -163,7 +163,7 @@ export const InlineComposerV2 = forwardRef<
           onClick={handleSend}
           disabled={!value.trim() || sending}
           aria-label="Enviar mensaje"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-40"
           style={{
             backgroundColor: value.trim() && !sending
               ? 'var(--v2-brand-navy, #0E2A5E)'

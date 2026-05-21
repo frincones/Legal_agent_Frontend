@@ -120,7 +120,7 @@ function SearchSubPanel({
           type="button"
           onClick={onBack}
           aria-label="Volver al menú principal"
-          className="flex h-6 w-6 items-center justify-center rounded text-[color:var(--v2-text-tertiary,#7A7870)] hover:bg-[color:var(--v2-bg-subtle,#F2F1EC)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--v2-accent-copper,#B8763C)]"
+          className="flex h-[24px] w-[24px] items-center justify-center rounded text-[color:var(--v2-text-tertiary,#7A7870)] hover:bg-[color:var(--v2-bg-subtle,#F2F1EC)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--v2-accent-copper,#B8763C)]"
         >
           <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
         </button>
@@ -340,7 +340,7 @@ export function ComposerPlusMenu({
             aria-label="Adjuntar o agregar contenido"
             aria-expanded={open}
             className={[
-              'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+              'flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-full',
               'text-[color:var(--v2-text-secondary,#4A4944)]',
               'hover:bg-[color:var(--v2-bg-subtle,#F2F1EC)] hover:text-[color:var(--v2-text-primary,#1A1916)]',
               'focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--v2-accent-copper,#B8763C)]',

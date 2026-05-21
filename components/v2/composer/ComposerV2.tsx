@@ -413,7 +413,7 @@ export function ComposerV2({
             disabled={!canSend}
             aria-label={isStreaming ? 'Enviando...' : 'Enviar mensaje'}
             className={[
-              'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+              'flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-full',
               'transition-colors duration-150 focus:outline-none',
               'focus-visible:ring-2 focus-visible:ring-[color:var(--v2-accent-copper,#B8763C)]',
               canSend

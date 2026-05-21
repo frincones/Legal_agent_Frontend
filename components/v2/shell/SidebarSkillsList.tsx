@@ -95,7 +95,7 @@ export function SidebarSkillsList({ collapsed = false }: SidebarSkillsListProps)
     return (
       <div className="px-2 py-1">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="mb-1 h-8 rounded-lg bg-[var(--v2-bg-subtle,#F2F1EC)] animate-pulse" />
+          <div key={i} className="mb-1 h-[32px] rounded-lg bg-[var(--v2-bg-subtle,#F2F1EC)] animate-pulse" />
         ))}
       </div>
     );

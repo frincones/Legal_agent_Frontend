@@ -55,7 +55,7 @@ export function MatterSection({
             >
               {/* Icono */}
               <span
-                className="grid h-8 w-8 flex-none place-items-center rounded-lg"
+                className="grid h-[32px] w-[32px] flex-none place-items-center rounded-lg"
                 style={{ background: 'var(--v2-brand-navy-soft, #E8EDF7)', color: 'var(--v2-brand-navy, #0E2A5E)' }}
                 aria-hidden="true"
               >

@@ -169,7 +169,7 @@ function AgentAvatar() {
   return (
     <div
       aria-hidden
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
+      className="flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
       style={{ backgroundColor: 'var(--v2-brand-navy, #0E2A5E)' }}
     >
       L
