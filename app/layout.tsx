@@ -25,7 +25,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="bg-bg text-ink antialiased">
         <Providers>{children}</Providers>
-        <Toaster position="bottom-right" richColors closeButton />
+        {/* bottom-right con offset para no solapar el composer ni el footer del sidebar */}
+        <Toaster position="top-right" richColors closeButton toastOptions={{ duration: 4000 }} />
       </body>
     </html>
   );

@@ -52,11 +52,34 @@ export function SidebarV2({
   userEmail,
 }: SidebarV2Props) {
   const pathname = usePathname();
+  // collapsed comienza siempre en false (expandido).
+  // El useEffect posterior lee localStorage: si el usuario lo colapsó antes,
+  // se respeta; si no hay valor, queda en false (expandido).
   const [collapsed, setCollapsed] = useState(false);
 
-  // Leer estado inicial desde localStorage (solo en el cliente)
+  // Leer estado inicial desde localStorage (solo en el cliente).
+  // Si nunca se guardó un valor, readSidebarCollapsed() retorna false → expandido.
   useEffect(() => {
     setCollapsed(readSidebarCollapsed());
+  }, []);
+
+  // Auto-colapso solo en breakpoint tablet (768-1024px) para no desperdiciar espacio.
+  // En desktop (≥1024px) siempre se respeta la preferencia del usuario.
+  // En mobile (<768px) el sidebar es un drawer y collapsed no aplica.
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px) and (max-width: 1023px)');
+    const handleChange = (e: MediaQueryListEvent | MediaQueryList) => {
+      // Solo colapsa automáticamente si el usuario NO ha guardado una preferencia explícita
+      const hasExplicitPref = localStorage.getItem('lexai-v2-sidebar-collapsed') !== null;
+      if (!hasExplicitPref && e.matches) {
+        setCollapsed(true);
+      } else if (!hasExplicitPref && !e.matches) {
+        setCollapsed(false);
+      }
+    };
+    handleChange(mq);
+    mq.addEventListener('change', handleChange);
+    return () => mq.removeEventListener('change', handleChange);
   }, []);
 
   const handleToggle = () => {
@@ -84,7 +107,7 @@ export function SidebarV2({
       {/* ── Header: Logo + Nombre firm + Toggle ── */}
       <div
         className={[
-          'flex items-center border-b border-[var(--v2-border-subtle,#E8E7E1)] px-3 py-3',
+          'flex items-center border-b border-[var(--v2-border-subtle,#E8E7E1)] px-3 py-4',
           collapsed ? 'justify-center' : 'gap-2',
         ].join(' ')}
       >
@@ -116,10 +139,11 @@ export function SidebarV2({
       {/* ── Cuerpo scrollable ── */}
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden py-2">
 
-        {/* Sección: Navegación principal (5 items) */}
+        {/* Sección: Navegación principal (5 items).
+            gap-0.5 (2px) entre items del mismo grupo — relacionados entre sí. */}
         <nav
           aria-label="Navegación principal"
-          className={['flex flex-col gap-px', collapsed ? 'items-center px-[7px]' : 'px-2'].join(' ')}
+          className={['flex flex-col gap-0.5', collapsed ? 'items-center px-2' : 'px-2'].join(' ')}
         >
           {NAV_ITEMS.map((item) => {
             const isActive =
@@ -140,24 +164,25 @@ export function SidebarV2({
           })}
         </nav>
 
-        {/* Separador */}
-        <div className="my-2 border-t border-[var(--v2-border-subtle,#E8E7E1)]" />
+        {/* Separador — gap-6 (24px) entre grupos distintos */}
+        <div className="my-3 border-t border-[var(--v2-border-subtle,#E8E7E1)]" />
 
         {/* Sección: Mis hilos (oculta en colapsado) */}
         {!collapsed && (
           <>
-            <div className="px-[10px] pb-[4px] text-[10px] font-semibold uppercase tracking-wider text-[var(--v2-text-tertiary,#807E76)]">
+            {/* Label de sección con gap-4 antes del primer item */}
+            <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--v2-text-tertiary,#807E76)]">
               Mis hilos
             </div>
             <div className="px-2">
               <SidebarHilosList collapsed={collapsed} />
             </div>
 
-            {/* Separador */}
-            <div className="my-2 border-t border-[var(--v2-border-subtle,#E8E7E1)]" />
+            {/* Separador entre secciones */}
+            <div className="my-3 border-t border-[var(--v2-border-subtle,#E8E7E1)]" />
 
-            {/* Sección: Plantillas y Skills (oculta en colapsado) */}
-            <div className="px-[10px] pb-[4px] text-[10px] font-semibold uppercase tracking-wider text-[var(--v2-text-tertiary,#807E76)]">
+            {/* Sección: Plantillas y Skills */}
+            <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--v2-text-tertiary,#807E76)]">
               Plantillas y Skills
             </div>
             <div className="px-2">
@@ -167,10 +192,10 @@ export function SidebarV2({
         )}
       </div>
 
-      {/* ── Footer: ThemeToggle + Usuario ── */}
+      {/* ── Footer: ThemeToggle + Usuario ── gap-1 entre elementos del footer */}
       <div
         className={[
-          'border-t border-[var(--v2-border-subtle,#E8E7E1)] px-2 py-2 flex flex-col gap-[2px]',
+          'border-t border-[var(--v2-border-subtle,#E8E7E1)] px-2 py-3 flex flex-col gap-1',
         ].join(' ')}
       >
         <ThemeToggle collapsed={collapsed} />

@@ -25,9 +25,9 @@ export default async function InicioV2Page() {
 
   return (
     <AppShell active="inicio">
-      {/* flex-1 para ocupar todo el espacio horizontal disponible */}
+      {/* flex-1 min-w-0 para ocupar todo el espacio horizontal sin desbordar el sidebar */}
       <main
-        className="flex min-h-0 flex-1 flex-col overflow-hidden"
+        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
         style={{ backgroundColor: 'var(--v2-bg-base, #FAFAF7)' }}
       >
         <DayBriefingPageClient data={data} />

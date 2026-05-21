@@ -11,6 +11,11 @@
  *  - Renderiza el layout scroll + sticky: thread scrollea, composer fijo abajo.
  *  - Muestra el header de saludo + fecha encima del thread (fuera del bubble).
  *  - Usa ComposerV2WithStream (F3) para streaming SSE token-by-token.
+ *
+ * UX v2 fixes:
+ *  - max-w-[720px] en toda la columna central para reading-width consistente.
+ *  - Header + briefing en zona scroll; composer en zona fija con min-height prominente.
+ *  - Composer section tiene maxHeight:60vh para no dominar la pantalla.
  */
 
 import { useRef, useCallback, useState, useEffect } from 'react';
@@ -70,27 +75,31 @@ export function DayBriefingPageClient({ data }: DayBriefingPageClientProps) {
     // Scroll hacia el composer para que sea visible
     document.getElementById('v2-inline-composer')?.scrollIntoView({
       behavior: 'smooth',
-      block: 'center',
+      block: 'nearest',
     });
   }, []);
 
   return (
     <div className="flex h-full flex-col">
-      {/* Zona scroll: header + thread — min-h-0 es crítico para que flex no crezca infinito */}
+      {/*
+       * Zona scroll: header + briefing proactivo del agente.
+       * min-h-0 es critico para que flex no crezca infinito.
+       * max-w-[720px] centraliza el contenido con ancho de lectura controlado.
+       */}
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="mx-auto max-w-4xl px-8 pt-10 pb-6">
-          {/* Header de página visible — saludo encima del bubble del agente */}
-          <header className="mb-8">
+        <div className="mx-auto max-w-[720px] px-6 pt-8 pb-4">
+          {/* Header de pagina — saludo + fecha. suppressHydrationWarning evita mismatch SSR/CSR. */}
+          <header className="mb-6">
             <h1
               className="font-medium leading-tight"
               suppressHydrationWarning
               style={{
                 fontFamily: 'var(--v2-font-serif, var(--font-new-spirit), Georgia, serif)',
-                fontSize: 'var(--v2-text-title, 2rem)',
+                fontSize: 'clamp(1.5rem, 3vw, 2rem)',
                 color: 'var(--v2-text-primary, #1A1916)',
               }}
             >
-              {greeting ? `${greeting}, ${data.userName}` : ` `}
+              {greeting ? `${greeting}, ${data.userName}` : ' '}
             </h1>
             <p
               className="mt-1 capitalize"
@@ -98,45 +107,50 @@ export function DayBriefingPageClient({ data }: DayBriefingPageClientProps) {
               style={{
                 color: 'var(--v2-text-tertiary, #807E76)',
                 fontFamily: 'var(--v2-font-sans, system-ui, sans-serif)',
-                fontSize: 'var(--v2-text-body, 16px)',
+                fontSize: '15px',
               }}
             >
               {dateFormatted || ' '}
             </p>
           </header>
 
-          {/* Thread del agente */}
+          {/* Briefing proactivo del agente — turno inicial estatico */}
           <DayBriefingThread data={data} onPrompt={handlePrompt} />
         </div>
       </div>
 
-      {/* Zona sticky: composer fijo al fondo con streaming SSE (F3) */}
+      {/*
+       * Zona compositor: ComposerV2WithStream (thread local + composer sticky).
+       * Separada del briefing por un borde sutil.
+       * min-height 200px para que el composer sea prominente desde el inicio.
+       * max-height 60vh para no dominar la pantalla cuando hay muchos mensajes.
+       * flex + flex-col necesarios para que el hijo ocupe el espacio correctamente.
+       */}
       <div
-        className="shrink-0 border-t"
-        style={{ borderColor: 'var(--v2-border-subtle, #E8E7E1)' }}
+        id="v2-inline-composer"
+        className="shrink-0 border-t flex flex-col"
+        style={{
+          borderColor: 'var(--v2-border-subtle, #E8E7E1)',
+          minHeight: '200px',
+          maxHeight: '60vh',
+        }}
       >
-        <div
-          id="v2-inline-composer"
-          className="mx-auto max-w-4xl px-8 py-4"
-          style={{ minHeight: '120px' }}
-        >
-          {/*
-           * ComposerV2WithStream (F3):
-           *   - Streaming SSE token-by-token vía runSkillStream
-           *   - Thread local de mensajes (usuario + agente)
-           *   - initialPrompt sincroniza cuando el usuario pulsa un chip
-           *   - key={prefillKey} fuerza re-mount solo cuando el mismo chip
-           *     se pulsa repetidamente; en la práctica initialPrompt ya se
-           *     sincroniza vía useEffect dentro de ComposerV2.
-           */}
-          <ComposerV2WithStream
-            key={prefillKey}
-            placeholder="Pregúntele algo a LexAI o use /skill…"
-            autoFocus={false}
-            initialPrompt={prefillPrompt}
-            className="h-full"
-          />
-        </div>
+        {/*
+         * ComposerV2WithStream (F3):
+         *   - Streaming SSE token-by-token via runSkillStream
+         *   - Thread local de mensajes (usuario + agente)
+         *   - initialPrompt sincroniza cuando el usuario pulsa un chip
+         *   - key={prefillKey} fuerza re-mount solo cuando el mismo chip
+         *     se pulsa repetidamente; en la practica initialPrompt ya se
+         *     sincroniza via useEffect dentro de ComposerV2.
+         */}
+        <ComposerV2WithStream
+          key={prefillKey}
+          placeholder="Preguntele algo a LexAI o use /skill..."
+          autoFocus={false}
+          initialPrompt={prefillPrompt}
+          className="flex-1 min-h-0"
+        />
       </div>
     </div>
   );

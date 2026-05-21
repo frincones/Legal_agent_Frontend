@@ -315,10 +315,12 @@ export function ComposerV2({
         </div>
       )}
 
-      {/* ── Textarea / Voice waveform ── */}
-      <div className="px-4 pt-3 pb-1">
+      {/* ── Textarea / Voice waveform ──
+          min-height 40px garantiza que el composer sea visualmente prominente
+          incluso cuando el prompt esta vacio (FIX D). */}
+      <div className="px-4 pt-4 pb-2">
         {voiceRecording ? (
-          /* Waveform inline cuando está grabando */
+          /* Waveform inline cuando esta grabando */
           <VoiceRecorder
             onTranscript={handleTranscript}
             disabled={isStreaming}
@@ -339,19 +341,19 @@ export function ComposerV2({
             aria-multiline="true"
             className={[
               'block w-full resize-none bg-transparent',
-              'text-[15px] leading-[1.5] text-[color:var(--v2-text-primary,#1A1916)]',
+              'text-[15px] leading-[1.6] text-[color:var(--v2-text-primary,#1A1916)]',
               'placeholder:text-[color:var(--v2-text-tertiary,#7A7870)]',
               'focus:outline-none',
               'disabled:cursor-not-allowed disabled:opacity-60',
               'scrollbar-none',
             ].join(' ')}
-            style={{ minHeight: `${LINE_HEIGHT_PX}px`, overflow: 'hidden' }}
+            style={{ minHeight: '40px', overflow: 'hidden' }}
           />
         )}
       </div>
 
       {/* ── Bottom toolbar ── */}
-      <div className="flex items-center justify-between gap-2 px-3 pb-2.5 pt-1">
+      <div className="flex items-center justify-between gap-2 px-3 pb-3 pt-1">
         {/* Left: PlusMenu + ModelSelector */}
         <div className="flex items-center gap-1">
           <ComposerPlusMenu
@@ -426,8 +428,8 @@ export function ComposerV2({
       </div>
 
       {/* ── Hint footer ── */}
-      <div className="px-4 pb-2.5 text-[10px] text-[color:var(--v2-text-disabled,#B8B6AF)] select-none">
-        Enter para enviar · Shift+Enter nueva línea · ⌘K comandos
+      <div className="px-4 pb-3 text-[10px] text-[color:var(--v2-text-disabled,#B8B6AF)] select-none">
+        Enter para enviar &middot; Shift+Enter nueva linea &middot; ⌘K comandos
       </div>
     </div>
   );

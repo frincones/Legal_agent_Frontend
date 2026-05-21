@@ -60,12 +60,14 @@ export function SidebarShellV2({ firmName, userName, userEmail }: SidebarShellV2
           open ? 'opacity-100' : 'pointer-events-none opacity-0',
         )}
       />
-      {/* Aside */}
+      {/* Aside — en desktop es columna estática; en mobile es drawer flotante.
+          El ancho real lo controla el motion.aside interno (SidebarV2).
+          shrink-0 evita que flex-1 del contenido comprima el sidebar. */}
       <aside
         data-open={open}
         className={cn(
-          'fixed inset-y-0 left-0 z-40 transform overflow-hidden shadow-3 transition-transform duration-200 ease-out',
-          'md:static md:z-auto md:translate-x-0 md:shadow-none',
+          'fixed inset-y-0 left-0 z-40 transform overflow-hidden shadow-lg transition-transform duration-200 ease-out',
+          'md:relative md:z-auto md:translate-x-0 md:shadow-none md:shrink-0',
           open ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
         )}
       >

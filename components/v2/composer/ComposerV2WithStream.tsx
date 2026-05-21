@@ -345,100 +345,107 @@ export function ComposerV2WithStream({
       {/* ── Thread ── min-h-0 necesario para que flex no crezca infinito */}
       <div
         ref={threadRef}
-        className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4"
+        className="flex-1 min-h-0 overflow-y-auto"
         aria-label="Hilo de conversación"
         aria-live="polite"
         aria-atomic="false"
       >
-        {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-32 gap-2 text-center">
-            <p className="text-[15px] text-[color:var(--v2-text-tertiary,#7A7870)]">
-              Pregúntale algo a LexAI
-            </p>
-          </div>
-        )}
-
-        {messages.map((msg) => {
-          // Durante streaming, ocultar el bloque <plantilla-doc> del render inline
-          // para evitar que se muestre como texto crudo mientras se reciben tokens.
-          const displayContent = msg.streaming
-            ? msg.content.replace(/<plantilla-doc[\s\S]*$/i, '').trimEnd()
-            : msg.content;
-
-          return (
-            <div
-              key={msg.id}
-              className={[
-                'flex flex-col gap-1',
-                msg.role === 'user' ? 'items-end' : 'items-start',
-              ].join(' ')}
-            >
-              {/* Role label */}
-              <span className="text-[11px] font-medium text-[color:var(--v2-text-tertiary,#7A7870)] px-1">
-                {msg.role === 'user' ? 'Usted' : 'LexAI'}
-              </span>
-
-              {/* Tools used indicator (assistant only) */}
-              {msg.role === 'assistant' && msg.toolsUsed && msg.toolsUsed.length > 0 && (
-                <div className="flex flex-wrap gap-1 px-1 mb-0.5">
-                  {msg.toolsUsed.map((tool) => (
-                    <span
-                      key={tool}
-                      className="inline-block text-[10px] rounded-full bg-[color:var(--v2-bg-subtle,#F2F1EC)] text-[color:var(--v2-text-tertiary,#7A7870)] px-2 py-0.5"
-                    >
-                      {tool}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {/* Thinking indicator */}
-              {msg.role === 'assistant' && msg.streaming && !displayContent && thinkingLabel && (
-                <ThinkingIndicator label={thinkingLabel} />
-              )}
-
-              {/* Bubble */}
-              {(displayContent || (!msg.streaming)) && (
-                <div
-                  className={[
-                    'max-w-[85%] rounded-2xl px-4 py-2.5 text-[14px] leading-[1.6]',
-                    msg.role === 'user'
-                      ? 'bg-[color:var(--v2-brand-navy,#0E2A5E)] text-white rounded-tr-sm'
-                      : 'bg-[color:var(--v2-bg-subtle,#F2F1EC)] text-[color:var(--v2-text-primary,#1A1916)] rounded-tl-sm',
-                  ].join(' ')}
-                >
-                  {msg.role === 'assistant' ? (
-                    <AssistantMessage content={displayContent} streaming={msg.streaming} />
-                  ) : (
-                    <SimpleMessage content={displayContent} streaming={msg.streaming} />
-                  )}
-                </div>
-              )}
-
-              {/* DocumentArtifact: se muestra cuando el agente retornó un bloque <plantilla-doc> */}
-              {msg.role === 'assistant' && msg.artifact?.type === 'document' && !msg.streaming && (
-                <div className="max-w-[85%] w-full">
-                  <DocumentArtifact content={msg.artifact.content} />
-                </div>
-              )}
+        {/* Contenedor centrado con reading-width controlado */}
+        <div className="mx-auto max-w-[720px] px-4 py-6 space-y-6">
+          {messages.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-8 gap-2 text-center">
+              <p className="text-[15px] text-[color:var(--v2-text-tertiary,#7A7870)]">
+                Pregúntale algo a LexAI
+              </p>
             </div>
-          );
-        })}
+          )}
+
+          {messages.map((msg) => {
+            // Durante streaming, ocultar el bloque <plantilla-doc> del render inline
+            // para evitar que se muestre como texto crudo mientras se reciben tokens.
+            const displayContent = msg.streaming
+              ? msg.content.replace(/<plantilla-doc[\s\S]*$/i, '').trimEnd()
+              : msg.content;
+
+            return (
+              <div
+                key={msg.id}
+                className={[
+                  'flex flex-col gap-1',
+                  msg.role === 'user' ? 'items-end' : 'items-start',
+                ].join(' ')}
+              >
+                {/* Role label */}
+                <span className="text-[11px] font-medium text-[color:var(--v2-text-tertiary,#7A7870)] px-1">
+                  {msg.role === 'user' ? 'Usted' : 'LexAI'}
+                </span>
+
+                {/* Tools used indicator (assistant only) */}
+                {msg.role === 'assistant' && msg.toolsUsed && msg.toolsUsed.length > 0 && (
+                  <div className="flex flex-wrap gap-1 px-1 mb-0.5">
+                    {msg.toolsUsed.map((tool) => (
+                      <span
+                        key={tool}
+                        className="inline-block text-[10px] rounded-full bg-[color:var(--v2-bg-subtle,#F2F1EC)] text-[color:var(--v2-text-tertiary,#7A7870)] px-2 py-0.5"
+                      >
+                        {tool}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Thinking indicator */}
+                {msg.role === 'assistant' && msg.streaming && !displayContent && thinkingLabel && (
+                  <ThinkingIndicator label={thinkingLabel} />
+                )}
+
+                {/* Bubble — max-width fijo para legibilidad (regla tipográfica 65-72ch).
+                    Asistente: máximo 680px, fondo sutil.
+                    Usuario: máximo 560px, alineado derecha, fondo navy. */}
+                {(displayContent || (!msg.streaming)) && (
+                  <div
+                    className={[
+                      'rounded-2xl px-5 py-3.5 text-[14.5px] leading-[1.65]',
+                      msg.role === 'user'
+                        ? 'ml-auto max-w-[560px] bg-[color:var(--v2-brand-navy,#0E2A5E)] text-white rounded-tr-sm shadow-sm'
+                        : 'max-w-[680px] bg-[color:var(--v2-bg-subtle,#F2F1EC)] text-[color:var(--v2-text-primary,#1A1916)] rounded-tl-sm shadow-sm',
+                    ].join(' ')}
+                  >
+                    {msg.role === 'assistant' ? (
+                      <AssistantMessage content={displayContent} streaming={msg.streaming} />
+                    ) : (
+                      <SimpleMessage content={displayContent} streaming={msg.streaming} />
+                    )}
+                  </div>
+                )}
+
+                {/* DocumentArtifact: se muestra cuando el agente retornó un bloque <plantilla-doc> */}
+                {msg.role === 'assistant' && msg.artifact?.type === 'document' && !msg.streaming && (
+                  <div className="max-w-[680px] w-full">
+                    <DocumentArtifact content={msg.artifact.content} />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      {/* ── Composer ── */}
-      <div className="px-4 pb-4 pt-2">
-        <ComposerV2
-          matterId={matterId}
-          sessionId={sessionId}
-          onSend={handleSend}
-          placeholder={placeholder}
-          autoFocus={autoFocus}
-          isStreaming={isStreaming}
-          history={composerHistory}
-          activeTab={activeTab}
-          initialPrompt={initialPrompt}
-        />
+      {/* ── Composer ── sticky bottom, prominente (min 64px) */}
+      <div className="shrink-0 px-4 pb-5 pt-3">
+        <div className="mx-auto max-w-[720px]">
+          <ComposerV2
+            matterId={matterId}
+            sessionId={sessionId}
+            onSend={handleSend}
+            placeholder={placeholder}
+            autoFocus={autoFocus}
+            isStreaming={isStreaming}
+            history={composerHistory}
+            activeTab={activeTab}
+            initialPrompt={initialPrompt}
+          />
+        </div>
       </div>
     </div>
   );

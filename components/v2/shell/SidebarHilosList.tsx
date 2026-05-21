@@ -114,7 +114,7 @@ export function SidebarHilosList({ collapsed = false }: SidebarHilosListProps) {
         <div className="px-[10px] pb-[4px] pt-[8px] text-[10px] font-semibold uppercase tracking-wider text-[var(--v2-text-tertiary,#807E76)]">
           {label}
         </div>
-        <div className="flex flex-col gap-px">
+        <div className="flex flex-col gap-0.5">
           {items.map((t) => (
             <SidebarItemV2
               key={t.id}
