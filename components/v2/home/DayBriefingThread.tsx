@@ -35,8 +35,9 @@ interface DayBriefingThreadProps {
 // ─── Helpers de prosa ────────────────────────────────────────────────────────
 
 function buildProse(data: DayBriefingData): string[] {
-  // Línea 0 — saludo
-  const lines: string[] = [`${data.greeting}, ${data.userName}.`];
+  // El saludo ahora vive en el <header> de la página (h1).
+  // El bubble empieza directo con la información del día.
+  const lines: string[] = [];
 
   // Línea 1 — audiencias
   if (data.hearings.length > 0) {
@@ -95,7 +96,7 @@ function buildProse(data: DayBriefingData): string[] {
   }
 
   // Línea final — cierre invitando a la acción
-  if (lines.length === 1) {
+  if (lines.length === 0) {
     lines.push('Todo está al día por ahora. ¿En qué quiere trabajar hoy?');
   } else {
     lines.push('¿Por dónde empezamos?');
