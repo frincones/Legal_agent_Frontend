@@ -23,13 +23,26 @@ export interface DocumentArtifactProps {
   content: string;
 }
 
-/** Extrae las primeras N líneas no vacías del contenido. */
+/** Extrae las primeras N líneas no vacías del contenido + strip de markdown
+ *  básico (**, __, ##, etc.) para evitar que asteriscos crudos se vean en el
+ *  preview. El documento completo se renderiza correctamente en TipTap al abrir
+ *  en canvas. */
 function getPreviewLines(content: string, maxLines = 4): string {
   return content
     .split('\n')
     .map((l) => l.trim())
     .filter(Boolean)
     .slice(0, maxLines)
+    .map((l) =>
+      l
+        .replace(/^#{1,6}\s+/g, '') // headers ##, ###...
+        .replace(/\*\*(.+?)\*\*/g, '$1') // **bold**
+        .replace(/__(.+?)__/g, '$1') // __bold__
+        .replace(/\*(.+?)\*/g, '$1') // *italic*
+        .replace(/_(.+?)_/g, '$1') // _italic_
+        .replace(/`([^`]+)`/g, '$1') // `code`
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'), // [text](url)
+    )
     .join('\n');
 }
 

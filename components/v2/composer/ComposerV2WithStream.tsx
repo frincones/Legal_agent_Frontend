@@ -173,19 +173,33 @@ export function ComposerV2WithStream({
 }: ComposerV2WithStreamProps) {
   const storageKey = getThreadStorageKey(matterId);
 
-  const [messages, setMessages] = useState<ThreadMessage[]>(() =>
-    readThreadFromStorage(storageKey, initialMessages),
-  );
+  // CLIENT-ONLY hydration pattern para evitar hydration mismatch.
+  // Server renderiza siempre con initialMessages (vacío). Cliente lee
+  // localStorage tras montar. Sin esto, React detecta mismatch entre el
+  // árbol del server (lista vacía) y el del cliente (lista con N mensajes
+  // persistidos) y dispara error #418/#422 + re-renderiza desde cero.
+  const [messages, setMessages] = useState<ThreadMessage[]>(initialMessages);
+  const [hasHydrated, setHasHydrated] = useState(false);
 
-  // Persist thread to localStorage whenever messages change.
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    // Tras el mount, leemos localStorage y reemplazamos el estado si hay datos.
+    const stored = readThreadFromStorage(storageKey, initialMessages);
+    if (stored.length > 0 || initialMessages.length === 0) {
+      setMessages(stored);
+    }
+    setHasHydrated(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey]);
+
+  // Persist thread to localStorage whenever messages change (post-hydration).
+  useEffect(() => {
+    if (typeof window === 'undefined' || !hasHydrated) return;
     try {
       localStorage.setItem(storageKey, JSON.stringify(messages));
     } catch {
       /* noop — storage quota */
     }
-  }, [messages, storageKey]);
+  }, [messages, storageKey, hasHydrated]);
   const [externalPrompt, setExternalPrompt] = useState(initialPrompt);
   const [isStreaming, setIsStreaming] = useState(false);
   const [thinkingLabel, setThinkingLabel] = useState<string | null>(null);
