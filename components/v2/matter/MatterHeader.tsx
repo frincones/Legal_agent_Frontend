@@ -78,8 +78,9 @@ export function MatterHeader({ matter, canvasHref }: MatterHeaderProps) {
 
       {/* Título */}
       <h1
-        className="mb-3 text-[28px] font-normal leading-tight tracking-[-0.02em]"
+        className="mb-3 font-normal leading-tight tracking-[-0.02em]"
         style={{
+          fontSize: 'clamp(1.25rem, 2vw, 1.75rem)',
           fontFamily: 'var(--v2-font-serif, Georgia, serif)',
           color: 'var(--v2-text-primary, #1A1916)',
         }}

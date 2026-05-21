@@ -36,7 +36,11 @@ export async function GET() {
     }
 
     const data = await res.json();
-    return NextResponse.json(data);
+    // Normalizar: el backend puede devolver array plano O { threads: [...] }
+    const threads = Array.isArray(data)
+      ? data
+      : (Array.isArray(data?.threads) ? data.threads : []);
+    return NextResponse.json({ threads });
   } catch (err) {
     // Error de red — loguear y retornar lista vacía
     console.error('[threads proxy] network error', err);

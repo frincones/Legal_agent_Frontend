@@ -13,6 +13,7 @@
  * reemplazar el fetch a /api/skills por ese endpoint.
  */
 import { useEffect, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { SidebarItemV2 } from './SidebarItemV2';
@@ -39,6 +40,8 @@ interface SidebarSkillsListProps {
 export function SidebarSkillsList({ collapsed = false }: SidebarSkillsListProps) {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
+  const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     let cancelled = false;
@@ -79,16 +82,31 @@ export function SidebarSkillsList({ collapsed = false }: SidebarSkillsListProps)
   if (collapsed) return null;
 
   const handleSkillClick = (skill: Skill) => {
-    // Emite evento global que ComposerV2WithStream escucha para pre-completarse.
-    window.dispatchEvent(
-      new CustomEvent('lexai:open-composer-with-skill', {
-        detail: {
-          command: skill.path,  // ej. "/redactar/poderEspecial"
-          prompt: skill.description ?? '',
-        },
-      }),
-    );
-    toast.info(`Skill seleccionada: ${skill.name}`);
+    // Páginas que tienen ComposerV2WithStream montado y pueden recibir el evento
+    const pathsWithComposer = ['/inicio', '/v2/inicio'];
+    const isOnComposerPage = pathsWithComposer.some((p) => pathname?.startsWith(p));
+
+    if (isOnComposerPage) {
+      // Emite evento global que ComposerV2WithStream escucha para pre-completarse.
+      window.dispatchEvent(
+        new CustomEvent('lexai:open-composer-with-skill', {
+          detail: {
+            command: skill.path,
+            prompt: skill.description ?? '',
+          },
+        }),
+      );
+      toast.info(`Skill seleccionada: ${skill.name}`);
+    } else {
+      // Sin compositor montado — navegar a /v2/inicio directo con query params.
+      // Evitamos /inicio porque el redirect server-side a /v2/inicio descarta
+      // los query params en Next 14.
+      const params = new URLSearchParams({
+        skill: skill.path,
+        prompt: skill.description ?? '',
+      });
+      router.push(`/v2/inicio?${params.toString()}`);
+    }
   };
 
   if (loading) {

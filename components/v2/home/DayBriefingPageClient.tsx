@@ -68,6 +68,22 @@ export function DayBriefingPageClient({ data }: DayBriefingPageClientProps) {
     setDateFormatted(formatDateES());
   }, []);
 
+  // Leer query params ?skill=...&prompt=... al montar (navegación desde sidebar en otras páginas)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const skill = params.get('skill');
+    const prompt = params.get('prompt');
+    if (skill || prompt) {
+      const text = [skill, prompt].filter(Boolean).join(' ');
+      prefillCounterRef.current += 1;
+      setPrefillKey(prefillCounterRef.current);
+      setPrefillPrompt(text);
+      // Limpiar la URL para no repetir en navegaciones futuras
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
   const handlePrompt = useCallback((prompt: string) => {
     prefillCounterRef.current += 1;
     setPrefillKey(prefillCounterRef.current);
@@ -80,14 +96,14 @@ export function DayBriefingPageClient({ data }: DayBriefingPageClientProps) {
   }, []);
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden">
       {/*
        * Zona scroll: header + briefing proactivo del agente.
        * min-h-0 es critico para que flex no crezca infinito.
        * max-w-[720px] centraliza el contenido con ancho de lectura controlado.
        */}
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="mx-auto max-w-[720px] px-6 pt-8 pb-4">
+        <div className="mx-auto max-w-[720px] px-6 pt-6 pb-4">
           {/* Header de pagina — saludo + fecha. suppressHydrationWarning evita mismatch SSR/CSR. */}
           <header className="mb-6">
             <h1
@@ -131,8 +147,8 @@ export function DayBriefingPageClient({ data }: DayBriefingPageClientProps) {
         className="shrink-0 border-t flex flex-col"
         style={{
           borderColor: 'var(--v2-border-subtle, #E8E7E1)',
-          minHeight: '200px',
-          maxHeight: '60vh',
+          minHeight: 'clamp(160px, 25vh, 280px)',
+          maxHeight: '55vh',
         }}
       >
         {/*

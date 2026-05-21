@@ -79,6 +79,20 @@ export function SidebarHilosList({ collapsed = false }: SidebarHilosListProps) {
     return () => { cancelled = true; };
   }, []);
 
+  // Re-fetch cuando el composer completa un ciclo de streaming
+  useEffect(() => {
+    const handleNewThread = () => {
+      setLoading(true);
+      fetch('/api/assistant/threads', { cache: 'no-store' })
+        .then((r) => r.ok ? r.json() : Promise.reject(r.status))
+        .then((data) => setThreads(data.threads ?? []))
+        .catch(() => { /* silencioso */ })
+        .finally(() => setLoading(false));
+    };
+    window.addEventListener('lexai:thread-completed', handleNewThread);
+    return () => window.removeEventListener('lexai:thread-completed', handleNewThread);
+  }, []);
+
   // En colapsado, ocultar la sección completa
   if (collapsed) return null;
 

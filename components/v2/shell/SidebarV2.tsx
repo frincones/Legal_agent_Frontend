@@ -101,17 +101,15 @@ export function SidebarV2({
     <motion.aside
       animate={{ width: collapsed ? 64 : 240 }}
       transition={{ duration: 0.25, ease: 'easeInOut' }}
-      className="flex h-full min-h-0 flex-col overflow-hidden border-r border-[var(--v2-border-subtle,#E8E7E1)] bg-[var(--v2-bg-base,#FAFAF7)]"
+      className="relative flex h-full min-h-0 flex-col border-r border-[var(--v2-border-subtle,#E8E7E1)] bg-[var(--v2-bg-base,#FAFAF7)]"
       aria-label="Barra lateral principal"
     >
-      {/* ── Header: Logo + Nombre firm + Toggle ── */}
+      {/* ── Header: Logo + Nombre firm + Toggle (solo expandido) ── */}
       <div
-        className={[
-          'flex items-center border-b border-[var(--v2-border-subtle,#E8E7E1)] px-3 py-3',
-          collapsed ? 'justify-center' : 'gap-2',
-        ].join(' ')}
+        className="flex items-center border-b border-[var(--v2-border-subtle,#E8E7E1)] px-3 py-3"
+        style={{ minHeight: '52px' }}
       >
-        {/* Logo LexAI */}
+        {/* Logo LexAI — siempre visible */}
         <span
           aria-label="LexAI"
           className="grid h-[28px] w-[28px] shrink-0 place-items-center rounded-md text-[11px] font-bold text-white"
@@ -123,18 +121,27 @@ export function SidebarV2({
         </span>
 
         {!collapsed && (
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-[12px] font-semibold text-[var(--v2-brand-navy,#0E2A5E)] leading-none">
-              LexAI
+          <>
+            <div className="min-w-0 flex-1 ml-2">
+              <div className="truncate text-[12px] font-semibold text-[var(--v2-brand-navy,#0E2A5E)] leading-none">
+                LexAI
+              </div>
+              <div className="truncate text-[10.5px] text-[var(--v2-text-tertiary,#807E76)] mt-[2px]">
+                {firmName}
+              </div>
             </div>
-            <div className="truncate text-[10.5px] text-[var(--v2-text-tertiary,#807E76)] mt-[2px]">
-              {firmName}
-            </div>
-          </div>
+            {/* Toggle solo visible en modo expandido, alineado a la derecha */}
+            <SidebarToggle collapsed={collapsed} onToggle={handleToggle} />
+          </>
         )}
-
-        <SidebarToggle collapsed={collapsed} onToggle={handleToggle} />
       </div>
+
+      {/* Toggle flotante para modo colapsado — en el borde derecho del aside */}
+      {collapsed && (
+        <div className="absolute right-0 top-[14px] translate-x-1/2 z-10">
+          <SidebarToggle collapsed={collapsed} onToggle={handleToggle} />
+        </div>
+      )}
 
       {/* ── Cuerpo scrollable ── */}
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden py-2">

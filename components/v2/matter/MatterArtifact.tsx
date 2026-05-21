@@ -168,7 +168,7 @@ export function MatterArtifact({
 
   return (
     <div
-      className="mx-auto w-full max-w-4xl pb-16"
+      className="mx-auto w-full max-w-4xl min-w-0 pb-16"
       style={{ fontFamily: 'var(--v2-font-sans, system-ui, sans-serif)' }}
     >
       {/* Header */}

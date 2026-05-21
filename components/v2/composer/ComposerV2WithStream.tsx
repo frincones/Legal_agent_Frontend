@@ -346,6 +346,8 @@ export function ComposerV2WithStream({
               });
               setIsStreaming(false);
               setThinkingLabel(null);
+              // Notificar al sidebar para re-fetch de hilos
+              window.dispatchEvent(new CustomEvent('lexai:thread-completed'));
               break;
             }
 

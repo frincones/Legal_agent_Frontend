@@ -12,6 +12,7 @@
 import { notFound } from 'next/navigation';
 import { AppShell } from '@/components/shell/AppShell';
 import { MatterArtifact } from '@/components/v2/matter/MatterArtifact';
+import { MatterComposerStrip } from '@/components/v2/matter/MatterComposerStrip';
 import { MatterPresenceHeartbeat } from '@/components/collab/MatterPresenceHeartbeat';
 import { fetchMatter, fetchMatterTimeline } from '@/lib/api/rsc-fetchers';
 import { prioritizeMatterSections } from '@/lib/v2/matterPrioritization';
@@ -195,21 +196,26 @@ export default async function CasoDetalleV2Page({
 
   return (
     <AppShell active="casos">
-      <main className="flex min-h-0 min-w-0 flex-col overflow-auto">
+      <main className="flex min-h-0 min-w-0 flex-col overflow-hidden h-full">
         <MatterPresenceHeartbeat matterId={matter.id} />
-        <MatterArtifact
-          matter={matter}
-          sections={sections}
-          timelineEvents={timelineRes}
-          documentos={documentos}
-          partes={partes}
-          deadlines={deadlines}
-          citations={citations}
-          notas={notas}
-          analyses={analyses}
-          cliente={cliente}
-          instance={matterExtra.instance}
-        />
+        {/* Zona scroll: todo el artifact */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <MatterArtifact
+            matter={matter}
+            sections={sections}
+            timelineEvents={timelineRes}
+            documentos={documentos}
+            partes={partes}
+            deadlines={deadlines}
+            citations={citations}
+            notas={notas}
+            analyses={analyses}
+            cliente={cliente}
+            instance={matterExtra.instance}
+          />
+        </div>
+        {/* Compositor sticky al fondo — solo cuando NEXT_PUBLIC_UX_V2_COMPOSER=true */}
+        <MatterComposerStrip matterId={matter.id} />
       </main>
     </AppShell>
   );
