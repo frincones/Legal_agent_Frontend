@@ -30,6 +30,11 @@ const ASSISTANT_SIDEBAR_ENABLED =
 // del CommandPalette legacy. Flag OFF → cero cambios.
 const UX_V2_SHELL = process.env.NEXT_PUBLIC_UX_V2_SHELL === 'true';
 
+// UX v2 home: cuando true, los elementos del shell legacy (VoiceHUD, AssistantProvider,
+// LexHelper) se ocultan porque el composer inline y el layout v2 los reemplazan.
+// Con false (o sin definir), el comportamiento legacy queda intacto.
+const UX_V2_HOME = process.env.NEXT_PUBLIC_UX_V2_HOME === 'true';
+
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   // Fast: reads cookie + decodes JWT locally · no Supabase roundtrip.
   const principal = await getSessionPrincipal();
@@ -72,24 +77,26 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           }
         >
         {children}
-        <EntitledOnly module="voice_agent" silent>
-          <div className="pointer-events-none fixed bottom-[16px] left-1/2 z-50 -translate-x-1/2 md:bottom-[22px]">
-            <div className="pointer-events-auto">
-              <VoiceHUD />
+        {!UX_V2_HOME && (
+          <EntitledOnly module="voice_agent" silent>
+            <div className="pointer-events-none fixed bottom-[16px] left-1/2 z-50 -translate-x-1/2 md:bottom-[22px]">
+              <div className="pointer-events-auto">
+                <VoiceHUD />
+              </div>
             </div>
-          </div>
-        </EntitledOnly>
+          </EntitledOnly>
+        )}
         {/* F1-T08: Switch CommandPalette → CommandPaletteV2 con flag */}
         {UX_V2_SHELL ? <CommandPaletteV2 /> : <CommandPalette />}
         <HITLController />
         </div>
-        {ASSISTANT_SIDEBAR_ENABLED && <AssistantProvider />}
+        {ASSISTANT_SIDEBAR_ENABLED && !UX_V2_HOME && <AssistantProvider />}
         <MobileBottomNav />
         <PWAInstallPrompt />
         <UpgradeModal />
         <QuotaErrorWatcher />
         <ActivationChecklist />
-        <LexHelper />
+        {!UX_V2_HOME && <LexHelper />}
       </div>
     </VoiceProvider>
     </EntitlementsProvider>

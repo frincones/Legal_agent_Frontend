@@ -10,8 +10,7 @@
  * TODO F3: reemplazar con ComposerV2 completo (botón "+", ModelSelector,
  * VoiceRecorder, AttachmentChips, streaming token-by-token).
  *
- * Por ahora envía el prompt a /api/chat/ask (el endpoint existente de AssistantSidebar)
- * con el mismo contrato que hoy para no romper nada.
+ * Envía el prompt a /api/skills/ask con body { input } para proxy a /v1/skills/execute.
  */
 
 import {
@@ -23,6 +22,7 @@ import {
   useState,
 } from 'react';
 import { SendHorizonal, Mic } from 'lucide-react';
+import { toast } from 'sonner';
 
 export interface InlineComposerV2Handle {
   /** Escribe el prompt en el textarea y lo focaliza. */
@@ -69,18 +69,25 @@ export const InlineComposerV2 = forwardRef<
     if (!trimmed || sending) return;
     setSending(true);
     try {
-      // Reutiliza el endpoint existente del AssistantSidebar.
+      // Usa /api/skills/ask que proxy a /v1/skills/execute con skill='/ask'.
       // TODO F3: reemplazar con /api/v2/composer/stream que soporte attachments.
-      const res = await fetch('/api/chat/ask', {
+      const res = await fetch('/api/skills/ask', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ message: trimmed }),
+        body: JSON.stringify({ input: trimmed }),
       });
       if (res.ok) {
         setValue('');
+        toast.success('Consulta enviada a LexAI');
+      } else {
+        const errBody = await res.json().catch(() => null);
+        const msg =
+          (errBody as Record<string, unknown> | null)?.error ??
+          `Error ${res.status} al enviar la consulta`;
+        toast.error(String(msg));
       }
     } catch {
-      // Silencio: el error se manejará en F3 con toasts
+      toast.error('Sin conexión. Intente de nuevo en un momento.');
     } finally {
       setSending(false);
     }

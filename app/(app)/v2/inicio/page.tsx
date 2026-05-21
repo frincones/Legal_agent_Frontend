@@ -2,9 +2,10 @@
  * F2-T04 · LexAI UX v2 — Home v2 / Day Briefing
  *
  * Server Component (RSC): genera el briefing del día en el servidor,
- * lo pasa al DayBriefingPageClient (client island) que maneja el composer.
+ * lo pasa al DayBriefingPageClient (client island) que maneja el layout
+ * scroll + composer sticky.
  *
- * Layout: AppShell con sidebar v2 (si flag ON) + contenedor centrado max-w-3xl.
+ * Layout: AppShell con sidebar v2 (si flag ON) + zona scroll + composer fijo.
  * Activación: se llega aquí desde el redirect en app/(app)/inicio/page.tsx
  *             cuando NEXT_PUBLIC_UX_V2_HOME=true.
  *
@@ -24,17 +25,12 @@ export default async function InicioV2Page() {
 
   return (
     <AppShell active="inicio">
+      {/* flex-1 para ocupar todo el espacio horizontal disponible */}
       <main
-        className="flex min-h-0 min-w-0 flex-col overflow-auto"
+        className="flex min-h-0 flex-1 flex-col overflow-hidden"
         style={{ backgroundColor: 'var(--v2-bg-base, #FAFAF7)' }}
       >
-        {/* Área de scroll con padding generoso */}
-        <div
-          className="mx-auto w-full max-w-3xl px-6 py-10"
-          style={{ minHeight: '100vh' }}
-        >
-          <DayBriefingPageClient data={data} />
-        </div>
+        <DayBriefingPageClient data={data} />
       </main>
     </AppShell>
   );
