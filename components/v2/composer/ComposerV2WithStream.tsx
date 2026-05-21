@@ -173,6 +173,7 @@ export function ComposerV2WithStream({
 }: ComposerV2WithStreamProps) {
   const storageKey = getThreadStorageKey(matterId);
 
+  // LEXAI_HYDRATION_FIX_V2_CACHEBUST
   // CLIENT-ONLY hydration pattern para evitar hydration mismatch.
   // Server renderiza siempre con initialMessages (vacío). Cliente lee
   // localStorage tras montar. Sin esto, React detecta mismatch entre el
