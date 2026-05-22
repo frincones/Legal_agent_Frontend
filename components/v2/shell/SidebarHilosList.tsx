@@ -5,30 +5,29 @@
  *
  * Lista de threads (hilos) recientes del asistente, agrupados por fecha.
  *
- * Data source: endpoint /api/assistant/threads (lista threads del firm).
- * Si el endpoint no existe aún, se muestra estado vacío con mensaje.
+ * Data source: indice local en localStorage (`lib/v2/threadIndex`). El
+ * backend de LexAI no expone (al dia de hoy) un endpoint que devuelva los
+ * hilos del usuario agrupados por session_id con titulo + timestamp, asi
+ * que el composer escribe el indice cada vez que termina un turno y este
+ * componente lo lee.
  *
- * TODO (F2): conectar con el endpoint real de threads cuando esté disponible.
- * El backend necesitaría: GET /v1/threads → lista { id, title, created_at }
+ * Si en el futuro el backend expone GET /v1/threads se puede reemplazar
+ * el fetch a localStorage por un fetch al endpoint sin tocar la UI.
  */
-import { useEffect, useState } from 'react';
-import { MessageSquare } from 'lucide-react';
-import { SidebarItemV2 } from './SidebarItemV2';
-
-interface Thread {
-  id: string;
-  title: string;
-  created_at: string;
-}
+import { useCallback, useEffect, useState } from 'react';
+import { MessageSquare, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import { readThreadIndex, removeThread, type ThreadIndexEntry } from '@/lib/v2/threadIndex';
 
 interface GroupedThreads {
-  hoy: Thread[];
-  ayer: Thread[];
-  semana: Thread[];
-  antes: Thread[];
+  hoy: ThreadIndexEntry[];
+  ayer: ThreadIndexEntry[];
+  semana: ThreadIndexEntry[];
+  antes: ThreadIndexEntry[];
 }
 
-function groupByDate(threads: Thread[]): GroupedThreads {
+function groupByDate(threads: ThreadIndexEntry[]): GroupedThreads {
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const startOfYesterday = new Date(startOfToday.getTime() - 86400000);
@@ -37,7 +36,7 @@ function groupByDate(threads: Thread[]): GroupedThreads {
   const groups: GroupedThreads = { hoy: [], ayer: [], semana: [], antes: [] };
 
   for (const t of threads) {
-    const d = new Date(t.created_at);
+    const d = new Date(t.last_message_at);
     if (d >= startOfToday) groups.hoy.push(t);
     else if (d >= startOfYesterday) groups.ayer.push(t);
     else if (d >= startOfWeek) groups.semana.push(t);
@@ -52,51 +51,62 @@ interface SidebarHilosListProps {
 }
 
 export function SidebarHilosList({ collapsed = false }: SidebarHilosListProps) {
-  const [threads, setThreads] = useState<Thread[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [threads, setThreads] = useState<ThreadIndexEntry[]>([]);
+  const [hasHydrated, setHasHydrated] = useState(false);
+  const router = useRouter();
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      try {
-        // TODO: reemplazar con endpoint real GET /api/assistant/threads
-        // cuando el backend tenga GET /v1/threads disponible.
-        // El endpoint debe retornar: { threads: Array<{ id, title, created_at }> }
-        const res = await fetch('/api/assistant/threads', { cache: 'no-store' });
-        if (!res.ok) throw new Error('no threads endpoint');
-        const data = await res.json();
-        if (!cancelled) setThreads(data.threads ?? []);
-      } catch {
-        // Endpoint no disponible aún — estado vacío silencioso
-        if (!cancelled) setThreads([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-    return () => { cancelled = true; };
+  const refresh = useCallback(() => {
+    setThreads(readThreadIndex());
   }, []);
 
-  // Re-fetch cuando el composer completa un ciclo de streaming
+  // Hidratar tras el mount (evita mismatch SSR/CSR — localStorage no existe en server).
   useEffect(() => {
-    const handleNewThread = () => {
-      setLoading(true);
-      fetch('/api/assistant/threads', { cache: 'no-store' })
-        .then((r) => r.ok ? r.json() : Promise.reject(r.status))
-        .then((data) => setThreads(data.threads ?? []))
-        .catch(() => { /* silencioso */ })
-        .finally(() => setLoading(false));
+    refresh();
+    setHasHydrated(true);
+  }, [refresh]);
+
+  // Re-fetch cuando el composer termina un turno
+  useEffect(() => {
+    const handler = () => refresh();
+    window.addEventListener('lexai:thread-completed', handler);
+    window.addEventListener('lexai:new-thread', handler);
+    return () => {
+      window.removeEventListener('lexai:thread-completed', handler);
+      window.removeEventListener('lexai:new-thread', handler);
     };
-    window.addEventListener('lexai:thread-completed', handleNewThread);
-    return () => window.removeEventListener('lexai:thread-completed', handleNewThread);
-  }, []);
+  }, [refresh]);
+
+  const handleOpenThread = useCallback((session_id: string) => {
+    // Marcar el session_id objetivo en localStorage y navegar a inicio.
+    // ComposerV2WithStream lee 'lexai-v2-current-session' al montar.
+    try {
+      localStorage.setItem('lexai-v2-current-session', session_id);
+      // Buscar los mensajes persistidos de ese hilo (si existen) y promoverlos
+      // a la clave activa para que el composer los renderice.
+      const stored = localStorage.getItem(`lexai-v2-thread-msgs:${session_id}`);
+      if (stored) {
+        localStorage.setItem('lexai-v2-current-thread', stored);
+      }
+    } catch {
+      /* noop */
+    }
+    window.dispatchEvent(new CustomEvent('lexai:open-thread', { detail: { session_id } }));
+    router.push('/v2/inicio');
+  }, [router]);
+
+  const handleDelete = useCallback((session_id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    removeThread(session_id);
+    refresh();
+    toast.success('Hilo eliminado');
+  }, [refresh]);
 
   // En colapsado, ocultar la sección completa
   if (collapsed) return null;
 
-  if (loading) {
+  // Pre-hydration: render placeholder (sin localStorage) para evitar mismatch
+  if (!hasHydrated) {
     return (
       <div className="px-2 py-1">
         {[...Array(3)].map((_, i) => (
@@ -121,7 +131,7 @@ export function SidebarHilosList({ collapsed = false }: SidebarHilosListProps) {
 
   const groups = groupByDate(threads);
 
-  const renderGroup = (label: string, items: Thread[]) => {
+  const renderGroup = (label: string, items: ThreadIndexEntry[]) => {
     if (items.length === 0) return null;
     return (
       <div key={label} className="mb-2">
@@ -130,13 +140,38 @@ export function SidebarHilosList({ collapsed = false }: SidebarHilosListProps) {
         </div>
         <div className="flex flex-col gap-0.5">
           {items.map((t) => (
-            <SidebarItemV2
-              key={t.id}
-              icon={MessageSquare}
-              label={t.title || 'Hilo sin título'}
-              href={`/threads/${t.id}`}
-              collapsed={false}
-            />
+            <div
+              key={t.session_id}
+              className="group flex items-center gap-1 rounded-lg px-[8px] py-[6px] cursor-pointer hover:bg-[var(--v2-bg-subtle,#F2F1EC)] transition-colors"
+              role="button"
+              tabIndex={0}
+              onClick={() => handleOpenThread(t.session_id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleOpenThread(t.session_id);
+                }
+              }}
+              title={t.title}
+            >
+              <MessageSquare
+                size={14}
+                strokeWidth={1.8}
+                className="shrink-0 text-[var(--v2-text-tertiary,#807E76)]"
+                aria-hidden
+              />
+              <span className="flex-1 min-w-0 truncate text-[13px] leading-tight text-[var(--v2-text-secondary,#4A4944)]">
+                {t.title || 'Hilo sin título'}
+              </span>
+              <button
+                type="button"
+                onClick={(e) => handleDelete(t.session_id, e)}
+                aria-label="Eliminar hilo"
+                className="shrink-0 opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity p-0.5 rounded"
+              >
+                <Trash2 size={12} aria-hidden className="text-[var(--v2-text-tertiary,#807E76)]" />
+              </button>
+            </div>
           ))}
         </div>
       </div>

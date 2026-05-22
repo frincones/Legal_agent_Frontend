@@ -38,7 +38,17 @@ export async function AppShell({
           userName={firm?.user_full_name ?? 'Usuario'}
           userEmail={principal?.email ?? undefined}
         />
-        {children}
+        {/*
+          flex-1 + min-w-0 garantiza que el area de contenido llene el
+          espacio restante despues del sidebar (sin dead-space a la
+          derecha) y que los <main> internos puedan hacer overflow sin
+          desbordar el shell. Sin esto, el <main> de cada pagina no
+          conoce el ancho del padre flex y se queda en su tamaño
+          intrinsico.
+        */}
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          {children}
+        </div>
       </>
     );
   }

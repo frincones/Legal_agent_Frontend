@@ -34,6 +34,7 @@ import { ComposerV2, type ComposerPayload } from './ComposerV2';
 import { StreamingCursor } from './StreamingCursor';
 import { DocumentArtifact } from './DocumentArtifact';
 import { MarkdownContent } from '@/components/assistant/MarkdownContent';
+import { upsertThread } from '@/lib/v2/threadIndex';
 
 // ─── Message types (local, no deps on assistant-store) ───────────────────────
 
@@ -226,14 +227,45 @@ export function ComposerV2WithStream({
   }, [storageKey, sessionKey]);
 
   // Persist thread to localStorage whenever messages change (post-hydration).
+  // Persistimos en DOS claves:
+  //  1) storageKey (activa) — para que recargar /v2/inicio recupere el hilo.
+  //  2) lexai-v2-thread-msgs:<session_id> — snapshot por hilo, usado por el
+  //     sidebar al "abrir" un hilo viejo (promueve este snapshot a la activa).
   useEffect(() => {
     if (typeof window === 'undefined' || !hasHydrated) return;
     try {
-      localStorage.setItem(storageKey, JSON.stringify(messages));
+      const serialized = JSON.stringify(messages);
+      localStorage.setItem(storageKey, serialized);
+      if (activeSessionId) {
+        localStorage.setItem(`lexai-v2-thread-msgs:${activeSessionId}`, serialized);
+      }
     } catch {
       /* noop — storage quota */
     }
-  }, [messages, storageKey, hasHydrated]);
+  }, [messages, storageKey, hasHydrated, activeSessionId]);
+
+  // Escuchar 'lexai:open-thread' (click en un hilo del sidebar): re-hidratar
+  // mensajes desde el snapshot por session_id y rotar activeSessionId.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      if (matterId) return; // hilos por matter se manejan aparte
+      const detail = (e as CustomEvent<{ session_id?: string }>).detail;
+      const sid = detail?.session_id;
+      if (!sid) return;
+      try {
+        const snapshot = localStorage.getItem(`lexai-v2-thread-msgs:${sid}`);
+        const parsed = snapshot ? (JSON.parse(snapshot) as ThreadMessage[]) : [];
+        setMessages(parsed);
+        localStorage.setItem('lexai-v2-current-thread', snapshot ?? '[]');
+        localStorage.setItem('lexai-v2-current-session', sid);
+        setActiveSessionId(sid);
+      } catch {
+        /* noop */
+      }
+    };
+    window.addEventListener('lexai:open-thread', handler);
+    return () => window.removeEventListener('lexai:open-thread', handler);
+  }, [matterId]);
   const [externalPrompt, setExternalPrompt] = useState(initialPrompt);
   const [isStreaming, setIsStreaming] = useState(false);
   const [thinkingLabel, setThinkingLabel] = useState<string | null>(null);
@@ -420,7 +452,17 @@ export function ComposerV2WithStream({
               });
               setIsStreaming(false);
               setThinkingLabel(null);
-              // Notificar al sidebar para re-fetch de hilos
+              // Persistir hilo en el indice local — sidebar lo lee desde aqui
+              // (el backend no expone listado por session_id).
+              if (effectiveSessionId) {
+                upsertThread({
+                  session_id: effectiveSessionId,
+                  firstPrompt: userMsg.content,
+                  matter_id: payload.matter_id ?? null,
+                  messageCount: messages.length + 2, // +user +assistant
+                });
+              }
+              // Notificar al sidebar para re-render
               window.dispatchEvent(new CustomEvent('lexai:thread-completed'));
               break;
             }
