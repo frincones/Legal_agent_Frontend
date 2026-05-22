@@ -100,7 +100,8 @@ export async function GET(req: NextRequest) {
         const tb = new Date(b.created_at || b.ts || 0).getTime();
         return ta - tb;
       });
-      const firstPrompt = pickPrompt(sorted[0]);
+      const firstRow = sorted[0] ?? groupRows[0];
+      const firstPrompt = firstRow ? pickPrompt(firstRow) : 'Hilo sin titulo';
       const title = firstPrompt.length > 60 ? `${firstPrompt.slice(0, 57)}...` : firstPrompt;
       return {
         id: key,

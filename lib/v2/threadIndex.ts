@@ -87,12 +87,13 @@ export function upsertThread(params: {
   const all = readThreadIndex();
   const idx = all.findIndex((e) => e.session_id === session_id);
 
-  if (idx >= 0) {
+  const existing = idx >= 0 ? all[idx] : undefined;
+  if (existing) {
     const updated: ThreadIndexEntry = {
-      ...all[idx],
+      ...existing,
       last_message_at: now,
       message_count: messageCount,
-      matter_id: matter_id ?? all[idx].matter_id ?? null,
+      matter_id: matter_id ?? existing.matter_id ?? null,
     };
     all[idx] = updated;
     writeThreadIndex(all);
