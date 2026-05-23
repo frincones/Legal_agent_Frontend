@@ -6,6 +6,7 @@ import { ForensicCanvas } from "./ForensicCanvas";
 import { GenerationTimeline } from "./GenerationTimeline";
 import { TemplateSelector, TemplateListItem } from "./TemplateSelector";
 import { TemplatePreview, TemplatePreviewData } from "./TemplatePreview";
+import { AuditPanel } from "./AuditPanel";
 
 export function GenerationView() {
   const { state, generate, reset, abort } = useGenerationStreamV2();
@@ -135,7 +136,14 @@ export function GenerationView() {
             totalDurationMs={totalDuration}
             collapsed={state.status === "completed"}
           />
-          <ForensicCanvas blocks={state.blocks} status={state.status} />
+          <div className="overflow-y-auto">
+            <ForensicCanvas blocks={state.blocks} status={state.status} />
+            {state.status === "completed" && state.audit && (
+              <div className="mx-auto max-w-3xl my-4 px-4">
+                <AuditPanel audit={state.audit} />
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
