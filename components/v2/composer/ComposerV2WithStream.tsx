@@ -402,22 +402,26 @@ export function ComposerV2WithStream({
 
   const handleSend = useCallback(
     async (payload: ComposerPayload) => {
-      // ─── SPRINT L-DOC: deteccion de intent "generacion de documento" ───
+      // ─── SPRINT M7: deteccion de intent + redirect a canvas integrado v2 ───
       // Si NEXT_PUBLIC_DOC_GEN_V2_ENABLED y el prompt es claramente un
       // pedido de generacion (confidence >= 0.85), navegamos a
-      // /v2/canvas/generate en lugar de procesar como chat normal.
-      // Sin el flag, NO se ejecuta nada de esto y el flow continua igual.
+      // /v2/canvas/draft?engine=v2 (canvas integrado con chat lateral).
+      // Sin el flag, el flow legacy de chat asistente sigue como hoy.
       if (
         typeof window !== 'undefined' &&
         process.env.NEXT_PUBLIC_DOC_GEN_V2_ENABLED === 'true' &&
-        !matterId  // no aplicar en canvas de matter (UX distinta)
+        !matterId
       ) {
         const prompt = payload.input.prompt || '';
         const detection = detectDocumentIntent(prompt);
         if (detection.isDocumentRequest && detection.confidence >= 0.85) {
-          // Navegacion via window.location (no tenemos router en este componente)
-          const url = new URL('/v2/canvas/generate', window.location.origin);
+          const { mapToTemplateId } = await import('@/lib/v2/document-gen/templateMapper');
+          const templateId = mapToTemplateId(detection.docType, detection.materia, prompt);
+          // Redirige al canvas integrado v2 (Sprint M7)
+          const url = new URL('/v2/canvas/draft', window.location.origin);
+          url.searchParams.set('engine', 'v2');
           url.searchParams.set('intent', prompt);
+          if (templateId) url.searchParams.set('template', templateId);
           if (payload.matter_id) url.searchParams.set('matter_id', payload.matter_id);
           window.location.assign(url.toString());
           return; // NO continuar con flow chat normal

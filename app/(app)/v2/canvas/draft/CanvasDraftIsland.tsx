@@ -12,13 +12,25 @@
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { ThreadCanvasSplit } from '@/components/v2/canvas/ThreadCanvasSplit';
+import { IntegratedGenerationCanvas } from '@/components/v2/document-gen/v2/IntegratedGenerationCanvas';
 
 interface CanvasDraftIslandProps {
   initialContent: string;
+  engine?: 'v2' | 'legacy';
+  intent?: string;
+  templateId?: string;
+  matterId?: string;
 }
 
-export function CanvasDraftIsland({ initialContent }: CanvasDraftIslandProps) {
+export function CanvasDraftIsland({
+  initialContent,
+  engine = 'legacy',
+  intent,
+  templateId,
+  matterId,
+}: CanvasDraftIslandProps) {
   const router = useRouter();
+  const isV2 = engine === 'v2' && !!intent;
 
   return (
     <main
@@ -70,7 +82,7 @@ export function CanvasDraftIsland({ initialContent }: CanvasDraftIslandProps) {
             color: 'var(--v2-text-primary, #1A1916)',
           }}
         >
-          Documento generado por LexAI
+          {isV2 ? 'Generación con motor v2' : 'Documento generado por LexAI'}
         </span>
 
         <span
@@ -80,13 +92,36 @@ export function CanvasDraftIsland({ initialContent }: CanvasDraftIslandProps) {
             marginLeft: 4,
           }}
         >
-          Vista preliminar — los cambios no se guardan
+          {isV2
+            ? 'Block streaming · Timeline · Audit · Regenerate'
+            : 'Vista preliminar — los cambios no se guardan'}
         </span>
+        {isV2 && (
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 500,
+              padding: '2px 6px',
+              borderRadius: 4,
+              backgroundColor: 'var(--v2-accent-copper, #B8763C)',
+              color: 'white',
+              marginLeft: 8,
+            }}
+          >
+            v2
+          </span>
+        )}
       </div>
 
-      {/* Split view: thread + canvas */}
+      {/* Split view */}
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        {initialContent ? (
+        {isV2 ? (
+          <IntegratedGenerationCanvas
+            intent={intent || ''}
+            templateId={templateId}
+            matterId={matterId}
+          />
+        ) : initialContent ? (
           <ThreadCanvasSplit
             matterId={null}
             docId="draft"

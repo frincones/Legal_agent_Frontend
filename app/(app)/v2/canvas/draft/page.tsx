@@ -29,15 +29,28 @@ function decodeContent(encoded: string | undefined): string {
 }
 
 interface PageProps {
-  searchParams: { content?: string };
+  searchParams: {
+    content?: string;
+    engine?: string;
+    intent?: string;
+    template?: string;
+    matter_id?: string;
+  };
 }
 
 export default function CanvasDraftPage({ searchParams }: PageProps) {
   const initialContent = decodeContent(searchParams.content);
+  const engine = searchParams.engine === "v2" ? "v2" : "legacy";
 
   return (
     <AppShell active="inicio">
-      <CanvasDraftIsland initialContent={initialContent} />
+      <CanvasDraftIsland
+        initialContent={initialContent}
+        engine={engine}
+        intent={searchParams.intent}
+        templateId={searchParams.template}
+        matterId={searchParams.matter_id}
+      />
     </AppShell>
   );
 }
