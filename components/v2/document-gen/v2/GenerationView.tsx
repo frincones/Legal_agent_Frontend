@@ -4,28 +4,39 @@ import * as React from "react";
 import { useGenerationStreamV2 } from "@/lib/hooks/useGenerationStreamV2";
 import { ForensicCanvas } from "./ForensicCanvas";
 import { GenerationTimeline } from "./GenerationTimeline";
-
-const DOC_TYPES: Array<{ value: string; label: string; jur: string }> = [
-  { value: "", label: "Auto-detectar", jur: "" },
-  { value: "demanda_laboral_ordinaria", label: "Demanda Ordinaria Laboral", jur: "laboral" },
-  { value: "demanda_civil_ordinaria", label: "Demanda Civil Ordinaria", jur: "civil" },
-  { value: "demanda_ejecutivo_singular", label: "Demanda Ejecutiva Singular", jur: "civil" },
-  { value: "demanda_alimentos", label: "Demanda de Alimentos", jur: "familia" },
-  { value: "tutela", label: "Acción de Tutela", jur: "constitucional" },
-  { value: "derecho_peticion", label: "Derecho de Petición", jur: "administrativo" },
-  { value: "contrato_arrendamiento", label: "Contrato de Arrendamiento", jur: "civil" },
-  { value: "contrato_prestacion_servicios", label: "Contrato Prestación Servicios", jur: "comercial" },
-  { value: "denuncia_penal", label: "Denuncia Penal", jur: "penal" },
-  { value: "recurso_apelacion", label: "Recurso de Apelación", jur: "general" },
-  { value: "concepto_juridico", label: "Concepto Jurídico", jur: "general" },
-  { value: "poder_especial", label: "Poder Especial", jur: "general" },
-];
+import { TemplateSelector, TemplateListItem } from "./TemplateSelector";
+import { TemplatePreview, TemplatePreviewData } from "./TemplatePreview";
 
 export function GenerationView() {
   const { state, generate, reset, abort } = useGenerationStreamV2();
   const [intent, setIntent] = React.useState("");
   const [brief, setBrief] = React.useState("");
   const [docType, setDocType] = React.useState("");
+  const [templates, setTemplates] = React.useState<TemplateListItem[]>([]);
+  const [templatesLoading, setTemplatesLoading] = React.useState(false);
+  const [preview, setPreview] = React.useState<TemplatePreviewData | null>(null);
+
+  // Load templates from backend on mount
+  React.useEffect(() => {
+    setTemplatesLoading(true);
+    fetch("/api/templates")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d) => setTemplates(Array.isArray(d) ? d : []))
+      .catch(() => setTemplates([]))
+      .finally(() => setTemplatesLoading(false));
+  }, []);
+
+  // Load preview when docType changes
+  React.useEffect(() => {
+    if (!docType) {
+      setPreview(null);
+      return;
+    }
+    fetch(`/api/templates/${encodeURIComponent(docType)}/preview`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setPreview(d))
+      .catch(() => setPreview(null));
+  }, [docType]);
 
   const start = async () => {
     if (!intent.trim()) return;
@@ -68,19 +79,15 @@ export function GenerationView() {
 
       {/* Input panel (visible solo en idle / error) */}
       {(state.status === "idle" || state.status === "error") && (
-        <div className="border-b border-zinc-200 bg-white p-4">
+        <div className="border-b border-zinc-200 bg-white p-4 overflow-y-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 max-w-5xl mx-auto">
             <div>
-              <label className="text-xs font-medium text-zinc-700">Tipo de documento</label>
-              <select
+              <TemplateSelector
                 value={docType}
-                onChange={(e) => setDocType(e.target.value)}
-                className="w-full mt-1 text-sm border border-zinc-300 rounded px-2 py-1.5"
-              >
-                {DOC_TYPES.map((d) => (
-                  <option key={d.value} value={d.value}>{d.label}</option>
-                ))}
-              </select>
+                items={templates}
+                loading={templatesLoading}
+                onChange={(id) => setDocType(id)}
+              />
             </div>
             <div className="md:col-span-2">
               <label className="text-xs font-medium text-zinc-700">Intent</label>
@@ -92,6 +99,11 @@ export function GenerationView() {
                 className="w-full mt-1 text-sm border border-zinc-300 rounded px-2 py-1.5"
               />
             </div>
+            {preview && (
+              <div className="md:col-span-3">
+                <TemplatePreview template={preview} />
+              </div>
+            )}
             <div className="md:col-span-3">
               <label className="text-xs font-medium text-zinc-700">Brief / datos del caso</label>
               <textarea
