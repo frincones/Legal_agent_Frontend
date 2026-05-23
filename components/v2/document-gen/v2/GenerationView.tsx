@@ -7,6 +7,7 @@ import { GenerationTimeline } from "./GenerationTimeline";
 import { TemplateSelector, TemplateListItem } from "./TemplateSelector";
 import { TemplatePreview, TemplatePreviewData } from "./TemplatePreview";
 import { AuditPanel } from "./AuditPanel";
+import { VersionHistory } from "./VersionHistory";
 
 export function GenerationView() {
   const { state, generate, reset, abort } = useGenerationStreamV2();
