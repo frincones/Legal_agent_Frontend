@@ -141,25 +141,83 @@ export function IntegratedGenerationCanvas({ intent, templateId, brief, matterId
       { id: `u-${Date.now()}`, role: "user", content: input, ts: Date.now() },
     ]);
 
-    // Detectar si pide regenerar sección
+    if (!state.documentId) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `s-${Date.now()}`,
+          role: "system",
+          content: "Espera a que termine la generación inicial para chatear sobre el documento.",
+          ts: Date.now(),
+        },
+      ]);
+      return;
+    }
+
+    // Atajo: "regenera la sección X" → endpoint específico de regenerate-section
     const sectionRegex = /regener[ae]r?\s+(?:la\s+secci[oó]n|secci[oó]n)\s+([a-záéíóúñ_]+)/i;
     const m = input.match(sectionRegex);
-    if (m && m[1] && state.documentId) {
+    if (m && m[1]) {
       const sectionKey = m[1].toLowerCase();
       await regenerateSection(sectionKey, input);
       return;
     }
 
-    // Fallback: notificar al usuario que esta funcionalidad evoluciona
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `a-${Date.now()}`,
-        role: "assistant",
-        content: 'Aún no integro chat conversacional. Para regenerar una sección, escribe "regenera la sección hechos" o usa los botones del canvas. Próximo sprint añadiré diálogo libre con el documento.',
-        ts: Date.now(),
-      },
-    ]);
+    // Sprint M9: chat conversacional real via /chat endpoint
+    setRegenLoading(true);
+    try {
+      const history = messages
+        .filter((mm) => mm.role !== "system")
+        .slice(-6)
+        .map((mm) => ({ role: mm.role, content: mm.content }));
+      const res = await fetch(
+        `/api/documents/v2/documents/${encodeURIComponent(state.documentId)}/chat`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: input, history }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `e-${Date.now()}`,
+            role: "system",
+            content: `Error: ${data.error || data.detail || "desconocido"}`,
+            ts: Date.now(),
+          },
+        ]);
+        return;
+      }
+      const reply: string = data.reply || "(sin respuesta)";
+      const blocksChanged: number = data.blocks_changed || 0;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `a-${Date.now()}`,
+          role: "assistant",
+          content: reply + (blocksChanged > 0 ? `\n\n✓ ${blocksChanged} bloque(s) actualizado(s).` : ""),
+          ts: Date.now(),
+        },
+      ]);
+      if (blocksChanged > 0) {
+        window.dispatchEvent(new CustomEvent("lexai-v2-blocks-need-refresh"));
+      }
+    } catch (e) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `e-${Date.now()}`,
+          role: "system",
+          content: `Error de red: ${String(e)}`,
+          ts: Date.now(),
+        },
+      ]);
+    } finally {
+      setRegenLoading(false);
+    }
   };
 
   const regenerateSection = async (sectionKey: string, feedback: string) => {
