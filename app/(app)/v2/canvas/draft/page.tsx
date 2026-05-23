@@ -34,6 +34,7 @@ interface PageProps {
     engine?: string;
     intent?: string;
     template?: string;
+    brief?: string;
     matter_id?: string;
   };
 }
@@ -49,6 +50,7 @@ export default function CanvasDraftPage({ searchParams }: PageProps) {
         engine={engine}
         intent={searchParams.intent}
         templateId={searchParams.template}
+        brief={searchParams.brief}
         matterId={searchParams.matter_id}
       />
     </AppShell>

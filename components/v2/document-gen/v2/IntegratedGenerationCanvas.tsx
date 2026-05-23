@@ -38,6 +38,7 @@ const MIN_SIZE = 25;
 interface Props {
   intent: string;
   templateId?: string | null;
+  brief?: string | null;
   matterId?: string | null;
 }
 
@@ -50,7 +51,7 @@ interface ChatMsg {
   ts: number;
 }
 
-export function IntegratedGenerationCanvas({ intent, templateId, matterId }: Props) {
+export function IntegratedGenerationCanvas({ intent, templateId, brief, matterId }: Props) {
   const { state, generate, reset, abort } = useGenerationStreamV2();
 
   const [defaultLeft, setDefaultLeft] = React.useState<number>(DEFAULT_LEFT);
@@ -91,10 +92,11 @@ export function IntegratedGenerationCanvas({ intent, templateId, matterId }: Pro
     ]);
     generate({
       intent,
+      user_brief: brief || undefined,
       doc_type: templateId || undefined,
       matter_id: matterId || undefined,
     });
-  }, [intent, templateId, matterId, generate]);
+  }, [intent, brief, templateId, matterId, generate]);
 
   // Cuando generación completa, agregar mensaje al thread
   React.useEffect(() => {
@@ -197,6 +199,7 @@ export function IntegratedGenerationCanvas({ intent, templateId, matterId }: Pro
         // Trigger nueva generación que re-stream la sección borrada
         await generate({
           intent,
+          user_brief: brief || undefined,
           doc_type: templateId || undefined,
           matter_id: matterId || undefined,
         });

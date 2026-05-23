@@ -36,6 +36,7 @@ import { DocumentArtifact } from './DocumentArtifact';
 import { MarkdownContent } from '@/components/assistant/MarkdownContent';
 import { upsertThread } from '@/lib/v2/threadIndex';
 import { detectDocumentIntent } from '@/lib/v2/document-gen/intentDetector';
+import { BriefModal } from '@/components/v2/document-gen/v2/BriefModal';
 
 // ─── Message types (local, no deps on assistant-store) ───────────────────────
 
@@ -241,6 +242,14 @@ export function ComposerV2WithStream({
   const [hasHydrated, setHasHydrated] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string>(sessionId ?? '');
 
+  // Sprint M8: estado para modal de brief antes de redirigir a canvas v2
+  const [briefModal, setBriefModal] = useState<{
+    open: boolean;
+    intent: string;
+    templateId: string | null;
+    matterId?: string;
+  }>({ open: false, intent: '', templateId: null });
+
   useEffect(() => {
     // Modo freshStart (/v2/inicio): NO restaurar el hilo activo automaticamente.
     // Excepcion: si el sidebar marco un session_id pendiente (click en "Mis hilos"),
@@ -417,13 +426,13 @@ export function ComposerV2WithStream({
         if (detection.isDocumentRequest && detection.confidence >= 0.85) {
           const { mapToTemplateId } = await import('@/lib/v2/document-gen/templateMapper');
           const templateId = mapToTemplateId(detection.docType, detection.materia, prompt);
-          // Redirige al canvas integrado v2 (Sprint M7)
-          const url = new URL('/v2/canvas/draft', window.location.origin);
-          url.searchParams.set('engine', 'v2');
-          url.searchParams.set('intent', prompt);
-          if (templateId) url.searchParams.set('template', templateId);
-          if (payload.matter_id) url.searchParams.set('matter_id', payload.matter_id);
-          window.location.assign(url.toString());
+          // Sprint M8: en vez de redirigir directo, abrir modal de brief
+          setBriefModal({
+            open: true,
+            intent: prompt,
+            templateId,
+            matterId: payload.matter_id,
+          });
           return; // NO continuar con flow chat normal
         }
       }
@@ -620,6 +629,26 @@ export function ComposerV2WithStream({
   // layout normal automaticamente.
   const isCompact = compactWhenEmpty && messages.length === 0;
 
+  // Sprint M8: handler común para confirmar/saltar brief y redirigir
+  const handleBriefConfirm = (brief: string) => {
+    const url = new URL('/v2/canvas/draft', window.location.origin);
+    url.searchParams.set('engine', 'v2');
+    url.searchParams.set('intent', briefModal.intent);
+    if (briefModal.templateId) url.searchParams.set('template', briefModal.templateId);
+    if (brief) url.searchParams.set('brief', brief);
+    if (briefModal.matterId) url.searchParams.set('matter_id', briefModal.matterId);
+    setBriefModal({ open: false, intent: '', templateId: null });
+    window.location.assign(url.toString());
+  };
+
+  const handleBriefSkip = () => {
+    handleBriefConfirm(''); // brief vacío → placeholders en doc
+  };
+
+  const handleBriefCancel = () => {
+    setBriefModal({ open: false, intent: '', templateId: null });
+  };
+
   if (isCompact) {
     return (
       <div className={['flex flex-col', className].filter(Boolean).join(' ')}>
@@ -636,6 +665,14 @@ export function ComposerV2WithStream({
             initialPrompt={externalPrompt}
           />
         </div>
+        <BriefModal
+          open={briefModal.open}
+          intent={briefModal.intent}
+          templateId={briefModal.templateId}
+          onConfirm={handleBriefConfirm}
+          onSkip={handleBriefSkip}
+          onCancel={handleBriefCancel}
+        />
       </div>
     );
   }
@@ -743,6 +780,14 @@ export function ComposerV2WithStream({
           />
         </div>
       </div>
+      <BriefModal
+        open={briefModal.open}
+        intent={briefModal.intent}
+        templateId={briefModal.templateId}
+        onConfirm={handleBriefConfirm}
+        onSkip={handleBriefSkip}
+        onCancel={handleBriefCancel}
+      />
     </div>
   );
 }

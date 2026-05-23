@@ -19,6 +19,7 @@ interface CanvasDraftIslandProps {
   engine?: 'v2' | 'legacy';
   intent?: string;
   templateId?: string;
+  brief?: string;
   matterId?: string;
 }
 
@@ -27,6 +28,7 @@ export function CanvasDraftIsland({
   engine = 'legacy',
   intent,
   templateId,
+  brief,
   matterId,
 }: CanvasDraftIslandProps) {
   const router = useRouter();
@@ -119,6 +121,7 @@ export function CanvasDraftIsland({
           <IntegratedGenerationCanvas
             intent={intent || ''}
             templateId={templateId}
+            brief={brief}
             matterId={matterId}
           />
         ) : initialContent ? (
