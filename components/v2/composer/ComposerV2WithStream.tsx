@@ -117,6 +117,17 @@ export interface ComposerV2WithStreamProps {
    * a su layout normal (thread arriba + composer sticky abajo).
    */
   compactWhenEmpty?: boolean;
+  /**
+   * Si true, al montar el composer NO restaura el hilo activo desde
+   * localStorage. Inicia con messages=[] y nuevo session_id.
+   *  - Excepcion: si el sidebar marco `lexai-v2-pending-open-session` justo
+   *    antes de navegar (click en "Mis hilos"), el composer carga ese hilo
+   *    especifico y consume el flag.
+   * El persist a localStorage se omite cuando messages.length === 0 para
+   * no destruir el snapshot del hilo previo. Usado por /v2/inicio para
+   * garantizar que la home siempre arranque en estado hero.
+   */
+  freshStart?: boolean;
 }
 
 // ─── Simple renderer para mensajes del usuario (plain text) ──────────────────
@@ -214,6 +225,7 @@ export function ComposerV2WithStream({
   initialPrompt = '',
   onMessagesChange,
   compactWhenEmpty = false,
+  freshStart = false,
 }: ComposerV2WithStreamProps) {
   const storageKey = getThreadStorageKey(matterId);
   const sessionKey = getSessionStorageKey(matterId);
@@ -229,18 +241,49 @@ export function ComposerV2WithStream({
   const [activeSessionId, setActiveSessionId] = useState<string>(sessionId ?? '');
 
   useEffect(() => {
-    // Tras el mount, leemos localStorage y reemplazamos el estado si hay datos.
+    // Modo freshStart (/v2/inicio): NO restaurar el hilo activo automaticamente.
+    // Excepcion: si el sidebar marco un session_id pendiente (click en "Mis hilos"),
+    // cargar ese hilo especifico y consumir el flag.
+    if (freshStart && !matterId) {
+      try {
+        const pendingSid = localStorage.getItem('lexai-v2-pending-open-session');
+        if (pendingSid) {
+          const snapshot = localStorage.getItem(`lexai-v2-thread-msgs:${pendingSid}`);
+          const parsed = snapshot ? (JSON.parse(snapshot) as ThreadMessage[]) : [];
+          setMessages(parsed);
+          setActiveSessionId(pendingSid);
+          localStorage.setItem('lexai-v2-current-thread', snapshot ?? '[]');
+          localStorage.setItem('lexai-v2-current-session', pendingSid);
+          localStorage.removeItem('lexai-v2-pending-open-session');
+        } else {
+          // Sin hilo pendiente: empezar limpio con nuevo session_id
+          setMessages([]);
+          const fresh = (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+            ? crypto.randomUUID()
+            : `s-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+          setActiveSessionId(fresh);
+          // NO escribimos a current-thread/current-session aqui: el primer
+          // mensaje del usuario hara la persistencia.
+        }
+      } catch {
+        setMessages([]);
+        setActiveSessionId(`s-${Date.now()}`);
+      }
+      setHasHydrated(true);
+      return;
+    }
+
+    // Modo normal: restaurar hilo activo desde localStorage
     const stored = readThreadFromStorage(storageKey, initialMessages);
     if (stored.length > 0 || initialMessages.length === 0) {
       setMessages(stored);
     }
-    // Leer (o crear) session_id estable para este thread
     if (!sessionId) {
       setActiveSessionId(readOrCreateSessionId(sessionKey));
     }
     setHasHydrated(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storageKey, sessionKey]);
+  }, [storageKey, sessionKey, freshStart, matterId]);
 
   // Persist thread to localStorage whenever messages change (post-hydration).
   // Persistimos en DOS claves:
@@ -249,6 +292,10 @@ export function ComposerV2WithStream({
   //     sidebar al "abrir" un hilo viejo (promueve este snapshot a la activa).
   useEffect(() => {
     if (typeof window === 'undefined' || !hasHydrated) return;
+    // No sobrescribir current con []: preserva el snapshot del hilo previo
+    // para que "Mis hilos" pueda re-abrirlo. Solo escribimos cuando hay
+    // mensajes reales (>= 1 turno).
+    if (messages.length === 0) return;
     try {
       const serialized = JSON.stringify(messages);
       localStorage.setItem(storageKey, serialized);

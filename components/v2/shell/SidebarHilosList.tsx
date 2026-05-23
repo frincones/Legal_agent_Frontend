@@ -78,11 +78,13 @@ export function SidebarHilosList({ collapsed = false }: SidebarHilosListProps) {
 
   const handleOpenThread = useCallback((session_id: string) => {
     // Marcar el session_id objetivo en localStorage y navegar a inicio.
-    // ComposerV2WithStream lee 'lexai-v2-current-session' al montar.
+    // El composer en /v2/inicio se monta con freshStart=true; lee
+    // 'lexai-v2-pending-open-session' para saber que debe cargar este hilo
+    // en vez de empezar limpio. El flag se consume al leerse.
     try {
+      localStorage.setItem('lexai-v2-pending-open-session', session_id);
       localStorage.setItem('lexai-v2-current-session', session_id);
-      // Buscar los mensajes persistidos de ese hilo (si existen) y promoverlos
-      // a la clave activa para que el composer los renderice.
+      // Promover el snapshot al hilo activo para que el composer lo lea.
       const stored = localStorage.getItem(`lexai-v2-thread-msgs:${session_id}`);
       if (stored) {
         localStorage.setItem('lexai-v2-current-thread', stored);
@@ -90,6 +92,8 @@ export function SidebarHilosList({ collapsed = false }: SidebarHilosListProps) {
     } catch {
       /* noop */
     }
+    // Para casos en que el composer ya esta montado (usuario ya esta en
+    // /v2/inicio), el handler de 'lexai:open-thread' carga el hilo sin remount.
     window.dispatchEvent(new CustomEvent('lexai:open-thread', { detail: { session_id } }));
     router.push('/v2/inicio');
   }, [router]);

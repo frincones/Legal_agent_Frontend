@@ -69,16 +69,21 @@ export function SidebarV2({
    */
   const handleNewChat = () => {
     try {
-      // Limpiar el thread principal (sin matter)
+      // Limpiar el thread principal (sin matter) + cualquier hilo pendiente
+      // de abrirse y el session activo. El composer en /v2/inicio se monta
+      // con freshStart=true: si no encuentra pending-open-session arranca
+      // con un session_id fresco y messages vacios.
       localStorage.removeItem('lexai-v2-current-thread');
+      localStorage.removeItem('lexai-v2-current-session');
+      localStorage.removeItem('lexai-v2-pending-open-session');
       // Disparar evento para que cualquier ComposerV2WithStream montado se resetee
       window.dispatchEvent(new CustomEvent('lexai:new-thread'));
     } catch {
       /* noop */
     }
     if (pathname?.startsWith('/v2/inicio') || pathname?.startsWith('/inicio')) {
-      // Ya estamos en inicio — refrescar para resetear el state local del composer
-      router.refresh();
+      // Ya estamos en inicio — el evento 'lexai:new-thread' ya reseteo el
+      // state interno del composer sin necesidad de remount/refresh.
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       router.push('/v2/inicio');
