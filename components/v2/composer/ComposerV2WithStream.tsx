@@ -416,28 +416,19 @@ export function ComposerV2WithStream({
       // pedido de generacion (confidence >= 0.85), navegamos a
       // /v2/canvas/draft?engine=v2 (canvas integrado con chat lateral).
       // Sin el flag, el flow legacy de chat asistente sigue como hoy.
-      // M8 diagnostic: log el estado del flag en runtime
       if (typeof window !== 'undefined' && !matterId) {
-        const flagValue = process.env.NEXT_PUBLIC_DOC_GEN_V2_ENABLED;
+        // M8 fix: trim env var por si Vercel agregó newline u otros whitespace
+        const flagValue = (process.env.NEXT_PUBLIC_DOC_GEN_V2_ENABLED || '').trim();
+        const flagEnabled = flagValue === 'true' || flagValue === '1';
         const prompt = payload.input.prompt || '';
         const detection = detectDocumentIntent(prompt);
-        console.log('[LexAI-M8] doc_gen_v2_check:', {
-          flag: flagValue,
-          isTrue: flagValue === 'true',
-          prompt: prompt.slice(0, 80),
-          detected: detection.isDocumentRequest,
-          confidence: detection.confidence,
-          docType: detection.docType,
-          materia: detection.materia,
-        });
         if (
-          flagValue === 'true' &&
+          flagEnabled &&
           detection.isDocumentRequest &&
           detection.confidence >= 0.85
         ) {
           const { mapToTemplateId } = await import('@/lib/v2/document-gen/templateMapper');
           const templateId = mapToTemplateId(detection.docType, detection.materia, prompt);
-          console.log('[LexAI-M8] opening BriefModal', { templateId });
           setBriefModal({
             open: true,
             intent: prompt,
