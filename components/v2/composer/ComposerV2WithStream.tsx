@@ -103,6 +103,20 @@ export interface ComposerV2WithStreamProps {
    * Usado por los SuggestionChips de la home v2.
    */
   initialPrompt?: string;
+  /**
+   * Callback opcional notificado cada vez que cambia el numero de mensajes
+   * del hilo. Permite al padre (ej. DayBriefingPageClient) saber si esta
+   * en estado vacio (0 mensajes) para renderizar un hero alternativo.
+   */
+  onMessagesChange?: (count: number) => void;
+  /**
+   * Si true, cuando `messages.length === 0` el componente renderiza SOLO el
+   * cuadro de composer (sin thread div y sin h-full). Util para layouts
+   * tipo hero donde el padre controla el centrado vertical (ej. /v2/inicio).
+   * Cuando aparezca el primer mensaje, el componente reactivamente vuelve
+   * a su layout normal (thread arriba + composer sticky abajo).
+   */
+  compactWhenEmpty?: boolean;
 }
 
 // ─── Simple renderer para mensajes del usuario (plain text) ──────────────────
@@ -198,6 +212,8 @@ export function ComposerV2WithStream({
   className,
   initialMessages = [],
   initialPrompt = '',
+  onMessagesChange,
+  compactWhenEmpty = false,
 }: ComposerV2WithStreamProps) {
   const storageKey = getThreadStorageKey(matterId);
   const sessionKey = getSessionStorageKey(matterId);
@@ -243,6 +259,13 @@ export function ComposerV2WithStream({
       /* noop — storage quota */
     }
   }, [messages, storageKey, hasHydrated, activeSessionId]);
+
+  // Notificar al padre cuantos mensajes hay (post-hidratacion). Permite que
+  // el padre (DayBriefingPageClient) decida si renderiza el hero o el chat.
+  useEffect(() => {
+    if (!hasHydrated) return;
+    onMessagesChange?.(messages.length);
+  }, [messages.length, hasHydrated, onMessagesChange]);
 
   // Escuchar 'lexai:open-thread' (click en un hilo del sidebar): re-hidratar
   // mensajes desde el snapshot por session_id y rotar activeSessionId.
@@ -517,6 +540,31 @@ export function ComposerV2WithStream({
     .filter((m) => m.content.trim().length > 0)
     .slice(-8)
     .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+
+  // Modo compacto: sin thread div ni h-full. El padre controla el centrado
+  // vertical (caso /v2/inicio hero). Apenas hay >=1 mensaje, volvemos al
+  // layout normal automaticamente.
+  const isCompact = compactWhenEmpty && messages.length === 0;
+
+  if (isCompact) {
+    return (
+      <div className={['flex flex-col', className].filter(Boolean).join(' ')}>
+        <div className="mx-auto w-full">
+          <ComposerV2
+            matterId={matterId}
+            sessionId={sessionId}
+            onSend={handleSend}
+            placeholder={placeholder}
+            autoFocus={autoFocus}
+            isStreaming={isStreaming}
+            history={composerHistory}
+            activeTab={activeTab}
+            initialPrompt={externalPrompt}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={['flex flex-col h-full', className].filter(Boolean).join(' ')}>

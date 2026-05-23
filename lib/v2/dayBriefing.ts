@@ -54,7 +54,8 @@ export type UrgentMatter = {
 
 export type DayBriefingData = {
   greeting: 'Buenos días' | 'Buenas tardes' | 'Buenas noches';
-  userName: string;         // "Lic. Rincones"
+  userName: string;         // "Lic. Rincones" — saludo formal
+  userFirstName: string;    // "Freddy" — saludo informal (hero composer)
   hearings: Hearing[];
   urgentDeadlines: UrgentDeadline[];
   novelties: Novelty[];
@@ -79,6 +80,15 @@ function formatUserName(fullName: string): string {
   const parts = fullName.replace(/^(Dr\.|Dra\.|Lic\.|Abg\.|Dr |Dra )/i, '').trim().split(' ');
   const lastName = parts.slice(-1)[0] ?? parts[0];
   return `Lic. ${lastName}`;
+}
+
+function pickFirstName(fullName: string): string {
+  // "Dr. Freddy Rincones" → "Freddy"
+  // "Freddy Rincones Alvarado" → "Freddy"
+  if (!fullName) return '';
+  const cleaned = fullName.replace(/^(Dr\.|Dra\.|Lic\.|Abg\.|Dr |Dra )\s*/i, '').trim();
+  const tokens = cleaned.split(/\s+/);
+  return tokens[0] ?? '';
 }
 
 function buildUrgentDeadlines(matters: Matter[]): UrgentDeadline[] {
@@ -232,6 +242,7 @@ export async function generateDayBriefing(): Promise<DayBriefingData> {
 
   const greeting = getGreeting();
   const userName = formatUserName(userFullName);
+  const userFirstName = pickFirstName(userFullName);
   const urgentDeadlines = buildUrgentDeadlines(matters);
   const urgentMatters = buildUrgentMatters(matters);
   const hearings = buildHearings(matters);
@@ -240,6 +251,7 @@ export async function generateDayBriefing(): Promise<DayBriefingData> {
   const partial = {
     greeting,
     userName,
+    userFirstName,
     hearings,
     urgentDeadlines,
     novelties,
