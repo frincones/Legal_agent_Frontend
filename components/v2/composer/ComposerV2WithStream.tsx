@@ -35,6 +35,7 @@ import { StreamingCursor } from './StreamingCursor';
 import { DocumentArtifact } from './DocumentArtifact';
 import { MarkdownContent } from '@/components/assistant/MarkdownContent';
 import { upsertThread } from '@/lib/v2/threadIndex';
+import { detectDocumentIntent } from '@/lib/v2/document-gen/intentDetector';
 
 // ─── Message types (local, no deps on assistant-store) ───────────────────────
 
@@ -401,6 +402,28 @@ export function ComposerV2WithStream({
 
   const handleSend = useCallback(
     async (payload: ComposerPayload) => {
+      // ─── SPRINT L-DOC: deteccion de intent "generacion de documento" ───
+      // Si NEXT_PUBLIC_DOC_GEN_V2_ENABLED y el prompt es claramente un
+      // pedido de generacion (confidence >= 0.85), navegamos a
+      // /v2/canvas/generate en lugar de procesar como chat normal.
+      // Sin el flag, NO se ejecuta nada de esto y el flow continua igual.
+      if (
+        typeof window !== 'undefined' &&
+        process.env.NEXT_PUBLIC_DOC_GEN_V2_ENABLED === 'true' &&
+        !matterId  // no aplicar en canvas de matter (UX distinta)
+      ) {
+        const prompt = payload.input.prompt || '';
+        const detection = detectDocumentIntent(prompt);
+        if (detection.isDocumentRequest && detection.confidence >= 0.85) {
+          // Navegacion via window.location (no tenemos router en este componente)
+          const url = new URL('/v2/canvas/generate', window.location.origin);
+          url.searchParams.set('intent', prompt);
+          if (payload.matter_id) url.searchParams.set('matter_id', payload.matter_id);
+          window.location.assign(url.toString());
+          return; // NO continuar con flow chat normal
+        }
+      }
+
       // Abort previous stream if any
       abortRef.current?.abort();
       const ac = new AbortController();
