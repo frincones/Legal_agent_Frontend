@@ -21,6 +21,10 @@ interface AuditCitation {
   derogada?: boolean;
   similarity?: number;
   chunk_id?: string | null;
+  estado?: "verificada" | "superada" | "sospechosa" | "no_encontrada";
+  method?: string;
+  fuente_url?: string | null;
+  titulo?: string | null;
 }
 
 interface AuditDerogation {
@@ -100,21 +104,47 @@ export function AuditPanel({ audit, onDownload }: Props) {
       </div>
 
       {audit.citation_verifications.length > 0 && (
-        <details>
+        <details open>
           <summary className="cursor-pointer text-zinc-700 hover:text-zinc-900 select-none">
             {audit.citation_verifications.length} verificaciones de citas
           </summary>
-          <ul className="mt-1 max-h-40 overflow-auto space-y-1 pl-2">
-            {audit.citation_verifications.map((c, i) => (
-              <li key={i} className="flex items-center gap-2">
-                <span aria-hidden>{c.verified ? "✅" : "❌"}</span>
-                <code className="text-[10px] truncate flex-1">{c.ref}</code>
-                <span className="text-zinc-400 text-[10px]">{c.type}</span>
-                {c.similarity != null && (
-                  <span className="text-zinc-400 text-[10px]">sim {c.similarity.toFixed(2)}</span>
-                )}
-              </li>
-            ))}
+          <ul className="mt-1 max-h-60 overflow-auto space-y-1 pl-2">
+            {audit.citation_verifications.map((c, i) => {
+              const estado = c.estado || (c.verified ? "verificada" : "no_encontrada");
+              const icon =
+                estado === "verificada" ? "✅" :
+                estado === "superada" ? "⚠️" :
+                estado === "sospechosa" ? "⚠️" :
+                "❌";
+              const tone =
+                estado === "verificada" ? "text-emerald-700" :
+                estado === "superada" ? "text-amber-700" :
+                estado === "sospechosa" ? "text-amber-600" :
+                "text-red-700";
+              const label =
+                estado === "verificada" ? "verificada" :
+                estado === "superada" ? "derogada" :
+                estado === "sospechosa" ? "no confirmada (fuente caída)" :
+                "no encontrada";
+              return (
+                <li key={i} className="flex items-center gap-2 group">
+                  <span aria-hidden>{icon}</span>
+                  <code className={`text-[10px] truncate flex-1 ${tone}`}>{c.ref}</code>
+                  <span className="text-zinc-400 text-[10px]">{c.type}</span>
+                  <span className="text-zinc-400 text-[10px] italic" title={c.method || ""}>{label}</span>
+                  {c.fuente_url && (
+                    <a
+                      href={c.fuente_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-blue-600 hover:underline opacity-0 group-hover:opacity-100"
+                    >
+                      fuente↗
+                    </a>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </details>
       )}
