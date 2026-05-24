@@ -25,6 +25,12 @@ interface AuditCitation {
   method?: string;
   fuente_url?: string | null;
   titulo?: string | null;
+  // Sprint M17: hyperlink garantizado + derogadas con dos URLs
+  fuente_url_original?: string | null;
+  fuente_url_vigente?: string | null;
+  url_http_status?: number | null;
+  url_validated?: boolean | null;
+  is_derogada?: boolean;
 }
 
 interface AuditDerogation {
@@ -126,21 +132,30 @@ export function AuditPanel({ audit, onDownload }: Props) {
                 estado === "superada" ? "derogada" :
                 estado === "sospechosa" ? "no confirmada (fuente caída)" :
                 "no encontrada";
+              const isDerogada = estado === "superada" && !!c.fuente_url_vigente;
+              const primaryUrl = c.fuente_url_original || c.fuente_url;
               return (
-                <li key={i} className="flex items-center gap-2 group">
+                <li key={i} className="flex items-center gap-2 flex-wrap">
                   <span aria-hidden>{icon}</span>
-                  <code className={`text-[10px] truncate flex-1 ${tone}`}>{c.ref}</code>
+                  <code className={`text-[10px] truncate flex-1 min-w-0 ${tone}`}>{c.ref}</code>
                   <span className="text-zinc-400 text-[10px]">{c.type}</span>
                   <span className="text-zinc-400 text-[10px] italic" title={c.method || ""}>{label}</span>
-                  {c.fuente_url && (
-                    <a
-                      href={c.fuente_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[10px] text-blue-600 hover:underline opacity-0 group-hover:opacity-100"
-                    >
-                      fuente↗
-                    </a>
+                  {primaryUrl && (
+                    <SourceLink
+                      url={primaryUrl}
+                      variant={isDerogada ? "original" : estado === "verificada" ? "primary" : estado === "sospechosa" ? "warning" : "danger"}
+                      label={isDerogada ? "original (derog.)" : "fuente"}
+                      validated={c.url_validated ?? undefined}
+                      httpStatus={c.url_http_status ?? undefined}
+                    />
+                  )}
+                  {isDerogada && c.fuente_url_vigente && (
+                    <SourceLink
+                      url={c.fuente_url_vigente}
+                      variant="replacement"
+                      label="vigente"
+                      validated={c.url_validated ?? undefined}
+                    />
                   )}
                 </li>
               );
@@ -190,5 +205,49 @@ function Stat({ label, value, variant = "default" }: { label: string; value: str
       <div className="text-[10px] opacity-70">{label}</div>
       <div className="font-bold text-sm">{value}</div>
     </div>
+  );
+}
+
+type SourceLinkVariant = "primary" | "original" | "replacement" | "warning" | "danger";
+
+function SourceLink({
+  url,
+  variant,
+  label,
+  validated,
+  httpStatus,
+}: {
+  url: string;
+  variant: SourceLinkVariant;
+  label: string;
+  validated?: boolean;
+  httpStatus?: number;
+}) {
+  // Token visual por variante — coherente con sistema (emerald/amber/blue/red/zinc)
+  const styles: Record<SourceLinkVariant, string> = {
+    primary: "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100",
+    original: "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100",
+    replacement: "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100",
+    warning: "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100",
+    danger: "bg-red-50 border-red-200 text-red-700 hover:bg-red-100",
+  };
+  const cls = styles[variant];
+  // Tooltip detallado: URL + estado HEAD validation
+  const tooltipParts = [url];
+  if (validated === false) tooltipParts.push("⚠ URL no responde (HEAD)");
+  else if (validated === true) tooltipParts.push("✓ URL verificada");
+  if (httpStatus) tooltipParts.push(`HTTP ${httpStatus}`);
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={tooltipParts.join("\n")}
+      className={`inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 border rounded transition-colors ${cls}`}
+    >
+      <span>↗</span>
+      <span>{label}</span>
+      {validated === false && <span aria-hidden className="text-[8px] opacity-70">!</span>}
+    </a>
   );
 }
