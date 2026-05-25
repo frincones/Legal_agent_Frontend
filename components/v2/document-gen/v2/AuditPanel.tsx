@@ -37,6 +37,9 @@ interface AuditDerogation {
   norma: string;
   vigente: boolean;
   derogada_por?: string | null;
+  // M17.b: link a fuente oficial + (si derogada) link a vigente
+  fuente_url?: string | null;
+  fuente_url_vigente?: string | null;
 }
 
 export interface AuditReport {
@@ -171,11 +174,25 @@ export function AuditPanel({ audit, onDownload }: Props) {
           </summary>
           <ul className="mt-1 max-h-40 overflow-auto space-y-1 pl-2">
             {audit.derogation_checks.map((d, i) => (
-              <li key={i} className="flex items-center gap-2">
+              <li key={i} className="flex items-center gap-2 flex-wrap">
                 <span aria-hidden>{d.vigente ? "✅" : "⚠️"}</span>
-                <code className="text-[10px] truncate flex-1">{d.norma}</code>
+                <code className="text-[10px] truncate flex-1 min-w-0">{d.norma}</code>
                 {d.derogada_por && (
                   <span className="text-amber-700 text-[10px]">derog. por {d.derogada_por}</span>
+                )}
+                {d.fuente_url && (
+                  <SourceLink
+                    url={d.fuente_url}
+                    variant={d.vigente ? "primary" : "original"}
+                    label={d.vigente ? "fuente" : "original (derog.)"}
+                  />
+                )}
+                {!d.vigente && d.fuente_url_vigente && (
+                  <SourceLink
+                    url={d.fuente_url_vigente}
+                    variant="replacement"
+                    label="vigente"
+                  />
                 )}
               </li>
             ))}
