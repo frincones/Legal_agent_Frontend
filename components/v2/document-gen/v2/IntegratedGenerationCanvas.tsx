@@ -29,6 +29,8 @@ import { useGenerationStreamV2 } from "@/lib/hooks/useGenerationStreamV2";
 import { ForensicCanvas } from "./ForensicCanvas";
 import { GenerationTimeline } from "./GenerationTimeline";
 import { AuditPanel } from "./AuditPanel";
+import { AgentThoughtStream } from "./AgentThoughtStream";
+import type { AgentThought } from "@/lib/types/blocks";
 
 const LS_KEY = "lexai-v2-integrated-split";
 const DEFAULT_LEFT = 38;
@@ -318,6 +320,7 @@ export function IntegratedGenerationCanvas({ intent, templateId, brief, matterId
           isRunning={isRunning}
           regenLoading={regenLoading}
           status={state.status}
+          thoughts={state.thoughts}
         />
       </Panel>
       <PanelResizeHandle style={{ width: 4, cursor: "col-resize", backgroundColor: "var(--v2-border-default, #DDDBD3)", flexShrink: 0 }} />
@@ -397,7 +400,7 @@ function TabButton({ active, onClick, label, disabled }: { active: boolean; onCl
 }
 
 function ChatPanel({
-  messages, chatInput, setChatInput, onSend, isRunning, regenLoading, status,
+  messages, chatInput, setChatInput, onSend, isRunning, regenLoading, status, thoughts,
 }: {
   messages: ChatMsg[];
   chatInput: string;
@@ -406,11 +409,12 @@ function ChatPanel({
   isRunning: boolean;
   regenLoading: boolean;
   status: string;
+  thoughts: AgentThought[];
 }) {
   const scrollRef = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages.length]);
+  }, [messages.length, thoughts.length]);
 
   return (
     <div style={{
@@ -443,6 +447,15 @@ function ChatPanel({
         {messages.map((m) => (
           <MessageRow key={m.id} msg={m} />
         ))}
+        {/* M18.d: Stream de pensamientos del agente (estilo Claude) */}
+        {(thoughts.length > 0 || isRunning) && (
+          <div style={{ marginTop: 8 }}>
+            <AgentThoughtStream
+              thoughts={thoughts}
+              status={(status as any) === "idle" ? "idle" : (status as any)}
+            />
+          </div>
+        )}
       </div>
       {/* Composer */}
       <div style={{
