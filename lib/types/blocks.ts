@@ -163,7 +163,30 @@ export type SSEEventName =
   | "docx_built"
   | "audit_report"
   | "done"
-  | "error";
+  | "error"
+  // M18.d: agent thought stream (Claude-style live narration)
+  | "agent_thought";
+
+// M18.d: Agent thought (narración en vivo del agente)
+export type AgentThoughtKind =
+  | "info"            // pensamiento genérico
+  | "tool_call"       // invocando una herramienta
+  | "tool_result"     // resultado de herramienta
+  | "correction"      // sugerencia de corrección (Judge detectó cita incorrecta)
+  | "warning"         // nota legal importante
+  | "success"         // hito completado
+  | "error";          // algo falló
+
+export interface AgentThought {
+  id: string;            // timestamp + random
+  kind: AgentThoughtKind;
+  message: string;
+  tool?: string | null;
+  ref?: string | null;
+  url?: string | null;
+  suggestion?: string | null;
+  timestamp: number;
+}
 
 export interface SectionPlanItem {
   key: string;
@@ -212,4 +235,6 @@ export interface GenerationState {
   timeline: TimelineStep[];
   audit: any | null;
   error: string | null;
+  // M18.d: agent thought stream (live narration estilo Claude)
+  thoughts: AgentThought[];
 }

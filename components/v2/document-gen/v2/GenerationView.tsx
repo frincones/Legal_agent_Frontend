@@ -4,6 +4,7 @@ import * as React from "react";
 import { useGenerationStreamV2 } from "@/lib/hooks/useGenerationStreamV2";
 import { ForensicCanvas } from "./ForensicCanvas";
 import { GenerationTimeline } from "./GenerationTimeline";
+import { AgentThoughtStream } from "./AgentThoughtStream";
 import { TemplateSelector, TemplateListItem } from "./TemplateSelector";
 import { TemplatePreview, TemplatePreviewData } from "./TemplatePreview";
 import { AuditPanel } from "./AuditPanel";
@@ -138,6 +139,15 @@ export function GenerationView() {
             collapsed={state.status === "completed"}
           />
           <div className="overflow-y-auto">
+            {/* M18.d: stream de pensamientos del agente (estilo Claude) */}
+            {(state.thoughts.length > 0 || state.status === "running") && (
+              <div className="mx-auto max-w-3xl mt-3 mb-2 px-4">
+                <AgentThoughtStream
+                  thoughts={state.thoughts}
+                  status={state.status}
+                />
+              </div>
+            )}
             <ForensicCanvas blocks={state.blocks} status={state.status} />
             {state.status === "completed" && state.audit && (
               <div className="mx-auto max-w-3xl my-4 px-4">

@@ -2,6 +2,7 @@
 
 import { useCallback, useReducer, useRef } from "react";
 import type {
+  AgentThought,
   Block,
   GenerationState,
   MetaPayload,
@@ -23,7 +24,8 @@ type Action =
   | { type: "BLOCK_EMIT"; payload: Block }
   | { type: "ERROR"; payload: string }
   | { type: "DONE"; payload: { generation_id: string; matter_document_id?: string | null; duration_seconds: number; cost_usd: number } }
-  | { type: "AUDIT"; payload: any };
+  | { type: "AUDIT"; payload: any }
+  | { type: "THOUGHT"; payload: AgentThought };
 
 const initialState: GenerationState = {
   generationId: null,
@@ -39,6 +41,7 @@ const initialState: GenerationState = {
   timeline: [],
   audit: null,
   error: null,
+  thoughts: [],
 };
 
 function reducer(state: GenerationState, action: Action): GenerationState {
@@ -100,6 +103,13 @@ function reducer(state: GenerationState, action: Action): GenerationState {
 
     case "AUDIT":
       return { ...state, audit: action.payload };
+
+    case "THOUGHT":
+      // M18.d: agregar narration al stream (mantener cap 200 thoughts max)
+      return {
+        ...state,
+        thoughts: [...state.thoughts, action.payload].slice(-200),
+      };
 
     default:
       return state;
@@ -366,6 +376,23 @@ function handleEvent(event: SSEEventName, data: any, dispatch: React.Dispatch<Ac
 
     case "error":
       dispatch({ type: "ERROR", payload: `${data.stage}: ${data.message}` });
+      break;
+
+    case "agent_thought":
+      // M18.d: live narration estilo Claude
+      dispatch({
+        type: "THOUGHT",
+        payload: {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          kind: data.kind || "info",
+          message: data.message || "",
+          tool: data.tool || null,
+          ref: data.ref || null,
+          url: data.url || null,
+          suggestion: data.suggestion || null,
+          timestamp: Date.now(),
+        },
+      });
       break;
   }
 }
