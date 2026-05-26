@@ -38,6 +38,9 @@ interface AuditCitation {
   judge_rationale?: string | null;      // explicación del Judge LLM
   judge_retried?: boolean;
   query_used?: string | null;
+  // Sprint M18.c: smart corrections estilo Claude
+  suggested_correction?: string | null; // "SU-440/21" → "SU-087/22"
+  legal_note?: string | null;           // "Ley 1010 art 18 modificado por Ley 2209/2022"
 }
 
 interface AuditDerogation {
@@ -146,30 +149,46 @@ export function AuditPanel({ audit, onDownload }: Props) {
               const primaryUrl = c.fuente_url_original || c.fuente_url;
               // M18: tooltip con provenance + snippet + judge rationale
               const provenance = buildProvenanceTooltip(c);
+              const hasCorrection = !!c.suggested_correction;
+              const hasLegalNote = !!c.legal_note;
               return (
-                <li key={i} className="flex items-center gap-2 flex-wrap">
-                  <span aria-hidden>{icon}</span>
-                  <code className={`text-[10px] truncate flex-1 min-w-0 ${tone}`}>{c.ref}</code>
-                  <span className="text-zinc-400 text-[10px]">{c.type}</span>
-                  <span className="text-zinc-400 text-[10px] italic" title={c.method || ""}>{label}</span>
-                  {primaryUrl && (
-                    <SourceLink
-                      url={primaryUrl}
-                      variant={isDerogada ? "original" : estado === "verificada" ? "primary" : estado === "sospechosa" ? "warning" : "danger"}
-                      label={isDerogada ? "original (derog.)" : "fuente"}
-                      validated={c.url_validated ?? undefined}
-                      httpStatus={c.url_http_status ?? undefined}
-                      provenance={provenance}
-                    />
+                <li key={i} className="flex flex-col gap-0.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span aria-hidden>{icon}</span>
+                    <code className={`text-[10px] truncate flex-1 min-w-0 ${tone}`}>{c.ref}</code>
+                    <span className="text-zinc-400 text-[10px]">{c.type}</span>
+                    <span className="text-zinc-400 text-[10px] italic" title={c.method || ""}>{label}</span>
+                    {primaryUrl && (
+                      <SourceLink
+                        url={primaryUrl}
+                        variant={isDerogada ? "original" : estado === "verificada" ? "primary" : estado === "sospechosa" ? "warning" : "danger"}
+                        label={isDerogada ? "original (derog.)" : "fuente"}
+                        validated={c.url_validated ?? undefined}
+                        httpStatus={c.url_http_status ?? undefined}
+                        provenance={provenance}
+                      />
+                    )}
+                    {isDerogada && c.fuente_url_vigente && (
+                      <SourceLink
+                        url={c.fuente_url_vigente}
+                        variant="replacement"
+                        label="vigente"
+                        validated={c.url_validated ?? undefined}
+                        provenance={provenance}
+                      />
+                    )}
+                  </div>
+                  {/* M18.c: smart corrections estilo Claude */}
+                  {hasCorrection && (
+                    <div className="ml-5 text-[10px] text-amber-700 bg-amber-50 border-l-2 border-amber-300 pl-2 py-0.5"
+                         title={c.judge_rationale || ""}>
+                      💡 Sugerencia: usar <code className="font-semibold">{c.suggested_correction}</code> en su lugar
+                    </div>
                   )}
-                  {isDerogada && c.fuente_url_vigente && (
-                    <SourceLink
-                      url={c.fuente_url_vigente}
-                      variant="replacement"
-                      label="vigente"
-                      validated={c.url_validated ?? undefined}
-                      provenance={provenance}
-                    />
+                  {hasLegalNote && (
+                    <div className="ml-5 text-[10px] text-blue-700 bg-blue-50 border-l-2 border-blue-300 pl-2 py-0.5">
+                      ⚖ {c.legal_note}
+                    </div>
                   )}
                 </li>
               );
