@@ -31,6 +31,13 @@ interface AuditCitation {
   url_http_status?: number | null;
   url_validated?: boolean | null;
   is_derogada?: boolean;
+  // Sprint M18: provenance + Judge
+  discovered_by?: string | null;       // 'brave_search' | 'internal_db' | 'pattern' | ...
+  snippet?: string | null;              // evidencia textual mostrada al usuario
+  judge_action?: string | null;         // 'accept' | 'refine' | 'reject'
+  judge_rationale?: string | null;      // explicación del Judge LLM
+  judge_retried?: boolean;
+  query_used?: string | null;
 }
 
 interface AuditDerogation {
@@ -137,6 +144,8 @@ export function AuditPanel({ audit, onDownload }: Props) {
                 "no encontrada";
               const isDerogada = estado === "superada" && !!c.fuente_url_vigente;
               const primaryUrl = c.fuente_url_original || c.fuente_url;
+              // M18: tooltip con provenance + snippet + judge rationale
+              const provenance = buildProvenanceTooltip(c);
               return (
                 <li key={i} className="flex items-center gap-2 flex-wrap">
                   <span aria-hidden>{icon}</span>
@@ -150,6 +159,7 @@ export function AuditPanel({ audit, onDownload }: Props) {
                       label={isDerogada ? "original (derog.)" : "fuente"}
                       validated={c.url_validated ?? undefined}
                       httpStatus={c.url_http_status ?? undefined}
+                      provenance={provenance}
                     />
                   )}
                   {isDerogada && c.fuente_url_vigente && (
@@ -158,6 +168,7 @@ export function AuditPanel({ audit, onDownload }: Props) {
                       variant="replacement"
                       label="vigente"
                       validated={c.url_validated ?? undefined}
+                      provenance={provenance}
                     />
                   )}
                 </li>
@@ -233,12 +244,14 @@ function SourceLink({
   label,
   validated,
   httpStatus,
+  provenance,
 }: {
   url: string;
   variant: SourceLinkVariant;
   label: string;
   validated?: boolean;
   httpStatus?: number;
+  provenance?: string;
 }) {
   // Token visual por variante — coherente con sistema (emerald/amber/blue/red/zinc)
   const styles: Record<SourceLinkVariant, string> = {
@@ -249,11 +262,12 @@ function SourceLink({
     danger: "bg-red-50 border-red-200 text-red-700 hover:bg-red-100",
   };
   const cls = styles[variant];
-  // Tooltip detallado: URL + estado HEAD validation
+  // Tooltip detallado: URL + estado HEAD validation + M18 provenance
   const tooltipParts = [url];
   if (validated === false) tooltipParts.push("⚠ URL no responde (HEAD)");
-  else if (validated === true) tooltipParts.push("✓ URL verificada");
+  else if (validated === true) tooltipParts.push("✓ URL verificada (HTTP 200)");
   if (httpStatus) tooltipParts.push(`HTTP ${httpStatus}`);
+  if (provenance) tooltipParts.push(provenance);
   return (
     <a
       href={url}
@@ -267,4 +281,33 @@ function SourceLink({
       {validated === false && <span aria-hidden className="text-[8px] opacity-70">!</span>}
     </a>
   );
+}
+
+/** M18: helper para construir tooltip de provenance + snippet + judge rationale */
+function buildProvenanceTooltip(c: AuditCitation): string | undefined {
+  const lines: string[] = [];
+  if (c.discovered_by) {
+    const discoveryLabels: Record<string, string> = {
+      brave_search: "🔎 Descubierta vía Brave Search (gov.co)",
+      internal_db: "💾 Cache BD interna",
+      pattern: "📐 URL canónica por patrón",
+      live_fetch: "🌐 Live fetch de fuente oficial",
+      manual: "✍ Seed manual validado",
+      llm_fallback: "🤖 LLM fallback",
+      verification_agent: "✓ Validada por agente",
+      smart_search: "🔎 SmartSearchTool",
+    };
+    lines.push(discoveryLabels[c.discovered_by] || `Origen: ${c.discovered_by}`);
+  }
+  if (c.snippet) {
+    const snipped = c.snippet.length > 180 ? c.snippet.slice(0, 180) + "…" : c.snippet;
+    lines.push(`📄 ${snipped}`);
+  }
+  if (c.judge_rationale) {
+    lines.push(`⚖ Judge: ${c.judge_rationale}`);
+  }
+  if (c.judge_retried) {
+    lines.push("(re-buscado por Judge)");
+  }
+  return lines.length > 0 ? lines.join("\n\n") : undefined;
 }
