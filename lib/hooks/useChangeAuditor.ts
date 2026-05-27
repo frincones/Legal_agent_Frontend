@@ -32,6 +32,15 @@ export interface AuditFinding {
   suggested_change: string;
 }
 
+export type AuditIntent =
+  | "rename"
+  | "redate"
+  | "remoney"
+  | "retext"
+  | "delete"
+  | "add"
+  | "unknown";
+
 export interface AuditResult {
   id: string; // local UUID para identificar este audit run
   documentId: string;
@@ -44,6 +53,9 @@ export interface AuditResult {
   loading: boolean;
   error?: string | null;
   dismissed?: boolean;
+  // M19.18 — intent detectado por el auditor (rename, redate, etc.)
+  intent?: AuditIntent;
+  intent_detail?: string;
 }
 
 const STORAGE_KEY = "lexai_auditor_enabled";
@@ -155,6 +167,8 @@ export function useChangeAuditor(documentId: string | null): UseChangeAuditorRes
                   coherence_score: data.coherence_score ?? 1.0,
                   summary: data.summary ?? "",
                   findings: Array.isArray(data.findings) ? data.findings : [],
+                  intent: data.intent as AuditIntent | undefined,
+                  intent_detail: data.intent_detail,
                 }
               : a
           )

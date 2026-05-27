@@ -235,10 +235,10 @@ export function IntegratedGenerationCanvas({ intent, templateId, brief, matterId
       }
       const reply: string = data.reply || "(sin respuesta)";
       const blocksChanged: number = data.blocks_changed || 0;
+      const actionsArr = (data.actions || []) as Array<{ kind?: string; question?: string; pending_context?: Record<string, unknown>; ok?: boolean; reason?: string }>;
       // M19.17.B — extraer clarify si el agente pidió aclaración
-      const clarifyAction = (data.actions || []).find(
-        (a: { kind?: string; question?: string; pending_context?: Record<string, unknown> }) =>
-          a.kind === "clarify" && a.question
+      const clarifyAction = actionsArr.find(
+        (a) => a.kind === "clarify" && a.question
       );
       const clarifyData = clarifyAction
         ? {
@@ -246,6 +246,21 @@ export function IntegratedGenerationCanvas({ intent, templateId, brief, matterId
             pending_context: (clarifyAction.pending_context || {}) as Record<string, unknown>,
           }
         : undefined;
+
+      // M19.18.G — detectar "no-op": el usuario pidió un cambio pero el LLM no
+      // aplicó ninguno y no pidió clarify. Mostrar mensaje guía.
+      const isNoOp =
+        blocksChanged === 0 &&
+        !clarifyData &&
+        actionsArr.length > 0 &&
+        actionsArr.every((a) => a.kind === "info_only" || a.ok === false);
+      const failedActions = actionsArr.filter((a) => a.ok === false);
+      const failedReasons = failedActions
+        .map((a) => a.reason)
+        .filter(Boolean)
+        .slice(0, 3)
+        .join(" · ");
+
       setMessages((prev) => [
         ...prev,
         {
@@ -254,7 +269,13 @@ export function IntegratedGenerationCanvas({ intent, templateId, brief, matterId
           content:
             (clarifyData ? `❓ ${clarifyData.question}\n\n` : "") +
             (clarifyData ? "" : reply) +
-            (blocksChanged > 0 ? `\n\n✓ ${blocksChanged} bloque(s) actualizado(s).` : ""),
+            (blocksChanged > 0 ? `\n\n✓ ${blocksChanged} bloque(s) actualizado(s).` : "") +
+            (isNoOp
+              ? `\n\n_ⓘ No pude aplicar cambios automáticos${failedReasons ? ` (${failedReasons})` : ""}. Puedes:_\n` +
+                `  • _Reformular tu pedido siendo más específico (ej. \"cambia 'X' por 'Y'\")_\n` +
+                `  • _Seleccionar el texto en el canvas y usar el popover_\n` +
+                `  • _Editar inline directamente en el canvas_`
+              : ""),
           ts: Date.now(),
           clarify: clarifyData,
         },
@@ -565,7 +586,7 @@ function ChatPanel({
           {auditPanelSlot}
         </div>
       )}
-      {/* Composer */}
+      {/* Composer — M19.18.F: textarea SIEMPRE activo, solo botón se deshabilita */}
       <div style={{
         padding: "10px 12px",
         borderTop: "1px solid var(--v2-border-default, #DDDBD3)",
@@ -579,28 +600,38 @@ function ChatPanel({
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                onSend();
+                if (!isRunning && !regenLoading && chatInput.trim()) onSend();
               }
             }}
             placeholder={
-              status === "completed"
-                ? 'Ej: "regenera la sección hechos"'
-                : "Espera a que termine la generación inicial…"
+              isRunning
+                ? "Escribe tu próximo mensaje (se enviará al terminar la generación)…"
+                : regenLoading
+                  ? "Procesando tu solicitud anterior… puedes escribir el siguiente mensaje"
+                  : status === "completed"
+                    ? "Pide cambios, haz preguntas o escribe lo que necesites del documento…"
+                    : "Escribe tu instrucción y presiona Enviar…"
             }
             rows={2}
-            disabled={isRunning || regenLoading}
-            className="flex-1 text-sm border border-zinc-300 rounded px-2 py-1.5 resize-none disabled:opacity-50 disabled:bg-zinc-50"
+            className="flex-1 text-sm border border-zinc-300 rounded px-2 py-1.5 resize-none focus:border-blue-400 outline-none"
           />
           <button
             onClick={onSend}
             disabled={!chatInput.trim() || isRunning || regenLoading}
             className="text-sm px-3 py-1.5 bg-zinc-900 text-white rounded hover:bg-zinc-800 disabled:opacity-40"
+            title={
+              isRunning
+                ? "Espera a que termine la generación"
+                : regenLoading
+                  ? "Procesando solicitud anterior…"
+                  : "Enviar mensaje al agente"
+            }
           >
-            Enviar
+            {regenLoading ? "…" : "Enviar"}
           </button>
         </div>
         <p className="text-[10px] text-zinc-400 mt-1">
-          Enter para enviar · Shift+Enter nueva línea
+          Enter para enviar · Shift+Enter nueva línea · El agente puede aplicar cambios, propagar a todo el documento o responder preguntas
         </p>
       </div>
     </div>

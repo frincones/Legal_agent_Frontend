@@ -14,7 +14,7 @@
  */
 
 import * as React from "react";
-import type { AuditFinding, AuditResult, AuditSeverity } from "@/lib/hooks/useChangeAuditor";
+import type { AuditFinding, AuditResult, AuditSeverity, AuditIntent } from "@/lib/hooks/useChangeAuditor";
 
 interface Props {
   audits: AuditResult[];
@@ -195,6 +195,10 @@ function AuditCard({
 
       {expanded && hasFindings && (
         <div className="border-t border-zinc-100 px-3 py-2 flex flex-col gap-2">
+          {/* M19.18.E — banner de intent + acciones globales */}
+          {audit.intent && audit.intent !== "unknown" && audit.intent_detail && (
+            <IntentBanner audit={audit} documentId={documentId} onDone={onDismiss} />
+          )}
           {audit.findings.map((f, idx) => (
             <FindingRow
               key={`${audit.id}_${idx}`}
@@ -203,8 +207,117 @@ function AuditCard({
               userInstructionBase={audit.user_instruction || "aplicar sugerencia del auditor"}
             />
           ))}
+          {/* M19.18.E — acciones de pie de card */}
+          <div className="flex items-center gap-2 pt-1 border-t border-zinc-100">
+            <button
+              type="button"
+              onClick={onDismiss}
+              className="text-[10.5px] text-zinc-500 hover:text-zinc-700 underline"
+            >
+              Ignorar todas las sugerencias
+            </button>
+            <span className="text-zinc-300 text-[10px]">·</span>
+            <span className="text-[10px] text-zinc-400 italic">
+              o escribe tu propio cambio en el chat
+            </span>
+          </div>
         </div>
       )}
+    </div>
+  );
+}
+
+const INTENT_LABEL: Record<AuditIntent, string> = {
+  rename: "renombrar",
+  redate: "cambiar fecha",
+  remoney: "cambiar monto",
+  retext: "redactar",
+  delete: "eliminar",
+  add: "agregar",
+  unknown: "",
+};
+
+function IntentBanner({
+  audit,
+  documentId,
+  onDone,
+}: {
+  audit: AuditResult;
+  documentId: string | null;
+  onDone: () => void;
+}) {
+  const [propagating, setPropagating] = React.useState(false);
+  const [done, setDone] = React.useState(false);
+  const [err, setErr] = React.useState<string | null>(null);
+  const intentLabel = INTENT_LABEL[audit.intent || "unknown"] || "";
+
+  const propagate = React.useCallback(async () => {
+    if (!documentId) return;
+    setPropagating(true);
+    setErr(null);
+    try {
+      // El auditor detectó la intención (ej. "rename de X a Y").
+      // Le pedimos al chat que ejecute propagate_change con esos datos.
+      const instr = audit.intent_detail
+        ? `Detecté: ${audit.intent_detail}. Aplica esta intención a TODO el documento usando "propagate_change". Solo emite esa acción.`
+        : `Propaga el cambio del bloque [${audit.edited_block_id}] a todo el documento.`;
+      const res = await fetch(
+        `/api/documents/v2/documents/${encodeURIComponent(documentId)}/chat`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ message: instr }),
+        }
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if ((data?.blocks_changed ?? 0) > 0) {
+        setDone(true);
+        window.dispatchEvent(
+          new CustomEvent("lexai:doc-changed", {
+            detail: {
+              documentId,
+              edited_block_id: audit.edited_block_id,
+              user_instruction: instr,
+              source: "auditor-propagate",
+            },
+          })
+        );
+        setTimeout(onDone, 800);
+      } else {
+        setErr(data?.reply || "No hubo cambios al propagar.");
+      }
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPropagating(false);
+    }
+  }, [documentId, audit, onDone]);
+
+  return (
+    <div className="bg-indigo-50 border border-indigo-200 rounded px-2.5 py-2 text-[11.5px] text-indigo-900 flex flex-col gap-1.5">
+      <div className="flex items-start gap-2">
+        <span aria-hidden>🎯</span>
+        <div className="flex-1">
+          <div className="font-medium">Intención detectada: {intentLabel}</div>
+          <div className="text-[11px] opacity-90 mt-0.5">{audit.intent_detail}</div>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={propagate}
+          disabled={propagating || done}
+          className={`text-[10.5px] px-2 py-0.5 rounded border ${
+            done
+              ? "bg-emerald-100 border-emerald-300 text-emerald-700"
+              : "bg-white border-indigo-300 hover:bg-indigo-50 text-indigo-700"
+          } disabled:opacity-50`}
+        >
+          {done ? "✓ propagado" : propagating ? "propagando…" : "✨ Propagar a todo el documento"}
+        </button>
+        {err && <span className="text-[10px] text-red-600">{err}</span>}
+      </div>
     </div>
   );
 }
@@ -220,49 +333,87 @@ function FindingRow({
 }) {
   const [applying, setApplying] = React.useState(false);
   const [applied, setApplied] = React.useState(false);
+  const [ignored, setIgnored] = React.useState(false);
+  const [editMode, setEditMode] = React.useState(false);
+  const [draft, setDraft] = React.useState(finding.suggested_change);
   const [err, setErr] = React.useState<string | null>(null);
   const style = SEVERITY_STYLE[finding.severity] || SEVERITY_STYLE.info;
   const dimLabel = DIMENSION_LABEL[finding.dimension] || finding.dimension;
 
-  const apply = React.useCallback(async () => {
-    if (!documentId) return;
-    setApplying(true);
-    setErr(null);
-    try {
-      // Llamar al chat endpoint con la sugerencia como instrucción.
-      // El LLM interpretará y aplicará el cambio sobre el block_id afectado.
-      const instr = `Aplica esta sugerencia del auditor al bloque [${finding.block_id}] (${dimLabel}): ${finding.suggested_change}`;
-      const res = await fetch(
-        `/api/documents/v2/documents/${encodeURIComponent(documentId)}/chat`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ message: instr }),
-        }
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      if ((data?.blocks_changed ?? 0) > 0) {
-        setApplied(true);
-        window.dispatchEvent(
-          new CustomEvent("lexai:doc-changed", {
-            detail: {
-              documentId,
-              edited_block_id: finding.block_id,
-              user_instruction: instr,
-              source: "auditor-apply",
-            },
-          })
+  const runInstruction = React.useCallback(
+    async (instr: string, src: string) => {
+      if (!documentId) return;
+      setApplying(true);
+      setErr(null);
+      try {
+        const res = await fetch(
+          `/api/documents/v2/documents/${encodeURIComponent(documentId)}/chat`,
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ message: instr }),
+          }
         );
-      } else {
-        setErr(data?.reply || "Sin cambios aplicados");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if ((data?.blocks_changed ?? 0) > 0) {
+          setApplied(true);
+          window.dispatchEvent(
+            new CustomEvent("lexai:doc-changed", {
+              detail: {
+                documentId,
+                edited_block_id: finding.block_id,
+                user_instruction: instr,
+                source: src,
+              },
+            })
+          );
+        } else {
+          setErr(data?.reply || "Sin cambios aplicados. Prueba con otra opción o escribe el cambio en el chat.");
+        }
+      } catch (e: unknown) {
+        setErr(e instanceof Error ? e.message : String(e));
+      } finally {
+        setApplying(false);
       }
-    } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : String(e));
-    } finally {
-      setApplying(false);
+    },
+    [documentId, finding]
+  );
+
+  const apply = React.useCallback(() => {
+    const instr = `Aplica esta sugerencia del auditor al bloque [${finding.block_id}] (${dimLabel}): ${finding.suggested_change}`;
+    return runInstruction(instr, "auditor-apply");
+  }, [finding, dimLabel, runInstruction]);
+
+  const applyEdited = React.useCallback(() => {
+    const trimmed = draft.trim();
+    if (!trimmed) {
+      setErr("Escribe el cambio que quieres aplicar.");
+      return;
     }
-  }, [documentId, finding, dimLabel]);
+    const instr = `Aplica este cambio al bloque [${finding.block_id}] (${dimLabel}): ${trimmed}`;
+    return runInstruction(instr, "auditor-apply-edited");
+  }, [draft, finding, dimLabel, runInstruction]);
+
+  const askAlternative = React.useCallback(() => {
+    const instr = `Esta sugerencia del auditor no me convence: "${finding.suggested_change}". Dame UNA alternativa diferente para resolver el mismo problema en el bloque [${finding.block_id}] (${dimLabel}: ${finding.issue}). Solo aplica la nueva alternativa, no la original.`;
+    return runInstruction(instr, "auditor-alt");
+  }, [finding, dimLabel, runInstruction]);
+
+  if (ignored) {
+    return (
+      <div className="text-[10.5px] text-zinc-400 italic px-2.5 py-1">
+        ✕ Sugerencia ignorada ({dimLabel})
+        <button
+          type="button"
+          className="ml-2 underline hover:text-zinc-700"
+          onClick={() => setIgnored(false)}
+        >
+          deshacer
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className={`border ${style.border} ${style.bg} rounded px-2.5 py-1.5 text-[11.5px] ${style.text}`}>
@@ -272,25 +423,81 @@ function FindingRow({
         <span className="text-[10px] opacity-60">· bloque {finding.block_id.slice(0, 14)}</span>
       </div>
       <div className="mb-1.5">{finding.issue}</div>
-      {finding.suggested_change && (
+
+      {!editMode && finding.suggested_change && (
         <div className="text-[11px] italic opacity-90 mb-1.5">
           Sugerencia: {finding.suggested_change}
         </div>
       )}
-      <div className="flex items-center gap-2">
+
+      {editMode && (
+        <div className="mb-1.5">
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={2}
+            disabled={applying}
+            className="w-full text-[11px] border border-zinc-300 rounded px-2 py-1 outline-none focus:border-blue-400 bg-white text-zinc-900"
+            placeholder="Edita la sugerencia antes de aplicar…"
+          />
+        </div>
+      )}
+
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {!editMode && (
+          <button
+            type="button"
+            onClick={apply}
+            disabled={applying || applied}
+            className={`text-[10.5px] px-2 py-0.5 rounded border transition ${
+              applied
+                ? "bg-emerald-100 border-emerald-300 text-emerald-700"
+                : "bg-white border-zinc-300 hover:bg-zinc-50"
+            } disabled:opacity-50`}
+          >
+            {applied ? "✓ aplicado" : applying ? "aplicando…" : "✨ Aplicar"}
+          </button>
+        )}
+        {editMode && (
+          <button
+            type="button"
+            onClick={applyEdited}
+            disabled={applying || applied || !draft.trim()}
+            className="text-[10.5px] px-2 py-0.5 rounded border bg-white border-zinc-300 hover:bg-zinc-50 disabled:opacity-50"
+          >
+            {applying ? "aplicando…" : "✓ Aplicar editado"}
+          </button>
+        )}
         <button
           type="button"
-          onClick={apply}
+          onClick={() => {
+            setEditMode((m) => !m);
+            setErr(null);
+          }}
           disabled={applying || applied}
-          className={`text-[10.5px] px-2 py-0.5 rounded border transition ${
-            applied
-              ? "bg-emerald-100 border-emerald-300 text-emerald-700"
-              : "bg-white border-zinc-300 hover:bg-zinc-50"
-          } disabled:opacity-50`}
+          className="text-[10.5px] px-2 py-0.5 rounded border bg-white border-zinc-300 hover:bg-zinc-50 disabled:opacity-50"
+          title="Modifica la sugerencia antes de aplicar"
         >
-          {applied ? "✓ aplicado" : applying ? "aplicando…" : "✨ Aplicar sugerencia"}
+          {editMode ? "← cancelar" : "✏ Editar"}
         </button>
-        {err && <span className="text-[10px] text-red-600">{err}</span>}
+        <button
+          type="button"
+          onClick={askAlternative}
+          disabled={applying || applied}
+          className="text-[10.5px] px-2 py-0.5 rounded border bg-white border-zinc-300 hover:bg-zinc-50 disabled:opacity-50"
+          title="Pide al agente una alternativa diferente"
+        >
+          🔄 Otra opción
+        </button>
+        <button
+          type="button"
+          onClick={() => setIgnored(true)}
+          disabled={applying || applied}
+          className="text-[10.5px] px-2 py-0.5 rounded text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
+        >
+          ignorar
+        </button>
+        {err && <span className="text-[10px] text-red-600 w-full">{err}</span>}
       </div>
     </div>
   );
