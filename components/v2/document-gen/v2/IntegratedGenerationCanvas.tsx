@@ -363,7 +363,13 @@ export function IntegratedGenerationCanvas({ intent, templateId, brief, matterId
           </div>
           {/* Tab content */}
           <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-            {rightTab === "canvas" && <ForensicCanvas blocks={state.blocks} status={state.status} />}
+            {rightTab === "canvas" && (
+              <ForensicCanvas
+                blocks={state.blocks}
+                status={state.status}
+                documentId={state.documentId}
+              />
+            )}
             {rightTab === "timeline" && (
               <GenerationTimeline
                 steps={state.timeline}

@@ -440,3 +440,14 @@
 .tippy-box[data-theme~='lexai'] > .tippy-content {
   padding: 0;
 }
+
+/* ───── M19.14.D · docx-preview viewer (canvas vista final) ───── */
+.docx-preview-host .docx-wrapper {
+  background: transparent;
+  padding: 16px 0 32px;
+}
+.docx-preview-host .docx-wrapper > section.docx {
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  margin: 12px auto;
+}
