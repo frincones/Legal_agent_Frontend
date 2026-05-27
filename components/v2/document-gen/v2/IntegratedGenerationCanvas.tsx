@@ -55,7 +55,18 @@ interface ChatMsg {
 }
 
 export function IntegratedGenerationCanvas({ intent, templateId, brief, matterId }: Props) {
-  const { state, generate, reset, abort } = useGenerationStreamV2();
+  const { state, generate, reset, abort, refreshBlocks } = useGenerationStreamV2();
+
+  // M19.16.F4 — refrescar bloques cuando hubo edit Harvey-style (chat o inline)
+  React.useEffect(() => {
+    const handler = (ev: Event) => {
+      const detail = (ev as CustomEvent).detail as { documentId?: string } | undefined;
+      const id = detail?.documentId || state.documentId;
+      if (id) refreshBlocks(id);
+    };
+    window.addEventListener("lexai:doc-changed", handler as EventListener);
+    return () => window.removeEventListener("lexai:doc-changed", handler as EventListener);
+  }, [state.documentId, refreshBlocks]);
 
   const [defaultLeft, setDefaultLeft] = React.useState<number>(DEFAULT_LEFT);
   const [rightTab, setRightTab] = React.useState<RightTab>("canvas");

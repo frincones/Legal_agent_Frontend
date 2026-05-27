@@ -25,7 +25,9 @@ type Action =
   | { type: "ERROR"; payload: string }
   | { type: "DONE"; payload: { generation_id: string; matter_document_id?: string | null; duration_seconds: number; cost_usd: number } }
   | { type: "AUDIT"; payload: any }
-  | { type: "THOUGHT"; payload: AgentThought };
+  | { type: "THOUGHT"; payload: AgentThought }
+  // M19.16.F4 — reemplazo completo del array de bloques tras edits Harvey-style
+  | { type: "REPLACE_BLOCKS"; payload: Block[] };
 
 const initialState: GenerationState = {
   generationId: null,
@@ -111,6 +113,12 @@ function reducer(state: GenerationState, action: Action): GenerationState {
         thoughts: [...state.thoughts, action.payload].slice(-200),
       };
 
+    case "REPLACE_BLOCKS": {
+      const newMap = new Map<string, Block>();
+      for (const b of action.payload) newMap.set(b.block_id, b);
+      return { ...state, blocks: action.payload, blocksByOrder: newMap };
+    }
+
     default:
       return state;
   }
@@ -171,6 +179,8 @@ export interface UseGenerationStreamV2Result {
   }) => Promise<void>;
   reset: () => void;
   abort: () => void;
+  // M19.16.F4 — recargar bloques desde BD (tras edits inline / chat actions)
+  refreshBlocks: (documentId: string) => Promise<void>;
 }
 
 export function useGenerationStreamV2(): UseGenerationStreamV2Result {
@@ -224,7 +234,27 @@ export function useGenerationStreamV2(): UseGenerationStreamV2Result {
     []
   );
 
-  return { state, generate, reset, abort };
+  // M19.16.F4 — refresca bloques desde el endpoint GET /blocks
+  const refreshBlocks = useCallback(async (documentId: string) => {
+    try {
+      const res = await fetch(
+        `/api/documents/v2/documents/${encodeURIComponent(documentId)}/blocks`
+      );
+      if (!res.ok) return;
+      const data = await res.json();
+      const rows: Array<{ block_id: string; block_type: string; block_data: any }> =
+        data?.blocks || [];
+      const blocks: Block[] = rows.map((r) => ({
+        block_id: r.block_id,
+        ...(r.block_data || {}),
+      })) as Block[];
+      dispatch({ type: "REPLACE_BLOCKS", payload: blocks });
+    } catch {
+      /* silent */
+    }
+  }, []);
+
+  return { state, generate, reset, abort, refreshBlocks };
 }
 
 // ============================================================

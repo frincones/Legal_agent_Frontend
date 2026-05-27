@@ -1,77 +1,87 @@
 "use client";
 
+/**
+ * M19.16.F3 — Canvas con flujo Harvey-style:
+ *   status === "running"   → BlockRenderer en streaming (read-only, "teatro" en vivo)
+ *   status === "completed" → EditableDocxCanvas (TipTap por bloque, click-to-edit)
+ *
+ * El botón "Vista final (DOCX)" sigue disponible como secondary action vía
+ * DocxPreviewCanvas (renderizado fiel del .docx). El usuario alterna entre
+ * Editor (default) y Vista final.
+ */
+
 import * as React from "react";
 import type { Block } from "@/lib/types/blocks";
 import { BlockRenderer } from "./BlockRenderer";
 import { DocxPreviewCanvas } from "./DocxPreviewCanvas";
+import { EditableDocxCanvas, type SelectionContext } from "./EditableDocxCanvas";
+import { SelectionAskBubble } from "./SelectionAskBubble";
 
 interface Props {
   blocks: Block[];
   status: "idle" | "running" | "completed" | "error";
   documentId?: string | null;
+  onSelectionAsk?: (selection: SelectionContext) => void;
 }
 
-type ViewMode = "stream" | "final";
+type ViewMode = "editor" | "preview";
 
-export function ForensicCanvas({ blocks, status, documentId }: Props) {
-  const [viewMode, setViewMode] = React.useState<ViewMode>("stream");
-  const autoSwitchedRef = React.useRef(false);
+export function ForensicCanvas({ blocks, status, documentId, onSelectionAsk }: Props) {
+  const [viewMode, setViewMode] = React.useState<ViewMode>("editor");
+  const [activeSelection, setActiveSelection] = React.useState<SelectionContext | null>(null);
 
-  // M19.14.D: al completar la generación, auto-switch a Vista final UNA sola vez
-  // (luego el usuario puede volver a Stream manualmente si quiere ver los bloques).
-  React.useEffect(() => {
-    if (status === "completed" && documentId && !autoSwitchedRef.current) {
-      autoSwitchedRef.current = true;
-      setViewMode("final");
-    }
-    if (status === "running") {
-      autoSwitchedRef.current = false;
-      setViewMode("stream");
-    }
-  }, [status, documentId]);
+  const handleSelection = React.useCallback(
+    (sel: SelectionContext) => {
+      setActiveSelection(sel);
+      onSelectionAsk?.(sel);
+    },
+    [onSelectionAsk]
+  );
 
-  const showToggle = Boolean(documentId) && status === "completed";
+  const completed = status === "completed" && Boolean(documentId);
 
   return (
     <div className="relative h-full overflow-hidden flex flex-col bg-white">
-      {showToggle && (
+      {/* Toolbar mini: solo visible cuando completado */}
+      {completed && (
         <div className="flex items-center justify-between border-b border-zinc-200 px-3 py-1.5 bg-zinc-50 flex-shrink-0">
           <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => setViewMode("stream")}
+              onClick={() => setViewMode("editor")}
               className={`px-3 py-1 text-xs rounded transition ${
-                viewMode === "stream"
+                viewMode === "editor"
                   ? "bg-white shadow-sm border border-zinc-200 font-medium text-zinc-900"
                   : "text-zinc-500 hover:text-zinc-700"
               }`}
-              title="Vista de bloques en vivo (como se generó)"
+              title="Edita inline cualquier párrafo. Cambios se guardan automáticamente."
             >
-              📝 Vista en vivo
+              ✏ Editor
             </button>
             <button
               type="button"
-              onClick={() => setViewMode("final")}
+              onClick={() => setViewMode("preview")}
               className={`px-3 py-1 text-xs rounded transition ${
-                viewMode === "final"
+                viewMode === "preview"
                   ? "bg-white shadow-sm border border-zinc-200 font-medium text-zinc-900"
                   : "text-zinc-500 hover:text-zinc-700"
               }`}
-              title="Vista del archivo .docx final (idéntico al que se descarga)"
+              title="Renderizado fiel del .docx final (read-only)"
             >
               📄 Vista final (DOCX)
             </button>
           </div>
           <span className="text-[10px] text-zinc-400">
-            {viewMode === "final" ? "Renderizado fiel del .docx" : "Vista aproximada"}
+            {viewMode === "editor"
+              ? "Edita inline · selecciona texto para pedir cambios a LexAI"
+              : "Idéntico al archivo descargable"}
           </span>
         </div>
       )}
 
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        {viewMode === "final" && documentId ? (
-          <DocxPreviewCanvas documentId={documentId} />
-        ) : (
+      <div className="flex-1 min-h-0 overflow-y-auto relative">
+        {/* Streaming: render aproximado de bloques que van llegando */}
+        {!completed && (
           <div
             className="mx-auto max-w-3xl my-6 px-12 py-10 bg-white shadow-md border border-zinc-200"
             style={{ minHeight: "calc(100vh - 8rem)" }}
@@ -79,7 +89,9 @@ export function ForensicCanvas({ blocks, status, documentId }: Props) {
             {blocks.length === 0 && status === "idle" && (
               <div className="text-center text-zinc-400 py-20">
                 <p className="text-lg">El documento aparecerá aquí</p>
-                <p className="text-sm mt-2">Escribe el intent y presiona Generar para empezar.</p>
+                <p className="text-sm mt-2">
+                  Escribe el intent y presiona Generar para empezar.
+                </p>
               </div>
             )}
             {blocks.length === 0 && status === "running" && (
@@ -97,6 +109,27 @@ export function ForensicCanvas({ blocks, status, documentId }: Props) {
               />
             )}
           </div>
+        )}
+
+        {/* Completado: editor inline o preview final */}
+        {completed && viewMode === "editor" && (
+          <EditableDocxCanvas
+            blocks={blocks}
+            documentId={documentId as string}
+            onSelectionAsk={handleSelection}
+          />
+        )}
+        {completed && viewMode === "preview" && (
+          <DocxPreviewCanvas documentId={documentId as string} />
+        )}
+
+        {/* Popover de selección — Harvey/ChatGPT-Canvas style */}
+        {completed && viewMode === "editor" && activeSelection && (
+          <SelectionAskBubble
+            selection={activeSelection}
+            documentId={documentId as string}
+            onDismiss={() => setActiveSelection(null)}
+          />
         )}
       </div>
     </div>
