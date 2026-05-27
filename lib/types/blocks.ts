@@ -175,7 +175,12 @@ export type SSEEventName =
   // M18.d: agent thought stream (Claude-style live narration)
   | "agent_thought"
   // M19.7: archivo final presentado con preview
-  | "presented_file";
+  | "presented_file"
+  // M19.20: Quality Loop Continuo
+  | "completeness_check_done"
+  | "coherence_check_done"
+  | "quality_report"
+  | "autoloop_iteration";
 
 // M18.d + M19.5 + M19.7: Agent thought (narración en vivo del agente, estilo Claude)
 export type AgentThoughtKind =
@@ -269,6 +274,36 @@ export interface TimelineStep {
   details?: any;
 }
 
+// M19.20.D — Quality Report (combinación de completeness + coherence + qa + citations)
+export interface QualityScores {
+  completeness: number;
+  coherence: number;
+  qa_rules: number;
+  citation_existence: number;
+}
+
+export interface QualityIssue {
+  source: "completeness" | "coherence" | "qa" | "citations";
+  issue: string;
+  severity: "critical" | "warning" | "info";
+  suggested_fix?: string | null;
+}
+
+export interface QualityReport {
+  doc_type: string;
+  ready_for_signature: boolean;
+  overall_score: number;
+  blocking_issues_count: number;
+  scores: QualityScores;
+  completeness?: any;
+  coherence?: any;
+  qa?: any;
+  citation_existence_rate: number;
+  blocking_issues: QualityIssue[];
+  advisory_issues: QualityIssue[];
+  summary: string;
+}
+
 export interface GenerationState {
   generationId: string | null;
   documentId: string | null;
@@ -289,4 +324,6 @@ export interface GenerationState {
   lastEditAt: number | null;
   // M19.17.D — flag mientras hay edit en vuelo (refresh pendiente)
   isSyncing: boolean;
+  // M19.20 — Quality Report del último análisis
+  qualityReport: QualityReport | null;
 }

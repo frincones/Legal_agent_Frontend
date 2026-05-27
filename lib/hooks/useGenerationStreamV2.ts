@@ -6,6 +6,7 @@ import type {
   Block,
   GenerationState,
   MetaPayload,
+  QualityReport,
   SectionPlanItem,
   SSEEventName,
   TimelineStep,
@@ -30,7 +31,9 @@ type Action =
   | { type: "REPLACE_BLOCKS"; payload: Block[] }
   // M19.17.D — flag de sincronización en vuelo (start/end)
   | { type: "SYNC_START" }
-  | { type: "SYNC_END" };
+  | { type: "SYNC_END" }
+  // M19.20 — quality report
+  | { type: "QUALITY_REPORT"; payload: QualityReport };
 
 const initialState: GenerationState = {
   generationId: null,
@@ -49,6 +52,7 @@ const initialState: GenerationState = {
   thoughts: [],
   lastEditAt: null,
   isSyncing: false,
+  qualityReport: null,
 };
 
 function reducer(state: GenerationState, action: Action): GenerationState {
@@ -134,6 +138,9 @@ function reducer(state: GenerationState, action: Action): GenerationState {
 
     case "SYNC_END":
       return { ...state, isSyncing: false };
+
+    case "QUALITY_REPORT":
+      return { ...state, qualityReport: action.payload };
 
     default:
       return state;
@@ -417,6 +424,17 @@ function handleEvent(event: SSEEventName, data: any, dispatch: React.Dispatch<Ac
 
     case "audit_report":
       dispatch({ type: "AUDIT", payload: data });
+      break;
+
+    // M19.20 — Quality Loop Continuo
+    case "quality_report":
+      dispatch({ type: "QUALITY_REPORT", payload: data as QualityReport });
+      break;
+
+    case "completeness_check_done":
+    case "coherence_check_done":
+    case "autoloop_iteration":
+      // por ahora solo log; el report final viene en "quality_report"
       break;
 
     case "done":

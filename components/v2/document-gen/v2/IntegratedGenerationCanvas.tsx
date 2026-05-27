@@ -29,6 +29,7 @@ import { useGenerationStreamV2 } from "@/lib/hooks/useGenerationStreamV2";
 import { ForensicCanvas } from "./ForensicCanvas";
 import { GenerationTimeline } from "./GenerationTimeline";
 import { AuditPanel } from "./AuditPanel";
+import { QualityCertification } from "./QualityCertification";
 import { AssistantNarrativeMessage } from "@/components/assistant/AssistantNarrativeMessage";
 import { useAssistantMessagesFromThoughts } from "@/lib/hooks/useAssistantMessagesFromThoughts";
 import { useChangeAuditor } from "@/lib/hooks/useChangeAuditor";
@@ -484,8 +485,16 @@ export function IntegratedGenerationCanvas({ intent, templateId, brief, matterId
               />
             )}
             {rightTab === "audit" && (
-              <div className="max-w-3xl mx-auto p-4">
-                <AuditPanel audit={state.audit as any} />
+              <div className="max-w-3xl mx-auto p-4 space-y-6">
+                {/* M19.20.F — QualityCertification arriba (gate ready_for_signature) */}
+                <QualityCertification report={state.qualityReport} />
+                {/* Audit clásico (citation_existence_rate, derogation, etc.) abajo */}
+                <div className="border-t border-zinc-200 pt-4">
+                  <div className="text-[11px] font-medium text-zinc-400 uppercase mb-2">
+                    Métricas de verificación
+                  </div>
+                  <AuditPanel audit={state.audit as any} />
+                </div>
               </div>
             )}
           </div>
