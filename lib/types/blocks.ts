@@ -223,7 +223,10 @@ export interface AssistantNarrativeMessage {
 
 export type AssistantSegment =
   | { type: "paragraph"; id: string; markdown: string; timestamp: number }
-  | { type: "tool"; id: string; tool: ToolCallDetail; timestamp: number };
+  | { type: "tool"; id: string; tool: ToolCallDetail; timestamp: number }
+  // M19.9: grupo de ≥2 tools consecutivos. Renderiza como línea colapsable
+  // estilo Claude ("Usó N herramientas ›") en lugar de N chips visibles.
+  | { type: "tool_group"; id: string; tools: ToolCallDetail[]; timestamp: number };
 
 export interface SectionPlanItem {
   key: string;

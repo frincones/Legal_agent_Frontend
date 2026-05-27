@@ -1,32 +1,25 @@
 "use client";
 
 /**
- * Sprint M19.6 · useAssistantMessagesFromThoughts (refactor)
+ * Sprint M19.6 + M19.9 · useAssistantMessagesFromThoughts
  *
  * Convierte AgentThought[] en una lista de AssistantNarrativeMessage[]
  * estilo Claude: CADA PARAGRAPH genera UN MENSAJE separado en el thread,
  * y los tool calls que vienen DESPUÉS de ese paragraph y ANTES del siguiente
  * paragraph se asocian a ese mensaje.
  *
- * Regla M19.6 (cambio vs M19.5):
- *   - Antes: agrupábamos TODOS los thoughts por threadId en 1 mensaje grande.
- *   - Ahora: cada paragraph crea un nuevo mensaje. Los tool calls siguientes
- *     hasta el próximo paragraph se asocian a ese mensaje. Si llegan tool
- *     calls SIN paragraph previo, crean un mensaje "implícito" con segments
- *     solo de tools.
+ * M19.9: tools consecutivos (≥2) sin paragraph entre ellos se AGRUPAN
+ * en un segment `tool_group` que el frontend renderiza colapsado como
+ * "Usó N herramientas ›" estilo Claude.ai (NO N chips sueltos).
  *
- * Esto produce el feel Claude: prosa → tools → prosa → tools → prosa, donde
- * cada prosa es un mensaje del agente separado, no un blob.
- *
- * Reglas de kind:
+ * Reglas:
  *   - kind="narration"   → cierra mensaje actual, abre nuevo paragraph
- *   - kind="tool_call"   → agrega al mensaje activo (merge por toolId)
- *   - kind="correction"  → paragraph con prefijo "💡 Sugerencia: ..."
- *   - kind="warning"     → paragraph con prefijo "⚖ ..."
- *   - kind="success"     → paragraph (sin prefijo)
- *   - kind="info"        → paragraph (legacy)
- *   - kind="error"       → paragraph con prefijo "⚠ ..."
- *   - kind="presented_file" → segment especial con metadata DOCX (M19.7)
+ *   - kind="tool_call"   → buffer de tools del mensaje activo (merge por toolId)
+ *                          al cerrar mensaje o llegar paragraph nuevo:
+ *                            si ≥2 tools → segment "tool_group"
+ *                            si 1 tool   → segment "tool" individual
+ *   - kind="presented_file" → segment especial PresentedFileChip
+ *   - kind="correction|warning|success|info|error" → paragraph con prefijo
  */
 
 import { useMemo } from "react";
@@ -55,10 +48,38 @@ function buildMessages(
 
   const messages: AssistantNarrativeMessage[] = [];
   let currentMsg: AssistantNarrativeMessage | null = null;
+  // Buffer de tools consecutivos del mensaje activo (M19.9)
+  // Se flushea cuando llega paragraph o termina el mensaje.
+  let toolBuffer: ToolCallDetail[] = [];
   const toolById = new Map<string, ToolCallDetail>();
+
+  const flushTools = () => {
+    if (toolBuffer.length === 0 || !currentMsg) return;
+    if (toolBuffer.length >= 2) {
+      // M19.9: ≥2 tools consecutivos → tool_group
+      const first = toolBuffer[0]!;
+      currentMsg.segments.push({
+        type: "tool_group",
+        id: `tg-${currentMsg.id}-${currentMsg.segments.length}`,
+        tools: [...toolBuffer],
+        timestamp: first.startedAt,
+      });
+    } else {
+      // 1 sólo tool → segment individual
+      const only = toolBuffer[0]!;
+      currentMsg.segments.push({
+        type: "tool",
+        id: `t-${only.id}`,
+        tool: only,
+        timestamp: only.startedAt,
+      });
+    }
+    toolBuffer = [];
+  };
 
   const closeCurrent = () => {
     if (currentMsg) {
+      flushTools();
       currentMsg.finishedAt = currentMsg.segments[currentMsg.segments.length - 1]?.timestamp ?? currentMsg.startedAt;
       currentMsg.isStreaming = false;
       messages.push(currentMsg);
@@ -90,7 +111,7 @@ function buildMessages(
       t.kind === "error";
 
     if (isParagraphKind && t.message) {
-      // Nuevo paragraph: cierra mensaje anterior, abre uno nuevo
+      // Antes de cerrar el mensaje viejo, flush los tools pendientes
       closeCurrent();
       const msg = ensureMsg(t.timestamp);
       msg.segments.push({
@@ -103,15 +124,14 @@ function buildMessages(
     }
 
     if (t.kind === "tool_call") {
-      // Tool calls van al mensaje activo. Si no hay, crea uno "implícito".
-      const msg = ensureMsg(t.timestamp);
+      ensureMsg(t.timestamp);
       const toolId = t.toolId || t.id;
       const existing = toolById.get(toolId);
       const isError = t.toolError != null;
       const isDone = t.toolResponse !== undefined && t.toolResponse !== null;
 
       if (existing) {
-        // Update tool existente (running → done/error). Mismo segmento, mutable.
+        // Update tool existente in-place (running → done/error). Mismo objeto, mutable.
         existing.status = isError ? "error" : isDone ? "done" : "running";
         if (t.toolRequest !== undefined && t.toolRequest !== null) existing.request = t.toolRequest;
         if (t.toolResponse !== undefined && t.toolResponse !== null) existing.response = t.toolResponse;
@@ -129,18 +149,17 @@ function buildMessages(
           startedAt: t.timestamp,
         };
         toolById.set(toolId, detail);
-        msg.segments.push({
-          type: "tool",
-          id: `tool-${toolId}`,
-          tool: detail,
-          timestamp: t.timestamp,
-        });
+        // M19.9: buffer en lugar de push directo. Flush ocurre al cerrar mensaje
+        // o al llegar paragraph.
+        toolBuffer.push(detail);
       }
       continue;
     }
 
-    // M19.7: presented_file kind (DOCX listo). Segment especial.
+    // M19.7: presented_file kind (DOCX listo). Segment especial, NO se agrupa.
     if ((t.kind as any) === "presented_file") {
+      // Flush tools pendientes antes para mantener orden temporal
+      flushTools();
       const msg = ensureMsg(t.timestamp);
       msg.segments.push({
         type: "tool",
@@ -163,8 +182,9 @@ function buildMessages(
     }
   }
 
-  // Cerrar último mensaje
+  // Flush último buffer + cerrar último mensaje
   if (currentMsg) {
+    flushTools();
     (currentMsg as AssistantNarrativeMessage).isStreaming = isStreaming;
     (currentMsg as AssistantNarrativeMessage).finishedAt = isStreaming ? null : Date.now();
     messages.push(currentMsg);

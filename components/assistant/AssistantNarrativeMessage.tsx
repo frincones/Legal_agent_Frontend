@@ -14,6 +14,7 @@
 import * as React from "react";
 import { MarkdownContent } from "@/components/assistant/MarkdownContent";
 import { ToolCallChip } from "@/components/assistant/ToolCallChip";
+import { ToolGroupChip } from "@/components/assistant/ToolGroupChip";
 import { PresentedFileChip } from "@/components/assistant/PresentedFileChip";
 import type { AssistantNarrativeMessage as Msg } from "@/lib/types/blocks";
 
@@ -35,7 +36,7 @@ export function AssistantNarrativeMessage({ message, className = "" }: Props) {
         padding: "10px 0",
       }}
     >
-      {message.segments.map((seg, idx) => {
+      {message.segments.map((seg) => {
         if (seg.type === "paragraph") {
           return (
             <div key={seg.id} className="assistant-paragraph" style={{ marginBottom: 8 }}>
@@ -43,6 +44,22 @@ export function AssistantNarrativeMessage({ message, className = "" }: Props) {
             </div>
           );
         }
+        // M19.9: tool_group → línea colapsable estilo Claude
+        if (seg.type === "tool_group") {
+          return (
+            <div
+              key={seg.id}
+              style={{
+                marginTop: 2,
+                marginBottom: 4,
+                fontFamily: "system-ui, -apple-system, sans-serif",
+              }}
+            >
+              <ToolGroupChip tools={seg.tools} />
+            </div>
+          );
+        }
+        // seg.type === "tool" (individual)
         // M19.7: PresentedFileChip especial para archivos .docx
         if (seg.tool.name === "presented_file") {
           return (
@@ -57,7 +74,7 @@ export function AssistantNarrativeMessage({ message, className = "" }: Props) {
             </div>
           );
         }
-        // Tool call regular - chip compacto en línea propia
+        // Tool call regular individual (poco común tras M19.9: la mayoría se agrupa)
         return (
           <div
             key={seg.id}
