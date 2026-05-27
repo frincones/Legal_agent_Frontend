@@ -1,9 +1,26 @@
 /* LexAI · Design tokens ported from Legal/styles/tokens.css
    RGB triplets so Tailwind can apply alpha via /<value> syntax. */
 
+/* M19.5 · Source Serif Pro para mensajes narrativos del agente (estilo Claude) */
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+Pro:ital,wght@0,400;0,600;1,400&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* M19.5 · Animaciones para Radix Accordion (ToolCallChip) */
+@layer utilities {
+  @keyframes slide-down {
+    from { height: 0; opacity: 0; }
+    to { height: var(--radix-accordion-content-height); opacity: 1; }
+  }
+  @keyframes slide-up {
+    from { height: var(--radix-accordion-content-height); opacity: 1; }
+    to { height: 0; opacity: 0; }
+  }
+  .animate-slide-down { animation: slide-down 0.18s ease-out; }
+  .animate-slide-up { animation: slide-up 0.15s ease-out; }
+}
 
 @layer base {
   :root {

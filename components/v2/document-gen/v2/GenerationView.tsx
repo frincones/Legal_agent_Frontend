@@ -4,7 +4,8 @@ import * as React from "react";
 import { useGenerationStreamV2 } from "@/lib/hooks/useGenerationStreamV2";
 import { ForensicCanvas } from "./ForensicCanvas";
 import { GenerationTimeline } from "./GenerationTimeline";
-import { AgentThoughtStream } from "./AgentThoughtStream";
+import { AssistantNarrativeMessage } from "@/components/assistant/AssistantNarrativeMessage";
+import { useAssistantMessagesFromThoughts } from "@/lib/hooks/useAssistantMessagesFromThoughts";
 import { TemplateSelector, TemplateListItem } from "./TemplateSelector";
 import { TemplatePreview, TemplatePreviewData } from "./TemplatePreview";
 import { AuditPanel } from "./AuditPanel";
@@ -139,15 +140,11 @@ export function GenerationView() {
             collapsed={state.status === "completed"}
           />
           <div className="overflow-y-auto">
-            {/* M18.d: stream de pensamientos del agente (estilo Claude) */}
-            {(state.thoughts.length > 0 || state.status === "running") && (
-              <div className="mx-auto max-w-3xl mt-3 mb-2 px-4">
-                <AgentThoughtStream
-                  thoughts={state.thoughts}
-                  status={state.status}
-                />
-              </div>
-            )}
+            {/* M19.5: Mensajes del agente estilo Claude (prosa + tool chips) */}
+            <GenerationViewAssistantMessages
+              thoughts={state.thoughts}
+              status={state.status}
+            />
             <ForensicCanvas blocks={state.blocks} status={state.status} />
             {state.status === "completed" && state.audit && (
               <div className="mx-auto max-w-3xl my-4 px-4">
@@ -157,6 +154,24 @@ export function GenerationView() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function GenerationViewAssistantMessages({
+  thoughts,
+  status,
+}: {
+  thoughts: import("@/lib/types/blocks").AgentThought[];
+  status: string;
+}) {
+  const messages = useAssistantMessagesFromThoughts(thoughts, status);
+  if (messages.length === 0) return null;
+  return (
+    <div className="mx-auto max-w-3xl mt-3 mb-2 px-4">
+      {messages.map((m) => (
+        <AssistantNarrativeMessage key={m.id} message={m} />
+      ))}
     </div>
   );
 }

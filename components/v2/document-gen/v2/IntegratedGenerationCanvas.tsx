@@ -29,7 +29,8 @@ import { useGenerationStreamV2 } from "@/lib/hooks/useGenerationStreamV2";
 import { ForensicCanvas } from "./ForensicCanvas";
 import { GenerationTimeline } from "./GenerationTimeline";
 import { AuditPanel } from "./AuditPanel";
-import { AgentThoughtStream } from "./AgentThoughtStream";
+import { AssistantNarrativeMessage } from "@/components/assistant/AssistantNarrativeMessage";
+import { useAssistantMessagesFromThoughts } from "@/lib/hooks/useAssistantMessagesFromThoughts";
 import type { AgentThought } from "@/lib/types/blocks";
 
 const LS_KEY = "lexai-v2-integrated-split";
@@ -321,6 +322,7 @@ export function IntegratedGenerationCanvas({ intent, templateId, brief, matterId
           regenLoading={regenLoading}
           status={state.status}
           thoughts={state.thoughts}
+          generationStatus={state.status}
         />
       </Panel>
       <PanelResizeHandle style={{ width: 4, cursor: "col-resize", backgroundColor: "var(--v2-border-default, #DDDBD3)", flexShrink: 0 }} />
@@ -400,7 +402,7 @@ function TabButton({ active, onClick, label, disabled }: { active: boolean; onCl
 }
 
 function ChatPanel({
-  messages, chatInput, setChatInput, onSend, isRunning, regenLoading, status, thoughts,
+  messages, chatInput, setChatInput, onSend, isRunning, regenLoading, status, thoughts, generationStatus,
 }: {
   messages: ChatMsg[];
   chatInput: string;
@@ -410,8 +412,11 @@ function ChatPanel({
   regenLoading: boolean;
   status: string;
   thoughts: AgentThought[];
+  generationStatus: string;
 }) {
   const scrollRef = React.useRef<HTMLDivElement>(null);
+  // M19.5: convertir thoughts → assistant messages estilo Claude
+  const assistantMessages = useAssistantMessagesFromThoughts(thoughts, generationStatus);
   React.useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages.length, thoughts.length]);
@@ -443,19 +448,14 @@ function ChatPanel({
         )}
       </div>
       {/* Thread */}
-      <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "12px" }}>
+      <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "16px" }}>
         {messages.map((m) => (
           <MessageRow key={m.id} msg={m} />
         ))}
-        {/* M18.d: Stream de pensamientos del agente (estilo Claude) */}
-        {(thoughts.length > 0 || isRunning) && (
-          <div style={{ marginTop: 8 }}>
-            <AgentThoughtStream
-              thoughts={thoughts}
-              status={(status as any) === "idle" ? "idle" : (status as any)}
-            />
-          </div>
-        )}
+        {/* M19.5: Mensajes del agente estilo Claude (prosa + tool chips) */}
+        {assistantMessages.map((am) => (
+          <AssistantNarrativeMessage key={am.id} message={am} />
+        ))}
       </div>
       {/* Composer */}
       <div style={{

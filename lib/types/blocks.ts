@@ -167,18 +167,19 @@ export type SSEEventName =
   // M18.d: agent thought stream (Claude-style live narration)
   | "agent_thought";
 
-// M18.d: Agent thought (narración en vivo del agente)
+// M18.d + M19.5: Agent thought (narración en vivo del agente, estilo Claude)
 export type AgentThoughtKind =
-  | "info"            // pensamiento genérico
-  | "tool_call"       // invocando una herramienta
-  | "tool_result"     // resultado de herramienta
-  | "correction"      // sugerencia de corrección (Judge detectó cita incorrecta)
+  | "narration"       // párrafo de prosa (markdown) del agente
+  | "tool_call"       // invocando una herramienta (con request/response)
+  | "tool_result"     // legacy: resultado de tool (prefer tool_call con response)
+  | "correction"      // sugerencia de corrección legal
   | "warning"         // nota legal importante
   | "success"         // hito completado
+  | "info"            // legacy: log genérico
   | "error";          // algo falló
 
 export interface AgentThought {
-  id: string;            // timestamp + random
+  id: string;                // timestamp + random
   kind: AgentThoughtKind;
   message: string;
   tool?: string | null;
@@ -186,7 +187,40 @@ export interface AgentThought {
   url?: string | null;
   suggestion?: string | null;
   timestamp: number;
+  // M19.5: capacidades estilo Claude
+  toolId?: string | null;            // id único para correlar request/response
+  toolRequest?: any;                  // JSON args al tool
+  toolResponse?: any;                 // JSON respuesta del tool
+  toolError?: string | null;
+  toolDurationMs?: number | null;
+  threadId?: string | null;           // agrupa thoughts en un solo mensaje del agente
 }
+
+// M19.5: detalle de un tool call para renderizar en ToolCallChip
+export interface ToolCallDetail {
+  id: string;
+  name: string;                       // 'brave_search', 'judge', 'preflight_check', etc.
+  status: "running" | "done" | "error";
+  request?: any;
+  response?: any;
+  error?: string | null;
+  durationMs?: number | null;
+  startedAt: number;
+}
+
+// M19.5: mensaje compuesto del asistente (prosa + tools intercalados)
+export interface AssistantNarrativeMessage {
+  id: string;                         // = threadId del backend
+  role: "assistant";
+  segments: AssistantSegment[];       // ordenados temporalmente
+  startedAt: number;
+  finishedAt?: number | null;
+  isStreaming: boolean;
+}
+
+export type AssistantSegment =
+  | { type: "paragraph"; id: string; markdown: string; timestamp: number }
+  | { type: "tool"; id: string; tool: ToolCallDetail; timestamp: number };
 
 export interface SectionPlanItem {
   key: string;

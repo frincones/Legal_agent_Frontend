@@ -379,7 +379,7 @@ function handleEvent(event: SSEEventName, data: any, dispatch: React.Dispatch<Ac
       break;
 
     case "agent_thought":
-      // M18.d: live narration estilo Claude
+      // M18.d + M19.5: live narration estilo Claude
       dispatch({
         type: "THOUGHT",
         payload: {
@@ -391,6 +391,13 @@ function handleEvent(event: SSEEventName, data: any, dispatch: React.Dispatch<Ac
           url: data.url || null,
           suggestion: data.suggestion || null,
           timestamp: Date.now(),
+          // M19.5 fields
+          toolId: data.tool_id || null,
+          toolRequest: data.tool_request ?? undefined,
+          toolResponse: data.tool_response ?? undefined,
+          toolError: data.tool_error || null,
+          toolDurationMs: data.tool_duration_ms ?? null,
+          threadId: data.thread_id || null,
         },
       });
       break;
