@@ -96,30 +96,86 @@ function PretensionView({ block }: { block: Extract<Block, { type: "pretension" 
 }
 
 function NormaCitadaView({ block }: { block: Extract<Block, { type: "norma_citada" }> }) {
-  return (
+  // M19.12.C2: si hay fuente_url, envuelve en hyperlink azul/underline
+  const url = block.fuente_url || block.fuente_ref || undefined;
+  const urlVigente = (block as any).fuente_url_vigente as string | undefined;
+  const tooltip = [
+    block.contenido?.map(r => r.text).join("") || block.norma,
+    url ? `Fuente: ${url}` : null,
+    block.derogada && urlVigente ? `Vigente: ${urlVigente}` : null,
+  ].filter(Boolean).join("\n");
+
+  const inner = (
     <span
       className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium
         ${block.derogada
-          ? "bg-red-50 text-red-800 line-through"
+          ? "bg-amber-50 text-amber-800 border border-amber-200"
           : block.verified
-            ? "bg-emerald-50 text-emerald-800"
+            ? "bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
             : "bg-zinc-100 text-zinc-700"
         }`}
-      title={block.contenido?.map(r => r.text).join("") || block.norma}
     >
       {block.verified && !block.derogada && <span aria-hidden>✓</span>}
-      {block.derogada && <span aria-hidden>✗</span>}
-      {block.norma}
+      {block.derogada && <span aria-hidden>⚠</span>}
+      <span className={url ? "underline decoration-dotted underline-offset-2" : ""}>{block.norma}</span>
+    </span>
+  );
+
+  return (
+    <span className="inline-flex items-center gap-1" title={tooltip}>
+      {url ? (
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="no-underline"
+          aria-label={`Ver ${block.norma} en fuente oficial`}
+        >
+          {inner}
+        </a>
+      ) : (
+        inner
+      )}
+      {block.derogada && urlVigente && (
+        <a
+          href={urlVigente}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[10px] text-blue-700 hover:text-blue-900 underline"
+          aria-label="Ver norma vigente"
+          title={urlVigente}
+        >
+          ↗ vigente
+        </a>
+      )}
     </span>
   );
 }
 
 function JurisprudenciaView({ block }: { block: Extract<Block, { type: "jurisprudencia" }> }) {
+  // M19.12.C2: si hay fuente_url, ID de sentencia es hyperlink azul subrayado
+  const url = block.fuente_url || undefined;
+  const idElement = url ? (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="font-bold text-blue-700 hover:text-blue-900 underline decoration-blue-400 underline-offset-2"
+      title={url}
+    >
+      {block.id}
+    </a>
+  ) : (
+    <span className="font-bold">{block.id}</span>
+  );
+
   return (
     <div className="my-3 p-3 border-l-4 border-indigo-300 bg-indigo-50/50 rounded-r-md font-serif text-sm">
-      <div className="flex items-center gap-2 text-xs text-indigo-900 mb-1">
-        {block.verified && <span className="bg-emerald-200 text-emerald-900 px-1.5 py-0.5 rounded text-[10px]">✓ verificada</span>}
-        <span className="font-bold">{block.id}</span>
+      <div className="flex items-center gap-2 text-xs text-indigo-900 mb-1 flex-wrap">
+        {block.verified && (
+          <span className="bg-emerald-200 text-emerald-900 px-1.5 py-0.5 rounded text-[10px]">✓ verificada</span>
+        )}
+        {idElement}
         <span>·</span>
         <span>M.P. {block.mp}</span>
         <span>·</span>
@@ -130,7 +186,7 @@ function JurisprudenciaView({ block }: { block: Extract<Block, { type: "jurispru
       </div>
       {block.ratio && block.ratio.length > 0 && (
         <p className="italic text-zinc-700 leading-relaxed">
-          “<Runs runs={block.ratio} />”
+          "<Runs runs={block.ratio} />"
         </p>
       )}
     </div>

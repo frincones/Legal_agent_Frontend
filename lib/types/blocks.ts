@@ -60,6 +60,11 @@ export interface NormaCitadaBlock extends BaseBlock {
   verified?: boolean;
   derogada?: boolean;
   fuente_ref?: string | null;
+  // M19.10.A7: URLs canónicas verificadas (para hyperlinks en canvas y DOCX)
+  fuente_url?: string | null;
+  fuente_url_vigente?: string | null;
+  discovered_by?: string | null;
+  titulo_oficial?: string | null;
 }
 
 export interface JurisprudenciaBlock extends BaseBlock {
@@ -72,6 +77,9 @@ export interface JurisprudenciaBlock extends BaseBlock {
   chunk_id?: string | null;
   verified?: boolean;
   sim_score?: number | null;
+  // M19.10.A3: URL canónica para hyperlink azul/underline en canvas y DOCX
+  fuente_url?: string | null;
+  discovered_by?: string | null;
 }
 
 export interface SilogismoBlock extends BaseBlock {
