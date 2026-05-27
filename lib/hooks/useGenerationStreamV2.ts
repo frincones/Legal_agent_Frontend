@@ -27,7 +27,10 @@ type Action =
   | { type: "AUDIT"; payload: any }
   | { type: "THOUGHT"; payload: AgentThought }
   // M19.16.F4 — reemplazo completo del array de bloques tras edits Harvey-style
-  | { type: "REPLACE_BLOCKS"; payload: Block[] };
+  | { type: "REPLACE_BLOCKS"; payload: Block[] }
+  // M19.17.D — flag de sincronización en vuelo (start/end)
+  | { type: "SYNC_START" }
+  | { type: "SYNC_END" };
 
 const initialState: GenerationState = {
   generationId: null,
@@ -44,6 +47,8 @@ const initialState: GenerationState = {
   audit: null,
   error: null,
   thoughts: [],
+  lastEditAt: null,
+  isSyncing: false,
 };
 
 function reducer(state: GenerationState, action: Action): GenerationState {
@@ -116,8 +121,19 @@ function reducer(state: GenerationState, action: Action): GenerationState {
     case "REPLACE_BLOCKS": {
       const newMap = new Map<string, Block>();
       for (const b of action.payload) newMap.set(b.block_id, b);
-      return { ...state, blocks: action.payload, blocksByOrder: newMap };
+      return {
+        ...state,
+        blocks: action.payload,
+        blocksByOrder: newMap,
+        lastEditAt: Date.now(),
+      };
     }
+
+    case "SYNC_START":
+      return { ...state, isSyncing: true };
+
+    case "SYNC_END":
+      return { ...state, isSyncing: false };
 
     default:
       return state;
@@ -234,8 +250,9 @@ export function useGenerationStreamV2(): UseGenerationStreamV2Result {
     []
   );
 
-  // M19.16.F4 — refresca bloques desde el endpoint GET /blocks
+  // M19.16.F4 + M19.17.D — refresca bloques desde el endpoint GET /blocks
   const refreshBlocks = useCallback(async (documentId: string) => {
+    dispatch({ type: "SYNC_START" });
     try {
       const res = await fetch(
         `/api/documents/v2/documents/${encodeURIComponent(documentId)}/blocks`
@@ -251,6 +268,8 @@ export function useGenerationStreamV2(): UseGenerationStreamV2Result {
       dispatch({ type: "REPLACE_BLOCKS", payload: blocks });
     } catch {
       /* silent */
+    } finally {
+      dispatch({ type: "SYNC_END" });
     }
   }, []);
 

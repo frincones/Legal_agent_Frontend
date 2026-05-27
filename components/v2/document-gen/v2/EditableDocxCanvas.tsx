@@ -29,6 +29,12 @@ interface Props {
   blocks: Block[];
   documentId: string;
   onSelectionAsk?: (selection: SelectionContext) => void;
+  /**
+   * M19.17.D — timestamp del último REPLACE_BLOCKS externo. Si cambia, los
+   * editores TipTap que NO están en edición local se remontan para reflejar
+   * el nuevo contenido.
+   */
+  lastEditAt?: number | null;
 }
 
 export interface SelectionContext {
@@ -37,7 +43,14 @@ export interface SelectionContext {
   // posición opcional dentro del bloque (para reemplazar después)
   from?: number;
   to?: number;
+  // M19.17.A — contexto inmediato para que el backend pueda hacer find-and-replace
+  // sin ambigüedad cuando el texto seleccionado aparece varias veces en el bloque
+  anchor_before?: string;
+  anchor_after?: string;
 }
+
+// M19.17.A — cuántos chars antes/después de la selección guardar como anchor
+const ANCHOR_CHARS = 32;
 
 const EDITABLE_BLOCK_TYPES = new Set<Block["type"]>([
   "paragraph",
@@ -149,6 +162,7 @@ function BlockEditor({ block, documentId, onPersisted, onSelectionAsk }: BlockEd
   });
 
   // Detectar selección de texto → emitir hacia el padre (SelectionAskBubble)
+  // M19.17.A — incluir anchor_before/anchor_after para reemplazo no ambiguo en backend
   React.useEffect(() => {
     if (!editor || !onSelectionAsk) return;
     const handler = () => {
@@ -156,13 +170,31 @@ function BlockEditor({ block, documentId, onPersisted, onSelectionAsk }: BlockEd
       if (empty) return;
       const text = editor.state.doc.textBetween(from, to, " ");
       if (text.trim().length < 3) return; // mínimo 3 chars
-      onSelectionAsk({ block_id: block.block_id, text, from, to });
+      const docSize = editor.state.doc.content.size;
+      const anchorBeforeStart = Math.max(0, from - ANCHOR_CHARS);
+      const anchorAfterEnd = Math.min(docSize, to + ANCHOR_CHARS);
+      const anchor_before = editor.state.doc.textBetween(anchorBeforeStart, from, " ");
+      const anchor_after = editor.state.doc.textBetween(to, anchorAfterEnd, " ");
+      onSelectionAsk({
+        block_id: block.block_id,
+        text,
+        from,
+        to,
+        anchor_before,
+        anchor_after,
+      });
     };
     editor.on("selectionUpdate", handler);
     return () => {
       editor.off("selectionUpdate", handler);
     };
   }, [editor, onSelectionAsk, block.block_id]);
+
+  // Snapshot del block_data ANTES de cualquier edit (para el auditor)
+  const beforeSnapshotRef = React.useRef<Record<string, unknown> | null>(null);
+  React.useEffect(() => {
+    beforeSnapshotRef.current = { ...(block as unknown as Record<string, unknown>) };
+  }, [block.block_id]);
 
   // Persistir al perder foco
   const persist = React.useCallback(async () => {
@@ -186,10 +218,25 @@ function BlockEditor({ block, documentId, onPersisted, onSelectionAsk }: BlockEd
       const data = await res.json();
       dirtyRef.current = false;
       setSavingState("saved");
-      // Actualizar bloque en estado padre
+      // Actualizar bloque en estado padre (también marca como local-edit
+      // para que el guard de remount lo proteja durante la ventana)
       if (data?.block?.block_data) {
         onPersisted({ ...block, runs: data.block.block_data.runs } as Block);
       }
+      // M19.17.D + C — notificar al canvas: refresca preview DOCX y dispara auditor
+      window.dispatchEvent(
+        new CustomEvent("lexai:doc-changed", {
+          detail: {
+            documentId,
+            source: "inline-edit",
+            edited_block_id: block.block_id,
+            before_block_data: beforeSnapshotRef.current || undefined,
+            user_instruction: "",
+          },
+        })
+      );
+      // Actualizar snapshot para la siguiente edición de este mismo bloque
+      beforeSnapshotRef.current = { ...(block as unknown as Record<string, unknown>), runs: newRuns };
       // ocultar el "saved" después de 1.5s
       setTimeout(() => setSavingState("idle"), 1500);
     } catch (e) {
@@ -226,9 +273,16 @@ function BlockEditor({ block, documentId, onPersisted, onSelectionAsk }: BlockEd
 // Canvas principal
 // ============================================================
 
-export function EditableDocxCanvas({ blocks, documentId, onSelectionAsk }: Props) {
+// M19.17.D — ventana de "edit local en vuelo" para evitar remount mientras
+// el usuario está escribiendo. Si el blockId está en este set, NO se remonta
+// aunque cambie lastEditAt externo.
+const LOCAL_EDIT_GUARD_MS = 2500;
+
+export function EditableDocxCanvas({ blocks, documentId, onSelectionAsk, lastEditAt }: Props) {
   // Estado local de bloques (para reflejar ediciones optimistically)
   const [localBlocks, setLocalBlocks] = React.useState<Block[]>(blocks);
+  // M19.17.D — last local edit timestamp por block_id (anti-clobber)
+  const localEditTsRef = React.useRef<Map<string, number>>(new Map());
 
   React.useEffect(() => {
     setLocalBlocks(blocks);
@@ -238,7 +292,22 @@ export function EditableDocxCanvas({ blocks, documentId, onSelectionAsk }: Props
     setLocalBlocks((prev) =>
       prev.map((b) => (b.block_id === updated.block_id ? updated : b))
     );
+    localEditTsRef.current.set(updated.block_id, Date.now());
   }, []);
+
+  // M19.17.D — calcula key del editor por bloque: si el bloque fue editado
+  // localmente en los últimos LOCAL_EDIT_GUARD_MS, NO incluye lastEditAt
+  // (preservando el editor del usuario). En cualquier otro caso, sí incluye
+  // lastEditAt para forzar remount con el contenido actualizado del servidor.
+  const editorKeyFor = React.useCallback(
+    (blockId: string): string => {
+      const lastLocal = localEditTsRef.current.get(blockId) || 0;
+      const isFresh = Date.now() - lastLocal < LOCAL_EDIT_GUARD_MS;
+      if (isFresh) return blockId; // proteger edición en curso
+      return `${blockId}:${lastEditAt ?? 0}`;
+    },
+    [lastEditAt]
+  );
 
   return (
     <div className="relative h-full overflow-y-auto bg-zinc-100">
@@ -262,16 +331,18 @@ export function EditableDocxCanvas({ blocks, documentId, onSelectionAsk }: Props
         {localBlocks.map((block) => {
           const isEditable = EDITABLE_BLOCK_TYPES.has(block.type);
           if (!isEditable) {
-            // Read-only: usar BlockRenderer existente para chips/tablas/headings/firma
+            // Read-only: BlockRenderer + key con lastEditAt para reflejar cambios
+            // externos (tablas, citas, firma editadas vía chat)
             return (
-              <div key={block.block_id} className="select-text">
+              <div key={editorKeyFor(block.block_id)} className="select-text">
                 <BlockRenderer block={block} />
               </div>
             );
           }
           return (
-            <EditableBlockWrapper key={block.block_id} block={block}>
+            <EditableBlockWrapper key={`wrap:${block.block_id}`} block={block}>
               <BlockEditor
+                key={editorKeyFor(block.block_id)}
                 block={block as Block & { runs?: Run[] }}
                 documentId={documentId}
                 onPersisted={updateBlock}

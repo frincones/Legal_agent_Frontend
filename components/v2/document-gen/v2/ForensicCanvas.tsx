@@ -22,11 +22,22 @@ interface Props {
   status: "idle" | "running" | "completed" | "error";
   documentId?: string | null;
   onSelectionAsk?: (selection: SelectionContext) => void;
+  /** M19.17.D — timestamp del último REPLACE_BLOCKS (remount fino) */
+  lastEditAt?: number | null;
+  /** M19.17.D — true mientras hay refresh de bloques en vuelo */
+  isSyncing?: boolean;
 }
 
 type ViewMode = "editor" | "preview";
 
-export function ForensicCanvas({ blocks, status, documentId, onSelectionAsk }: Props) {
+export function ForensicCanvas({
+  blocks,
+  status,
+  documentId,
+  onSelectionAsk,
+  lastEditAt,
+  isSyncing,
+}: Props) {
   const [viewMode, setViewMode] = React.useState<ViewMode>("editor");
   const [activeSelection, setActiveSelection] = React.useState<SelectionContext | null>(null);
 
@@ -71,10 +82,23 @@ export function ForensicCanvas({ blocks, status, documentId, onSelectionAsk }: P
               📄 Vista final (DOCX)
             </button>
           </div>
-          <span className="text-[10px] text-zinc-400">
-            {viewMode === "editor"
-              ? "Edita inline · selecciona texto para pedir cambios a LexAI"
-              : "Idéntico al archivo descargable"}
+          <span className="text-[10px] text-zinc-400 flex items-center gap-1.5">
+            {isSyncing && (
+              <span className="inline-flex items-center gap-1 text-blue-600">
+                <span
+                  className="inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse"
+                  aria-hidden
+                />
+                sincronizando…
+              </span>
+            )}
+            {!isSyncing && (
+              <>
+                {viewMode === "editor"
+                  ? "Edita inline · selecciona texto para pedir cambios a LexAI"
+                  : "Idéntico al archivo descargable"}
+              </>
+            )}
           </span>
         </div>
       )}
@@ -117,6 +141,7 @@ export function ForensicCanvas({ blocks, status, documentId, onSelectionAsk }: P
             blocks={blocks}
             documentId={documentId as string}
             onSelectionAsk={handleSelection}
+            lastEditAt={lastEditAt ?? null}
           />
         )}
         {completed && viewMode === "preview" && (

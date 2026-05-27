@@ -285,4 +285,8 @@ export interface GenerationState {
   error: string | null;
   // M18.d: agent thought stream (live narration estilo Claude)
   thoughts: AgentThought[];
+  // M19.17.D — timestamp del último REPLACE_BLOCKS para forzar remount del canvas
+  lastEditAt: number | null;
+  // M19.17.D — flag mientras hay edit en vuelo (refresh pendiente)
+  isSyncing: boolean;
 }

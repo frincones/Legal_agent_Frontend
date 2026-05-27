@@ -59,6 +59,9 @@ export function SelectionAskBubble({ selection, documentId, onDismiss }: Props) 
                 block_id: selection.block_id,
                 text: selection.text,
                 instruction,
+                // M19.17.A — anchors para reemplazo quirúrgico sin ambigüedad
+                anchor_before: selection.anchor_before || "",
+                anchor_after: selection.anchor_after || "",
               },
             }),
           }
@@ -66,11 +69,16 @@ export function SelectionAskBubble({ selection, documentId, onDismiss }: Props) 
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (data?.blocks_changed > 0) {
-          // El cambio ya está persistido en BD. El padre debería recargar
-          // los bloques. Por simplicidad emitimos un evento custom para que
-          // el contenedor (IntegratedGenerationCanvas o el hook) decida cómo.
+          // M19.17.C — incluir metadata para que el auditor sepa qué se cambió y por qué
           window.dispatchEvent(
-            new CustomEvent("lexai:doc-changed", { detail: { documentId } })
+            new CustomEvent("lexai:doc-changed", {
+              detail: {
+                documentId,
+                source: "selection-bubble",
+                edited_block_id: selection.block_id,
+                user_instruction: instruction,
+              },
+            })
           );
           onDismiss();
         } else {

@@ -18,10 +18,32 @@ interface Props {
   documentId: string;
 }
 
+// M19.17.D — debounce para evitar fetch-storm si llegan varios "doc-changed" seguidos
+const REFETCH_DEBOUNCE_MS = 800;
+
 export function DocxPreviewCanvas({ documentId }: Props) {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  // M19.17.D — incrementar para forzar re-fetch sin desmontar el componente
+  const [revision, setRevision] = React.useState(0);
+
+  // M19.17.D — listener del evento global lexai:doc-changed (edits inline o chat)
+  React.useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const handler = (ev: Event) => {
+      const detail = (ev as CustomEvent).detail as { documentId?: string } | undefined;
+      // Solo reaccionar si el evento es para este documento (o sin documentId → asumir match)
+      if (detail?.documentId && detail.documentId !== documentId) return;
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => setRevision((r) => r + 1), REFETCH_DEBOUNCE_MS);
+    };
+    window.addEventListener("lexai:doc-changed", handler as EventListener);
+    return () => {
+      window.removeEventListener("lexai:doc-changed", handler as EventListener);
+      if (timer) clearTimeout(timer);
+    };
+  }, [documentId]);
 
   React.useEffect(() => {
     if (!documentId) return;
@@ -31,8 +53,10 @@ export function DocxPreviewCanvas({ documentId }: Props) {
 
     (async () => {
       try {
-        const url = `/api/documents/v2/documents/${encodeURIComponent(documentId)}/export-forensic`;
-        const res = await fetch(url, { credentials: "include" });
+        // M19.17.D — cache-buster para garantizar fresh download tras edits
+        const cacheBuster = revision > 0 ? `?v=${revision}` : "";
+        const url = `/api/documents/v2/documents/${encodeURIComponent(documentId)}/export-forensic${cacheBuster}`;
+        const res = await fetch(url, { credentials: "include", cache: "no-store" });
         if (!res.ok) throw new Error(`backend HTTP ${res.status}`);
         const blob = await res.blob();
         if (cancelled || !containerRef.current) return;
@@ -67,14 +91,16 @@ export function DocxPreviewCanvas({ documentId }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [documentId]);
+  }, [documentId, revision]);
 
   return (
     <div className="relative h-full overflow-y-auto bg-zinc-100">
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="text-center text-zinc-500 animate-pulse">
-            <p className="text-sm">Renderizando documento final…</p>
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+          <div className="text-center text-zinc-500 animate-pulse bg-white/80 px-4 py-2 rounded shadow">
+            <p className="text-sm">
+              {revision === 0 ? "Renderizando documento final…" : "Actualizando vista final…"}
+            </p>
           </div>
         </div>
       )}

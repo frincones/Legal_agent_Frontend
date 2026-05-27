@@ -31,6 +31,8 @@ import { GenerationTimeline } from "./GenerationTimeline";
 import { AuditPanel } from "./AuditPanel";
 import { AssistantNarrativeMessage } from "@/components/assistant/AssistantNarrativeMessage";
 import { useAssistantMessagesFromThoughts } from "@/lib/hooks/useAssistantMessagesFromThoughts";
+import { useChangeAuditor } from "@/lib/hooks/useChangeAuditor";
+import { ChangeAuditSuggestions } from "./ChangeAuditSuggestions";
 import type { AgentThought } from "@/lib/types/blocks";
 
 const LS_KEY = "lexai-v2-integrated-split";
@@ -52,6 +54,12 @@ interface ChatMsg {
   role: "user" | "assistant" | "system";
   content: string;
   ts: number;
+  // M19.17.B — si el assistant pidió aclaración, el frontend persiste el
+  // pending_context aquí para reenviarlo automáticamente en el próximo turn.
+  clarify?: {
+    question: string;
+    pending_context: Record<string, unknown>;
+  };
 }
 
 export function IntegratedGenerationCanvas({ intent, templateId, brief, matterId }: Props) {
@@ -67,6 +75,16 @@ export function IntegratedGenerationCanvas({ intent, templateId, brief, matterId
     window.addEventListener("lexai:doc-changed", handler as EventListener);
     return () => window.removeEventListener("lexai:doc-changed", handler as EventListener);
   }, [state.documentId, refreshBlocks]);
+
+  // M19.17.C — Auditor de cambios (escucha lexai:doc-changed con metadata
+  // y corre POST /audit-change en background)
+  const {
+    audits,
+    enabled: auditorEnabled,
+    setEnabled: setAuditorEnabled,
+    dismissAudit,
+    clearAll: clearAllAudits,
+  } = useChangeAuditor(state.documentId);
 
   const [defaultLeft, setDefaultLeft] = React.useState<number>(DEFAULT_LEFT);
   const [rightTab, setRightTab] = React.useState<RightTab>("canvas");
@@ -184,12 +202,22 @@ export function IntegratedGenerationCanvas({ intent, templateId, brief, matterId
         .filter((mm) => mm.role !== "system")
         .slice(-6)
         .map((mm) => ({ role: mm.role, content: mm.content }));
+      // M19.17.B — si el assistant pidió aclaración en el último turn,
+      // adjuntar pending_context para que el LLM ejecute la acción original.
+      const lastClarify = [...messages]
+        .reverse()
+        .find((mm) => mm.role === "assistant" && mm.clarify);
+      const pendingContext = lastClarify?.clarify?.pending_context;
       const res = await fetch(
         `/api/documents/v2/documents/${encodeURIComponent(state.documentId)}/chat`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: input, history }),
+          body: JSON.stringify({
+            message: input,
+            history,
+            ...(pendingContext ? { pending_context: pendingContext } : {}),
+          }),
         }
       );
       const data = await res.json();
@@ -207,16 +235,50 @@ export function IntegratedGenerationCanvas({ intent, templateId, brief, matterId
       }
       const reply: string = data.reply || "(sin respuesta)";
       const blocksChanged: number = data.blocks_changed || 0;
+      // M19.17.B — extraer clarify si el agente pidió aclaración
+      const clarifyAction = (data.actions || []).find(
+        (a: { kind?: string; question?: string; pending_context?: Record<string, unknown> }) =>
+          a.kind === "clarify" && a.question
+      );
+      const clarifyData = clarifyAction
+        ? {
+            question: clarifyAction.question as string,
+            pending_context: (clarifyAction.pending_context || {}) as Record<string, unknown>,
+          }
+        : undefined;
       setMessages((prev) => [
         ...prev,
         {
           id: `a-${Date.now()}`,
           role: "assistant",
-          content: reply + (blocksChanged > 0 ? `\n\n✓ ${blocksChanged} bloque(s) actualizado(s).` : ""),
+          content:
+            (clarifyData ? `❓ ${clarifyData.question}\n\n` : "") +
+            (clarifyData ? "" : reply) +
+            (blocksChanged > 0 ? `\n\n✓ ${blocksChanged} bloque(s) actualizado(s).` : ""),
           ts: Date.now(),
+          clarify: clarifyData,
         },
       ]);
       if (blocksChanged > 0) {
+        // M19.17.C — emitir doc-changed con metadata del primer bloque tocado
+        // para que el auditor sepa qué cambió y por qué.
+        const firstChange = (data.actions || []).find(
+          (a: { kind?: string; block_id?: string; ok?: boolean }) =>
+            (a.kind === "update_block" || a.kind === "replace_selection") &&
+            a.ok &&
+            a.block_id
+        );
+        window.dispatchEvent(
+          new CustomEvent("lexai:doc-changed", {
+            detail: {
+              documentId: state.documentId,
+              source: "chat",
+              edited_block_id: firstChange?.block_id || "unknown",
+              user_instruction: input,
+            },
+          })
+        );
+        // Mantener evento legacy por compatibilidad con listeners viejos
         window.dispatchEvent(new CustomEvent("lexai-v2-blocks-need-refresh"));
       }
     } catch (e) {
@@ -334,6 +396,16 @@ export function IntegratedGenerationCanvas({ intent, templateId, brief, matterId
           status={state.status}
           thoughts={state.thoughts}
           generationStatus={state.status}
+          auditPanelSlot={
+            <ChangeAuditSuggestions
+              audits={audits}
+              enabled={auditorEnabled}
+              onToggle={setAuditorEnabled}
+              onDismiss={dismissAudit}
+              onClearAll={clearAllAudits}
+              documentId={state.documentId}
+            />
+          }
         />
       </Panel>
       <PanelResizeHandle style={{ width: 4, cursor: "col-resize", backgroundColor: "var(--v2-border-default, #DDDBD3)", flexShrink: 0 }} />
@@ -379,6 +451,8 @@ export function IntegratedGenerationCanvas({ intent, templateId, brief, matterId
                 blocks={state.blocks}
                 status={state.status}
                 documentId={state.documentId}
+                lastEditAt={state.lastEditAt}
+                isSyncing={state.isSyncing}
               />
             )}
             {rightTab === "timeline" && (
@@ -420,6 +494,7 @@ function TabButton({ active, onClick, label, disabled }: { active: boolean; onCl
 
 function ChatPanel({
   messages, chatInput, setChatInput, onSend, isRunning, regenLoading, status, thoughts, generationStatus,
+  auditPanelSlot,
 }: {
   messages: ChatMsg[];
   chatInput: string;
@@ -430,6 +505,8 @@ function ChatPanel({
   status: string;
   thoughts: AgentThought[];
   generationStatus: string;
+  /** M19.17.C — slot opcional para el panel del auditor (entre thread y composer) */
+  auditPanelSlot?: React.ReactNode;
 }) {
   const scrollRef = React.useRef<HTMLDivElement>(null);
   // M19.5: convertir thoughts → assistant messages estilo Claude
@@ -474,6 +551,20 @@ function ChatPanel({
           <AssistantNarrativeMessage key={am.id} message={am} />
         ))}
       </div>
+      {/* M19.17.C — Auditor: findings de cada edit recientes */}
+      {auditPanelSlot && (
+        <div
+          style={{
+            borderTop: "1px solid var(--v2-border-default, #DDDBD3)",
+            backgroundColor: "white",
+            flexShrink: 0,
+            maxHeight: "40%",
+            overflowY: "auto",
+          }}
+        >
+          {auditPanelSlot}
+        </div>
+      )}
       {/* Composer */}
       <div style={{
         padding: "10px 12px",
