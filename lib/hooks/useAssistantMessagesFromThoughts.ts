@@ -1,24 +1,32 @@
 "use client";
 
 /**
- * Sprint M19.5 · useAssistantMessagesFromThoughts
+ * Sprint M19.6 · useAssistantMessagesFromThoughts (refactor)
  *
- * Convierte el stream raw de AgentThought[] del backend en una lista de
- * "AssistantNarrativeMessage" agrupados por threadId. Cada mensaje del
- * agente puede contener segmentos: párrafos de prosa (markdown) + tool
- * calls colapsables, ordenados temporalmente como Claude.ai.
+ * Convierte AgentThought[] en una lista de AssistantNarrativeMessage[]
+ * estilo Claude: CADA PARAGRAPH genera UN MENSAJE separado en el thread,
+ * y los tool calls que vienen DESPUÉS de ese paragraph y ANTES del siguiente
+ * paragraph se asocian a ese mensaje.
  *
- * Reglas de agrupación:
- *   - thoughts con mismo threadId → mismo mensaje
- *   - kind="narration"   → segmento paragraph
- *   - kind="tool_call"   → segmento tool (merge por toolId si está running→done)
- *   - kind="correction"  → segmento paragraph (resaltado en el render)
- *   - kind="warning"     → segmento paragraph
- *   - kind="success"     → segmento paragraph
- *   - kind="info"        → segmento paragraph (legacy)
- *   - kind="error"       → segmento paragraph
+ * Regla M19.6 (cambio vs M19.5):
+ *   - Antes: agrupábamos TODOS los thoughts por threadId en 1 mensaje grande.
+ *   - Ahora: cada paragraph crea un nuevo mensaje. Los tool calls siguientes
+ *     hasta el próximo paragraph se asocian a ese mensaje. Si llegan tool
+ *     calls SIN paragraph previo, crean un mensaje "implícito" con segments
+ *     solo de tools.
  *
- * Si un thought NO tiene threadId, se agrupa en "default" thread.
+ * Esto produce el feel Claude: prosa → tools → prosa → tools → prosa, donde
+ * cada prosa es un mensaje del agente separado, no un blob.
+ *
+ * Reglas de kind:
+ *   - kind="narration"   → cierra mensaje actual, abre nuevo paragraph
+ *   - kind="tool_call"   → agrega al mensaje activo (merge por toolId)
+ *   - kind="correction"  → paragraph con prefijo "💡 Sugerencia: ..."
+ *   - kind="warning"     → paragraph con prefijo "⚖ ..."
+ *   - kind="success"     → paragraph (sin prefijo)
+ *   - kind="info"        → paragraph (legacy)
+ *   - kind="error"       → paragraph con prefijo "⚠ ..."
+ *   - kind="presented_file" → segment especial con metadata DOCX (M19.7)
  */
 
 import { useMemo } from "react";
@@ -42,55 +50,73 @@ function buildMessages(
 ): AssistantNarrativeMessage[] {
   if (thoughts.length === 0) return [];
 
-  // Agrupar por threadId
-  const byThread = new Map<string, AgentThought[]>();
-  for (const t of thoughts) {
-    const tid = t.threadId || "default";
-    const arr = byThread.get(tid) || [];
-    arr.push(t);
-    byThread.set(tid, arr);
-  }
+  const isStreaming = status === "running";
+  const sorted = [...thoughts].sort((a, b) => a.timestamp - b.timestamp);
 
   const messages: AssistantNarrativeMessage[] = [];
-  for (const [threadId, ts] of byThread.entries()) {
-    const sorted = [...ts].sort((a, b) => a.timestamp - b.timestamp);
-    const segments = buildSegments(sorted);
-    const startedAt = sorted[0]?.timestamp ?? Date.now();
-    const lastTs = sorted[sorted.length - 1]?.timestamp ?? startedAt;
-    messages.push({
-      id: threadId,
-      role: "assistant",
-      segments,
-      startedAt,
-      finishedAt: status === "running" ? null : lastTs,
-      isStreaming: status === "running",
-    });
-  }
-
-  return messages;
-}
-
-function buildSegments(thoughts: AgentThought[]): AssistantSegment[] {
-  const segments: AssistantSegment[] = [];
+  let currentMsg: AssistantNarrativeMessage | null = null;
   const toolById = new Map<string, ToolCallDetail>();
-  const toolSegmentByToolId = new Map<string, AssistantSegment>();
 
-  for (const t of thoughts) {
+  const closeCurrent = () => {
+    if (currentMsg) {
+      currentMsg.finishedAt = currentMsg.segments[currentMsg.segments.length - 1]?.timestamp ?? currentMsg.startedAt;
+      currentMsg.isStreaming = false;
+      messages.push(currentMsg);
+      currentMsg = null;
+    }
+  };
+
+  const ensureMsg = (ts: number) => {
+    if (!currentMsg) {
+      currentMsg = {
+        id: `am-${ts}-${Math.random().toString(36).slice(2, 8)}`,
+        role: "assistant",
+        segments: [],
+        startedAt: ts,
+        finishedAt: null,
+        isStreaming: true,
+      };
+    }
+    return currentMsg;
+  };
+
+  for (const t of sorted) {
+    const isParagraphKind =
+      t.kind === "narration" ||
+      t.kind === "correction" ||
+      t.kind === "warning" ||
+      t.kind === "success" ||
+      t.kind === "info" ||
+      t.kind === "error";
+
+    if (isParagraphKind && t.message) {
+      // Nuevo paragraph: cierra mensaje anterior, abre uno nuevo
+      closeCurrent();
+      const msg = ensureMsg(t.timestamp);
+      msg.segments.push({
+        type: "paragraph",
+        id: t.id,
+        markdown: formatParagraph(t),
+        timestamp: t.timestamp,
+      });
+      continue;
+    }
+
     if (t.kind === "tool_call") {
-      // Merge por toolId (running → done correlaciona)
+      // Tool calls van al mensaje activo. Si no hay, crea uno "implícito".
+      const msg = ensureMsg(t.timestamp);
       const toolId = t.toolId || t.id;
       const existing = toolById.get(toolId);
-      const isDone = t.toolResponse !== undefined && t.toolResponse !== null;
       const isError = t.toolError != null;
+      const isDone = t.toolResponse !== undefined && t.toolResponse !== null;
 
       if (existing) {
-        // Update existente: actualizar status/response/error/duration
+        // Update tool existente (running → done/error). Mismo segmento, mutable.
         existing.status = isError ? "error" : isDone ? "done" : "running";
         if (t.toolRequest !== undefined && t.toolRequest !== null) existing.request = t.toolRequest;
         if (t.toolResponse !== undefined && t.toolResponse !== null) existing.response = t.toolResponse;
         if (t.toolError) existing.error = t.toolError;
         if (t.toolDurationMs != null) existing.durationMs = t.toolDurationMs;
-        // El segmento ya está en `segments` con esa referencia (mutable)
       } else {
         const detail: ToolCallDetail = {
           id: toolId,
@@ -103,35 +129,52 @@ function buildSegments(thoughts: AgentThought[]): AssistantSegment[] {
           startedAt: t.timestamp,
         };
         toolById.set(toolId, detail);
-        const seg: AssistantSegment = {
+        msg.segments.push({
           type: "tool",
           id: `tool-${toolId}`,
           tool: detail,
           timestamp: t.timestamp,
-        };
-        toolSegmentByToolId.set(toolId, seg);
-        segments.push(seg);
+        });
       }
       continue;
     }
 
-    // Resto de kinds → paragraph
-    if (t.message) {
-      segments.push({
-        type: "paragraph",
-        id: t.id,
-        markdown: formatParagraph(t),
+    // M19.7: presented_file kind (DOCX listo). Segment especial.
+    if ((t.kind as any) === "presented_file") {
+      const msg = ensureMsg(t.timestamp);
+      msg.segments.push({
+        type: "tool",
+        id: `pf-${t.id}`,
+        tool: {
+          id: `pf-${t.id}`,
+          name: "presented_file",
+          status: "done",
+          request: undefined,
+          response: t.toolResponse ?? {
+            name: t.message,
+            url: t.url || undefined,
+          },
+          error: null,
+          durationMs: null,
+          startedAt: t.timestamp,
+        },
         timestamp: t.timestamp,
       });
     }
   }
 
-  return segments;
+  // Cerrar último mensaje
+  if (currentMsg) {
+    (currentMsg as AssistantNarrativeMessage).isStreaming = isStreaming;
+    (currentMsg as AssistantNarrativeMessage).finishedAt = isStreaming ? null : Date.now();
+    messages.push(currentMsg);
+  }
+
+  return messages;
 }
 
 function formatParagraph(t: AgentThought): string {
-  // Prefijos cosméticos por kind (solo para los no-narration / no-success limpios)
-  if (t.kind === "narration" || t.kind === "success") {
+  if (t.kind === "narration" || t.kind === "success" || t.kind === "info") {
     return t.message;
   }
   if (t.kind === "correction") {
@@ -141,6 +184,5 @@ function formatParagraph(t: AgentThought): string {
   }
   if (t.kind === "warning") return `⚖ ${t.message}`;
   if (t.kind === "error") return `⚠ ${t.message}`;
-  // legacy "info" o "tool_result"
   return t.message;
 }

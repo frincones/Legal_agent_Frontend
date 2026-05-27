@@ -165,9 +165,11 @@ export type SSEEventName =
   | "done"
   | "error"
   // M18.d: agent thought stream (Claude-style live narration)
-  | "agent_thought";
+  | "agent_thought"
+  // M19.7: archivo final presentado con preview
+  | "presented_file";
 
-// M18.d + M19.5: Agent thought (narración en vivo del agente, estilo Claude)
+// M18.d + M19.5 + M19.7: Agent thought (narración en vivo del agente, estilo Claude)
 export type AgentThoughtKind =
   | "narration"       // párrafo de prosa (markdown) del agente
   | "tool_call"       // invocando una herramienta (con request/response)
@@ -176,7 +178,8 @@ export type AgentThoughtKind =
   | "warning"         // nota legal importante
   | "success"         // hito completado
   | "info"            // legacy: log genérico
-  | "error";          // algo falló
+  | "error"           // algo falló
+  | "presented_file"; // M19.7: chip especial con archivo DOCX adjunto
 
 export interface AgentThought {
   id: string;                // timestamp + random

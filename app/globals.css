@@ -22,6 +22,52 @@
   .animate-slide-up { animation: slide-up 0.15s ease-out; }
 }
 
+/* M19.6 · Tool chip color tokens por tipo de herramienta */
+:root {
+  --tool-bg-default: rgb(250 250 247);
+  --tool-border-default: rgb(228 228 231);
+  --tool-text-default: rgb(82 82 91);
+
+  --tool-bg-running: rgb(239 246 255);
+  --tool-border-running: rgb(191 219 254);
+  --tool-text-running: rgb(29 78 216);
+
+  --tool-bg-error: rgb(254 242 242);
+  --tool-border-error: rgb(252 165 165);
+  --tool-text-error: rgb(185 28 28);
+
+  /* Por tipo de tool específico (M19.6) */
+  --tool-brave-bg: rgb(240 253 244);
+  --tool-brave-text: rgb(21 128 61);
+  --tool-judge-bg: rgb(255 251 235);
+  --tool-judge-text: rgb(146 64 14);
+  --tool-preflight-bg: rgb(245 243 255);
+  --tool-preflight-text: rgb(91 33 182);
+  --tool-bd-bg: rgb(243 244 246);
+  --tool-bd-text: rgb(55 65 81);
+  --tool-corte-bg: rgb(254 242 242);
+  --tool-corte-text: rgb(185 28 28);
+}
+
+/* M19.6 · Assistant narrative message: tipografía serif para prosa */
+.assistant-narrative-message .assistant-paragraph {
+  font-family: "Source Serif Pro", "Tiempos Text", Georgia, serif;
+}
+
+/* M19.6 · Override de MarkdownContent inside agent narrative para serif */
+.assistant-narrative-message .assistant-paragraph p,
+.assistant-narrative-message .assistant-paragraph li,
+.assistant-narrative-message .assistant-paragraph blockquote {
+  font-family: inherit;
+  font-size: 14.5px;
+  line-height: 1.7;
+}
+.assistant-narrative-message .assistant-paragraph code,
+.assistant-narrative-message .assistant-paragraph pre {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 12.5px;
+}
+
 @layer base {
   :root {
     /* Sobria · default · Apple-grade */

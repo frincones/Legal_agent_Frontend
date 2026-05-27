@@ -401,5 +401,34 @@ function handleEvent(event: SSEEventName, data: any, dispatch: React.Dispatch<Ac
         },
       });
       break;
+
+    case "presented_file":
+      // M19.7: archivo final (DOCX) - empaquetar como thought presented_file
+      dispatch({
+        type: "THOUGHT",
+        payload: {
+          id: `pf-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          kind: "presented_file",
+          message: data.name || "documento.docx",
+          tool: "presented_file",
+          url: data.url || null,
+          suggestion: null,
+          ref: null,
+          timestamp: Date.now(),
+          toolId: `pf-${Date.now()}`,
+          toolRequest: undefined,
+          toolResponse: {
+            name: data.name,
+            url: data.url,
+            size_kb: data.size_kb,
+            mime: data.mime,
+            preview_b64: data.preview_b64,
+          },
+          toolError: null,
+          toolDurationMs: null,
+          threadId: data.thread_id || null,
+        },
+      });
+      break;
   }
 }
