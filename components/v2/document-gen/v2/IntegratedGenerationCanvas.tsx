@@ -34,9 +34,11 @@ import { AssistantNarrativeMessage } from "@/components/assistant/AssistantNarra
 import { useAssistantMessagesFromThoughts } from "@/lib/hooks/useAssistantMessagesFromThoughts";
 import { useChangeAuditor } from "@/lib/hooks/useChangeAuditor";
 import { ChangeAuditSuggestions } from "./ChangeAuditSuggestions";
-import type { AgentThought } from "@/lib/types/blocks";
+import { MissingDataPrompt } from "./MissingDataPrompt";
+import type { AgentThought, MissingDataReport } from "@/lib/types/blocks";
 
 const LS_KEY = "lexai-v2-integrated-split";
+const LS_BORRADOR_KEY = "lexai-v2-borrador-mode";
 const DEFAULT_LEFT = 38;
 const DEFAULT_RIGHT = 62;
 const MIN_SIZE = 25;
@@ -93,8 +95,13 @@ export function IntegratedGenerationCanvas({ intent, templateId, brief, matterId
   const [chatInput, setChatInput] = React.useState("");
   const [regenLoading, setRegenLoading] = React.useState(false);
   const startedRef = React.useRef(false);
+  // M19.23.I — modo del data_completeness_gate (true=borrador, false=firma).
+  // Persistido en localStorage para que el abogado mantenga su preferencia.
+  const [borradorMode, setBorradorMode] = React.useState<boolean>(true);
+  // M19.23.I — dismiss local del MissingDataPrompt para no re-mostrarlo tras cerrar.
+  const [missingDismissed, setMissingDismissed] = React.useState<boolean>(false);
 
-  // Restore split ratio
+  // Restore split ratio + borrador mode
   React.useEffect(() => {
     try {
       const v = localStorage.getItem(LS_KEY);
@@ -102,8 +109,25 @@ export function IntegratedGenerationCanvas({ intent, templateId, brief, matterId
         const n = parseInt(v, 10);
         if (!isNaN(n) && n >= MIN_SIZE && n <= 100 - MIN_SIZE) setDefaultLeft(n);
       }
+      const bm = localStorage.getItem(LS_BORRADOR_KEY);
+      if (bm === "false") setBorradorMode(false);
     } catch {}
   }, []);
+
+  // Persist borrador mode toggle
+  React.useEffect(() => {
+    try {
+      localStorage.setItem(LS_BORRADOR_KEY, String(borradorMode));
+    } catch {}
+  }, [borradorMode]);
+
+  // Reset dismiss flag cuando llega un nuevo missing_data report del backend
+  const missingReportKey = state.missingDataReport
+    ? `${state.missingDataReport.doc_type}-${state.missingDataReport.missing_critical.length}-${state.missingDataReport.missing_optional.length}`
+    : null;
+  React.useEffect(() => {
+    setMissingDismissed(false);
+  }, [missingReportKey]);
 
   // Trigger generación automática al montar con intent
   React.useEffect(() => {
@@ -128,7 +152,12 @@ export function IntegratedGenerationCanvas({ intent, templateId, brief, matterId
       user_brief: brief || undefined,
       doc_type: templateId || undefined,
       matter_id: matterId || undefined,
+      borrador_mode: borradorMode,
     });
+    // borradorMode intencionalmente excluido del dependency array: solo
+    // aplica al primer generate; cambios posteriores afectan próximas
+    // regeneraciones (regenerateSection lo lee dinámicamente).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [intent, brief, templateId, matterId, generate]);
 
   // Cuando generación completa, agregar mensaje al thread
@@ -358,6 +387,7 @@ export function IntegratedGenerationCanvas({ intent, templateId, brief, matterId
           user_brief: brief || undefined,
           doc_type: templateId || undefined,
           matter_id: matterId || undefined,
+          borrador_mode: borradorMode,
         });
       } else {
         setMessages((prev) => [
@@ -418,6 +448,18 @@ export function IntegratedGenerationCanvas({ intent, templateId, brief, matterId
           status={state.status}
           thoughts={state.thoughts}
           generationStatus={state.status}
+          missingDataReport={
+            state.missingDataReport &&
+            !state.missingDataReport.skipped &&
+            !missingDismissed &&
+            (state.missingDataReport.missing_critical.length +
+              state.missingDataReport.missing_optional.length >
+              0)
+              ? state.missingDataReport
+              : null
+          }
+          missingDataDocumentId={state.documentId}
+          onDismissMissingData={() => setMissingDismissed(true)}
           auditPanelSlot={
             <ChangeAuditSuggestions
               audits={audits}
@@ -445,7 +487,13 @@ export function IntegratedGenerationCanvas({ intent, templateId, brief, matterId
             <TabButton active={rightTab === "timeline"} onClick={() => setRightTab("timeline")}
               label={`🕒 Timeline${state.timeline.length ? ` (${state.timeline.filter(s => s.status === "completed").length}/${state.timeline.length})` : ""}`} />
             <TabButton active={rightTab === "audit"} onClick={() => setRightTab("audit")} label="⚖ Audit" disabled={state.status !== "completed"} />
-            <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+              {/* M19.23.I — Toggle modo borrador/firma */}
+              <BorradorFirmaToggle
+                value={borradorMode}
+                onChange={setBorradorMode}
+                disabled={isRunning}
+              />
               {state.status === "completed" && state.documentId && (
                 <button onClick={downloadDocx} className="text-xs px-2 py-1 bg-zinc-900 text-white rounded hover:bg-zinc-800">
                   📥 .docx
@@ -506,6 +554,53 @@ export function IntegratedGenerationCanvas({ intent, templateId, brief, matterId
 
 // ─── Sub-components ─────────────────────────────────────────────────────────
 
+function BorradorFirmaToggle({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+}) {
+  // value=true → borrador (placeholders OK), false → firma (exige datos críticos)
+  return (
+    <div
+      className="flex items-center gap-1 text-[11px]"
+      title={
+        value
+          ? "Modo borrador: el agente genera el documento con placeholders si faltan datos"
+          : "Modo firma: el agente alerta cuando faltan datos críticos antes de firmar"
+      }
+    >
+      <button
+        type="button"
+        onClick={() => !disabled && onChange(true)}
+        disabled={disabled}
+        className={`px-2 py-0.5 rounded-l border transition ${
+          value
+            ? "bg-amber-100 border-amber-300 text-amber-900 font-medium"
+            : "bg-white border-zinc-300 text-zinc-500 hover:bg-zinc-50"
+        } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+      >
+        ✎ Borrador
+      </button>
+      <button
+        type="button"
+        onClick={() => !disabled && onChange(false)}
+        disabled={disabled}
+        className={`px-2 py-0.5 rounded-r border-y border-r transition ${
+          !value
+            ? "bg-red-50 border-red-300 text-red-900 font-medium"
+            : "bg-white border-zinc-300 text-zinc-500 hover:bg-zinc-50"
+        } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+      >
+        ✒ Firma
+      </button>
+    </div>
+  );
+}
+
 function TabButton({ active, onClick, label, disabled }: { active: boolean; onClick: () => void; label: string; disabled?: boolean }) {
   return (
     <button
@@ -525,6 +620,9 @@ function TabButton({ active, onClick, label, disabled }: { active: boolean; onCl
 function ChatPanel({
   messages, chatInput, setChatInput, onSend, isRunning, regenLoading, status, thoughts, generationStatus,
   auditPanelSlot,
+  missingDataReport,
+  missingDataDocumentId,
+  onDismissMissingData,
 }: {
   messages: ChatMsg[];
   chatInput: string;
@@ -537,6 +635,10 @@ function ChatPanel({
   generationStatus: string;
   /** M19.17.C — slot opcional para el panel del auditor (entre thread y composer) */
   auditPanelSlot?: React.ReactNode;
+  /** M19.23.I — report del data_completeness_gate (null si nada faltante) */
+  missingDataReport?: MissingDataReport | null;
+  missingDataDocumentId?: string | null;
+  onDismissMissingData?: () => void;
 }) {
   const scrollRef = React.useRef<HTMLDivElement>(null);
   // M19.5: convertir thoughts → assistant messages estilo Claude
@@ -581,6 +683,24 @@ function ChatPanel({
           <AssistantNarrativeMessage key={am.id} message={am} />
         ))}
       </div>
+      {/* M19.23.I — Missing Data Prompt (datos faltantes detectados por el gate) */}
+      {missingDataReport && (
+        <div
+          style={{
+            borderTop: "1px solid var(--v2-border-default, #DDDBD3)",
+            backgroundColor: "white",
+            flexShrink: 0,
+            maxHeight: "50%",
+            overflowY: "auto",
+          }}
+        >
+          <MissingDataPrompt
+            report={missingDataReport}
+            documentId={missingDataDocumentId ?? null}
+            onDismiss={onDismissMissingData ?? (() => {})}
+          />
+        </div>
+      )}
       {/* M19.17.C — Auditor: findings de cada edit recientes */}
       {auditPanelSlot && (
         <div

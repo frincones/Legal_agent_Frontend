@@ -183,7 +183,11 @@ export type SSEEventName =
   | "autoloop_iteration"
   // M19.22: Context Enrichment (pre-research)
   | "context_enrichment_started"
-  | "context_enrichment_done";
+  | "context_enrichment_done"
+  // M19.23: Structure Discovery + Data Completeness Gate
+  | "structure_discovered"
+  | "missing_data"
+  | "missing_data_resolved";
 
 // M18.d + M19.5 + M19.7: Agent thought (narración en vivo del agente, estilo Claude)
 export type AgentThoughtKind =
@@ -277,6 +281,55 @@ export interface TimelineStep {
   details?: any;
 }
 
+// M19.23.B — Structure Recipe (plan de estructura descubierto dinámicamente)
+export interface StructureRecipeData {
+  structure_key: string;
+  doc_type: string;
+  jurisdiccion?: string | null;
+  cuantia_rango?: string | null;
+  demandado_tipo?: string | null;
+  procedimiento?: string | null;
+  sections_plan: Array<{
+    key: string;
+    title: string;
+    order: number;
+    roman?: string | null;
+    expected_blocks?: string[];
+  }>;
+  norma_procesal_ref?: string | null;
+  juramento_norma_ref?: string | null;
+  juez_competente?: string | null;
+  cuerpos_normativos_minimos?: string[];
+  cached: boolean;
+  fallback_used: boolean;
+  duration_ms: number;
+  sections_count?: number;
+}
+
+// M19.23.C — Missing Data Report
+export interface MissingField {
+  field_key: string;
+  label: string;
+  description: string;
+  severity: "critical" | "optional";
+  suggested_placeholder?: string | null;
+  example_value?: string | null;
+}
+
+export interface MissingDataReport {
+  doc_type: string;
+  required_fields_count: number;
+  extracted_fields_count: number;
+  missing_critical: MissingField[];
+  missing_optional: MissingField[];
+  can_continue: boolean;
+  borrador_mode: boolean;
+  skipped: boolean;
+  reasoning: string;
+  missing_summary: string;
+  duration_ms: number;
+}
+
 // M19.20.D — Quality Report (combinación de completeness + coherence + qa + citations)
 export interface QualityScores {
   completeness: number;
@@ -329,4 +382,7 @@ export interface GenerationState {
   isSyncing: boolean;
   // M19.20 — Quality Report del último análisis
   qualityReport: QualityReport | null;
+  // M19.23 — Structure Discovery + Data Completeness
+  structureRecipe: StructureRecipeData | null;
+  missingDataReport: MissingDataReport | null;
 }

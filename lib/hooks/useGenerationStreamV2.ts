@@ -6,9 +6,11 @@ import type {
   Block,
   GenerationState,
   MetaPayload,
+  MissingDataReport,
   QualityReport,
   SectionPlanItem,
   SSEEventName,
+  StructureRecipeData,
   TimelineStep,
 } from "@/lib/types/blocks";
 
@@ -33,7 +35,11 @@ type Action =
   | { type: "SYNC_START" }
   | { type: "SYNC_END" }
   // M19.20 — quality report
-  | { type: "QUALITY_REPORT"; payload: QualityReport };
+  | { type: "QUALITY_REPORT"; payload: QualityReport }
+  // M19.23 — Structure Discovery + Data Completeness
+  | { type: "STRUCTURE_DISCOVERED"; payload: StructureRecipeData }
+  | { type: "MISSING_DATA"; payload: MissingDataReport }
+  | { type: "MISSING_DATA_RESOLVED" };
 
 const initialState: GenerationState = {
   generationId: null,
@@ -53,6 +59,8 @@ const initialState: GenerationState = {
   lastEditAt: null,
   isSyncing: false,
   qualityReport: null,
+  structureRecipe: null,
+  missingDataReport: null,
 };
 
 function reducer(state: GenerationState, action: Action): GenerationState {
@@ -142,6 +150,15 @@ function reducer(state: GenerationState, action: Action): GenerationState {
     case "QUALITY_REPORT":
       return { ...state, qualityReport: action.payload };
 
+    case "STRUCTURE_DISCOVERED":
+      return { ...state, structureRecipe: action.payload };
+
+    case "MISSING_DATA":
+      return { ...state, missingDataReport: action.payload };
+
+    case "MISSING_DATA_RESOLVED":
+      return { ...state, missingDataReport: null };
+
     default:
       return state;
   }
@@ -199,6 +216,10 @@ export interface UseGenerationStreamV2Result {
     matter_id?: string;
     firm_id?: string;
     doc_type?: string;
+    // M19.23.C — modo del data_completeness_gate
+    // true (default): borrador, continúa con placeholders
+    // false: firma, agente alerta si faltan datos críticos
+    borrador_mode?: boolean;
   }) => Promise<void>;
   reset: () => void;
   abort: () => void;
@@ -224,6 +245,7 @@ export function useGenerationStreamV2(): UseGenerationStreamV2Result {
       matter_id?: string;
       firm_id?: string;
       doc_type?: string;
+      borrador_mode?: boolean;
     }) => {
       dispatch({ type: "START" });
       const controller = new AbortController();
@@ -441,6 +463,19 @@ function handleEvent(event: SSEEventName, data: any, dispatch: React.Dispatch<Ac
     // visible en la prosa del agente; aquí solo aceptamos los eventos sin acción.
     case "context_enrichment_started":
     case "context_enrichment_done":
+      break;
+
+    // M19.23 — Structure Discovery + Data Completeness
+    case "structure_discovered":
+      dispatch({ type: "STRUCTURE_DISCOVERED", payload: data as StructureRecipeData });
+      break;
+
+    case "missing_data":
+      dispatch({ type: "MISSING_DATA", payload: data as MissingDataReport });
+      break;
+
+    case "missing_data_resolved":
+      dispatch({ type: "MISSING_DATA_RESOLVED" });
       break;
 
     case "done":
