@@ -283,10 +283,63 @@ export function EditableDocxCanvas({ blocks, documentId, onSelectionAsk, lastEdi
   const [localBlocks, setLocalBlocks] = React.useState<Block[]>(blocks);
   // M19.17.D — last local edit timestamp por block_id (anti-clobber)
   const localEditTsRef = React.useRef<Map<string, number>>(new Map());
+  // M19.21.A — root del canvas para listener de selección universal
+  const canvasRootRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     setLocalBlocks(blocks);
   }, [blocks]);
+
+  // M19.21.A — listener universal de selección dentro del canvas (cubre bloques
+  // editables Y read-only: firma, juramento, norma_citada, jurisprudencia, etc.)
+  React.useEffect(() => {
+    if (!onSelectionAsk) return;
+    const handler = () => {
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed) return;
+      const text = sel.toString();
+      if (text.trim().length < 3) return;
+      // Verificar que la selección esté dentro del canvas
+      const root = canvasRootRef.current;
+      if (!root) return;
+      const range = sel.getRangeAt(0);
+      if (!root.contains(range.commonAncestorContainer)) return;
+      // Encontrar el bloque ancestor con data-block-id
+      let node: Node | null = range.commonAncestorContainer;
+      let blockEl: HTMLElement | null = null;
+      while (node && node !== root) {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          const el = node as HTMLElement;
+          if (el.dataset?.blockId) {
+            blockEl = el;
+            break;
+          }
+        }
+        node = node.parentNode;
+      }
+      if (!blockEl) return;
+      const blockId = blockEl.dataset.blockId as string;
+      // Si el bloque ya tiene un BlockEditor TipTap activo, el listener del editor
+      // ya manejará la selección (con anchors precisos). Evitamos doble emit.
+      const isInsideEditor = blockEl.querySelector?.(".ProseMirror") != null;
+      if (isInsideEditor) return;
+      // Calcular anchors string-based a partir del textContent del bloque
+      const blockText = blockEl.textContent || "";
+      const idx = blockText.indexOf(text);
+      const before = idx > 0 ? blockText.slice(Math.max(0, idx - ANCHOR_CHARS), idx) : "";
+      const after = idx >= 0
+        ? blockText.slice(idx + text.length, idx + text.length + ANCHOR_CHARS)
+        : "";
+      onSelectionAsk({
+        block_id: blockId,
+        text,
+        anchor_before: before,
+        anchor_after: after,
+      });
+    };
+    document.addEventListener("selectionchange", handler);
+    return () => document.removeEventListener("selectionchange", handler);
+  }, [onSelectionAsk]);
 
   const updateBlock = React.useCallback((updated: Block) => {
     setLocalBlocks((prev) =>
@@ -312,6 +365,7 @@ export function EditableDocxCanvas({ blocks, documentId, onSelectionAsk, lastEdi
   return (
     <div className="relative h-full overflow-y-auto bg-zinc-100">
       <div
+        ref={canvasRootRef}
         className="mx-auto bg-white shadow-md border border-zinc-200 my-6"
         style={{
           width: "8.5in",
@@ -333,14 +387,25 @@ export function EditableDocxCanvas({ blocks, documentId, onSelectionAsk, lastEdi
           if (!isEditable) {
             // Read-only: BlockRenderer + key con lastEditAt para reflejar cambios
             // externos (tablas, citas, firma editadas vía chat)
+            // M19.21.A: data-block-id permite que el listener de selección global
+            // identifique de qué bloque viene la selección (firma, norma, etc.)
             return (
-              <div key={editorKeyFor(block.block_id)} className="select-text">
+              <div
+                key={editorKeyFor(block.block_id)}
+                className="select-text"
+                data-block-id={block.block_id}
+                data-block-type={block.type}
+              >
                 <BlockRenderer block={block} />
               </div>
             );
           }
           return (
-            <EditableBlockWrapper key={`wrap:${block.block_id}`} block={block}>
+            <EditableBlockWrapper
+              key={`wrap:${block.block_id}`}
+              block={block}
+              dataAttrs={{ blockId: block.block_id, blockType: block.type }}
+            >
               <BlockEditor
                 key={editorKeyFor(block.block_id)}
                 block={block as Block & { runs?: Run[] }}
@@ -363,16 +428,23 @@ export function EditableDocxCanvas({ blocks, documentId, onSelectionAsk, lastEdi
 function EditableBlockWrapper({
   block,
   children,
+  dataAttrs,
 }: {
   block: Block;
   children: React.ReactNode;
+  // M19.21.A: data-block-id + data-block-type para que el listener de selección
+  // universal pueda identificar el bloque incluso en wrappers complejos.
+  dataAttrs?: { blockId?: string; blockType?: string };
 }) {
+  const da = dataAttrs
+    ? { "data-block-id": dataAttrs.blockId, "data-block-type": dataAttrs.blockType }
+    : {};
   // Layout específico por tipo (prefijos numéricos, etc.) — manteniendo simétrico al BlockRenderer
   switch (block.type) {
     case "hecho": {
       const num = (block as { num: number }).num;
       return (
-        <div className="flex gap-2 mb-2 leading-relaxed text-justify">
+        <div className="flex gap-2 mb-2 leading-relaxed text-justify" {...da}>
           <span className="font-bold min-w-[2rem] text-right">{num}.</span>
           <div className="flex-1">{children}</div>
         </div>
@@ -381,7 +453,7 @@ function EditableBlockWrapper({
     case "pretension": {
       const ord = (block as { ord: string }).ord;
       return (
-        <div className="mb-3 leading-relaxed text-justify">
+        <div className="mb-3 leading-relaxed text-justify" {...da}>
           <span className="font-bold">{ord}.</span>{" "}
           <span className="inline-block w-full">{children}</span>
         </div>
@@ -390,7 +462,7 @@ function EditableBlockWrapper({
     case "list_item": {
       const num = (block as { num: string }).num;
       return (
-        <div className="flex gap-2 mb-1 leading-relaxed pl-6 text-justify">
+        <div className="flex gap-2 mb-1 leading-relaxed pl-6 text-justify" {...da}>
           <span className="font-bold min-w-[1.5rem]">{num})</span>
           <div className="flex-1">{children}</div>
         </div>
@@ -401,13 +473,17 @@ function EditableBlockWrapper({
       const text = (block as { number: string; text: string }).text;
       // subsection no tiene runs editables (header), mejor renderlo read-only
       return (
-        <h3 className="text-sm font-bold underline mt-4 mb-2">
+        <h3 className="text-sm font-bold underline mt-4 mb-2" {...da}>
           {number}. {text}
         </h3>
       );
     }
     case "paragraph":
     default:
-      return <div className="leading-relaxed text-justify mb-2">{children}</div>;
+      return (
+        <div className="leading-relaxed text-justify mb-2" {...da}>
+          {children}
+        </div>
+      );
   }
 }
