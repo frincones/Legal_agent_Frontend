@@ -48,6 +48,9 @@ interface Props {
   templateId?: string | null;
   brief?: string | null;
   matterId?: string | null;
+  /** M19.23.K — modo inicial pasado desde URL/BriefModal. Tiene prioridad
+   * sobre localStorage (la modal ya capturó la elección del usuario). */
+  initialBorradorMode?: boolean;
 }
 
 type RightTab = "canvas" | "timeline" | "audit";
@@ -65,7 +68,13 @@ interface ChatMsg {
   };
 }
 
-export function IntegratedGenerationCanvas({ intent, templateId, brief, matterId }: Props) {
+export function IntegratedGenerationCanvas({
+  intent,
+  templateId,
+  brief,
+  matterId,
+  initialBorradorMode,
+}: Props) {
   const { state, generate, reset, abort, refreshBlocks } = useGenerationStreamV2();
 
   // M19.16.F4 — refrescar bloques cuando hubo edit Harvey-style (chat o inline)
@@ -96,12 +105,14 @@ export function IntegratedGenerationCanvas({ intent, templateId, brief, matterId
   const [regenLoading, setRegenLoading] = React.useState(false);
   const startedRef = React.useRef(false);
   // M19.23.I — modo del data_completeness_gate (true=borrador, false=firma).
-  // Persistido en localStorage para que el abogado mantenga su preferencia.
-  const [borradorMode, setBorradorMode] = React.useState<boolean>(true);
+  // Prioridad: initialBorradorMode (URL/BriefModal) > localStorage > default true.
+  const [borradorMode, setBorradorMode] = React.useState<boolean>(
+    initialBorradorMode ?? true,
+  );
   // M19.23.I — dismiss local del MissingDataPrompt para no re-mostrarlo tras cerrar.
   const [missingDismissed, setMissingDismissed] = React.useState<boolean>(false);
 
-  // Restore split ratio + borrador mode
+  // Restore split ratio + borrador mode (solo si initialBorradorMode no se mandó).
   React.useEffect(() => {
     try {
       const v = localStorage.getItem(LS_KEY);
@@ -109,9 +120,12 @@ export function IntegratedGenerationCanvas({ intent, templateId, brief, matterId
         const n = parseInt(v, 10);
         if (!isNaN(n) && n >= MIN_SIZE && n <= 100 - MIN_SIZE) setDefaultLeft(n);
       }
-      const bm = localStorage.getItem(LS_BORRADOR_KEY);
-      if (bm === "false") setBorradorMode(false);
+      if (initialBorradorMode === undefined) {
+        const bm = localStorage.getItem(LS_BORRADOR_KEY);
+        if (bm === "false") setBorradorMode(false);
+      }
     } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Persist borrador mode toggle

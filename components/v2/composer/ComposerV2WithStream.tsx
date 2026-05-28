@@ -631,20 +631,24 @@ export function ComposerV2WithStream({
   // layout normal automaticamente.
   const isCompact = compactWhenEmpty && messages.length === 0;
 
-  // Sprint M8: handler común para confirmar/saltar brief y redirigir
-  const handleBriefConfirm = (brief: string) => {
+  // Sprint M8 + M19.23.K: handler común para confirmar/saltar brief y redirigir
+  // Recibe borradorMode del toggle dentro de la modal y lo propaga vía URL.
+  const handleBriefConfirm = (brief: string, opts: { borradorMode: boolean }) => {
     const url = new URL('/v2/canvas/draft', window.location.origin);
     url.searchParams.set('engine', 'v2');
     url.searchParams.set('intent', briefModal.intent);
     if (briefModal.templateId) url.searchParams.set('template', briefModal.templateId);
     if (brief) url.searchParams.set('brief', brief);
     if (briefModal.matterId) url.searchParams.set('matter_id', briefModal.matterId);
+    // M19.23.K — borrador_mode default=true. Solo lo agregamos si es false
+    // para mantener URLs limpias en el caso por defecto.
+    if (!opts.borradorMode) url.searchParams.set('borrador_mode', 'false');
     setBriefModal({ open: false, intent: '', templateId: null });
     window.location.assign(url.toString());
   };
 
-  const handleBriefSkip = () => {
-    handleBriefConfirm(''); // brief vacío → placeholders en doc
+  const handleBriefSkip = (opts: { borradorMode: boolean }) => {
+    handleBriefConfirm('', opts); // brief vacío → placeholders en doc
   };
 
   const handleBriefCancel = () => {

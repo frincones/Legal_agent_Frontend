@@ -21,6 +21,7 @@ interface CanvasDraftIslandProps {
   templateId?: string;
   brief?: string;
   matterId?: string;
+  borradorMode?: boolean;
 }
 
 export function CanvasDraftIsland({
@@ -30,6 +31,7 @@ export function CanvasDraftIsland({
   templateId,
   brief,
   matterId,
+  borradorMode = true,
 }: CanvasDraftIslandProps) {
   const router = useRouter();
   const isV2 = engine === 'v2' && !!intent;
@@ -123,6 +125,7 @@ export function CanvasDraftIsland({
             templateId={templateId}
             brief={brief}
             matterId={matterId}
+            initialBorradorMode={borradorMode}
           />
         ) : initialContent ? (
           <ThreadCanvasSplit

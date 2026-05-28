@@ -1,172 +1,165 @@
 "use client";
 
 /**
- * Sprint M8 · Modal de captura de brief antes de redirigir a /v2/canvas/draft?engine=v2
+ * Sprint M8 + M19.23.K · Modal de captura de brief antes de redirigir
+ * a /v2/canvas/draft?engine=v2.
  *
- * Cuando el composer detecta intent doc_gen pero el prompt NO contiene datos del caso,
- * abrimos este modal para capturar los datos mínimos del TemplateDef (required_data).
+ * Comportamiento:
+ *  1. Al abrirse, llama POST /api/documents/v2/preview-required-fields para
+ *     que el AGENTE (gpt-4o) liste los campos críticos/opcionales necesarios
+ *     para el doc_type detectado. Mientras carga, muestra spinner.
+ *  2. Si el agente responde, renderiza los campos dinámicos con label,
+ *     description, example. Distingue críticos (asterisco rojo) de opcionales.
+ *  3. Si el preview falla o tarda, fallback a una sola textarea libre.
+ *  4. Incluye toggle "Modo Borrador / Modo Firma" para que el usuario decida
+ *     desde aquí (no después). Persiste preferencia en localStorage.
+ *  5. Submit construye el brief como bullet list y redirige al canvas con
+ *     borrador_mode en URL params.
  *
- * Sin brief, el motor v2 emite el documento con placeholders [NOMBRE_DEMANDANTE], etc.
- * Con brief, los placeholders se reemplazan por valores reales.
- *
- * El usuario puede:
- *   - Llenar los campos y "Generar"
- *   - "Saltar" → generar con placeholders (M8 fallback)
- *   - "Cancelar" → vuelve al chat normal
+ * Diseño doc-type agnostic: NO hay listas hardcoded. El agente decide.
  */
 
 import * as React from "react";
+
+const LS_BORRADOR_KEY = "lexai-v2-borrador-mode";
+
+interface DynamicField {
+  field_key: string;
+  label: string;
+  description: string;
+  example_value?: string | null;
+  suggested_placeholder?: string | null;
+}
+
+interface PreviewResponse {
+  doc_type: string;
+  fields_critical: DynamicField[];
+  fields_optional: DynamicField[];
+  required_fields_count: number;
+  reasoning: string;
+  skipped: boolean;
+  duration_ms: number;
+}
 
 export interface BriefModalProps {
   open: boolean;
   intent: string;
   templateId: string | null;
-  onConfirm: (brief: string) => void;
-  onSkip: () => void;
+  onConfirm: (brief: string, opts: { borradorMode: boolean }) => void;
+  onSkip: (opts: { borradorMode: boolean }) => void;
   onCancel: () => void;
 }
 
-// Campos a pedir por template_id. Si no aparece, no se pide brief (fallback).
-const TEMPLATE_FIELDS: Record<string, Array<{ key: string; label: string; placeholder?: string; type?: string }>> = {
-  demanda_laboral_ordinaria: [
-    { key: "demandante_nombre", label: "Nombre del demandante", placeholder: "María Pérez González" },
-    { key: "demandante_cc", label: "C.C. demandante", placeholder: "1.234.567.890" },
-    { key: "demandada_razon_social", label: "Razón social demandada", placeholder: "Comercializadora XYZ SAS" },
-    { key: "demandada_nit", label: "NIT demandada", placeholder: "900.123.456-7" },
-    { key: "salario_mensual", label: "Salario mensual (COP)", placeholder: "2500000", type: "number" },
-    { key: "fecha_ingreso", label: "Fecha ingreso", placeholder: "2019-03-15", type: "date" },
-    { key: "fecha_despido", label: "Fecha despido", placeholder: "2026-04-30", type: "date" },
-    { key: "cargo", label: "Cargo", placeholder: "Asistente Administrativa" },
-    { key: "ciudad", label: "Ciudad", placeholder: "Bogotá D.C." },
-  ],
-  demanda_civil_ordinaria: [
-    { key: "demandante_nombre", label: "Demandante" },
-    { key: "demandado_nombre", label: "Demandado" },
-    { key: "pretension_principal", label: "Pretensión principal" },
-    { key: "monto_reclamado", label: "Monto reclamado", type: "number" },
-    { key: "fecha_hechos", label: "Fecha de los hechos", type: "date" },
-    { key: "ciudad", label: "Ciudad" },
-  ],
-  demanda_ejecutivo_singular: [
-    { key: "demandante_nombre", label: "Demandante" },
-    { key: "demandado_nombre", label: "Demandado" },
-    { key: "titulo_tipo", label: "Tipo título (pagaré/factura/sentencia)" },
-    { key: "monto_capital", label: "Capital adeudado (COP)", type: "number" },
-    { key: "fecha_titulo", label: "Fecha del título", type: "date" },
-    { key: "tasa_interes", label: "Tasa de interés (% anual)", type: "number" },
-    { key: "ciudad", label: "Ciudad" },
-  ],
-  demanda_alimentos: [
-    { key: "demandante_nombre", label: "Demandante (madre/padre)" },
-    { key: "demandado_nombre", label: "Demandado (alimentante)" },
-    { key: "menor_nombre", label: "Nombre del menor" },
-    { key: "menor_edad", label: "Edad del menor", type: "number" },
-    { key: "alimentante_ingresos", label: "Ingresos del alimentante (COP/mes)", type: "number" },
-    { key: "ciudad", label: "Ciudad" },
-  ],
-  tutela: [
-    { key: "accionante_nombre", label: "Accionante" },
-    { key: "accionante_cc", label: "C.C." },
-    { key: "accionado_entidad", label: "Entidad accionada", placeholder: "EPS Sura" },
-    { key: "derecho_vulnerado", label: "Derecho fundamental vulnerado", placeholder: "Salud" },
-    { key: "fecha_hecho", label: "Fecha del hecho", type: "date" },
-    { key: "ciudad", label: "Ciudad" },
-  ],
-  derecho_peticion: [
-    { key: "peticionario_nombre", label: "Peticionario" },
-    { key: "peticionario_cc", label: "C.C." },
-    { key: "entidad_destinataria", label: "Entidad destinataria" },
-    { key: "peticion_concreta", label: "Petición concreta" },
-    { key: "ciudad", label: "Ciudad" },
-  ],
-  contrato_arrendamiento: [
-    { key: "arrendador_nombre", label: "Arrendador" },
-    { key: "arrendador_cc", label: "C.C./NIT arrendador" },
-    { key: "arrendatario_nombre", label: "Arrendatario" },
-    { key: "arrendatario_cc", label: "C.C. arrendatario" },
-    { key: "inmueble_direccion", label: "Dirección del inmueble" },
-    { key: "canon_mensual", label: "Canon mensual (COP)", type: "number" },
-    { key: "duracion_meses", label: "Duración (meses)", type: "number" },
-    { key: "ciudad", label: "Ciudad" },
-  ],
-  contrato_prestacion_servicios: [
-    { key: "contratante_nombre", label: "Contratante" },
-    { key: "contratante_nit_cc", label: "C.C./NIT contratante" },
-    { key: "contratista_nombre", label: "Contratista" },
-    { key: "contratista_nit_cc", label: "C.C./NIT contratista" },
-    { key: "objeto_servicio", label: "Objeto del servicio" },
-    { key: "valor_total", label: "Valor total (COP)", type: "number" },
-    { key: "duracion_meses", label: "Duración (meses)", type: "number" },
-  ],
-  denuncia_penal: [
-    { key: "denunciante_nombre", label: "Denunciante" },
-    { key: "denunciante_cc", label: "C.C. denunciante" },
-    { key: "denunciado_nombre", label: "Denunciado" },
-    { key: "delito", label: "Delito" },
-    { key: "fecha_hecho", label: "Fecha del hecho", type: "date" },
-    { key: "lugar_hecho", label: "Lugar del hecho" },
-  ],
-  recurso_apelacion: [
-    { key: "recurrente_nombre", label: "Recurrente" },
-    { key: "providencia_referencia", label: "Providencia impugnada (ref.)" },
-    { key: "fecha_providencia", label: "Fecha providencia", type: "date" },
-    { key: "juzgado_origen", label: "Juzgado de origen" },
-    { key: "motivos_impugnacion", label: "Motivos de impugnación" },
-  ],
-  concepto_juridico: [
-    { key: "consultante", label: "Consultante" },
-    { key: "problema_juridico", label: "Problema jurídico" },
-    { key: "fecha_consulta", label: "Fecha de consulta", type: "date" },
-  ],
-  poder_especial: [
-    { key: "poderdante_nombre", label: "Poderdante" },
-    { key: "poderdante_cc", label: "C.C. poderdante" },
-    { key: "apoderado_nombre", label: "Apoderado" },
-    { key: "apoderado_tp", label: "T.P. apoderado" },
-    { key: "asunto", label: "Asunto" },
-    { key: "ciudad", label: "Ciudad" },
-  ],
-};
-
-export function BriefModal({ open, intent, templateId, onConfirm, onSkip, onCancel }: BriefModalProps) {
-  const fields = templateId && TEMPLATE_FIELDS[templateId] ? TEMPLATE_FIELDS[templateId] : null;
+export function BriefModal({
+  open,
+  intent,
+  templateId,
+  onConfirm,
+  onSkip,
+  onCancel,
+}: BriefModalProps) {
+  const [borradorMode, setBorradorMode] = React.useState<boolean>(true);
+  const [preview, setPreview] = React.useState<PreviewResponse | null>(null);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
   const [values, setValues] = React.useState<Record<string, string>>({});
+  const [showAllOptional, setShowAllOptional] = React.useState(false);
 
   React.useEffect(() => {
-    if (open) setValues({});
-  }, [open, templateId]);
+    try {
+      const v = localStorage.getItem(LS_BORRADOR_KEY);
+      if (v === "false") setBorradorMode(false);
+    } catch {}
+  }, []);
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem(LS_BORRADOR_KEY, String(borradorMode));
+    } catch {}
+  }, [borradorMode]);
+
+  // Al abrir, dispara preview-required-fields
+  React.useEffect(() => {
+    if (!open || !intent) return;
+    let cancelled = false;
+    setPreview(null);
+    setValues({});
+    setError(null);
+    setLoading(true);
+    (async () => {
+      try {
+        const res = await fetch("/api/documents/v2/preview-required-fields", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ intent, doc_type: templateId || undefined }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data: PreviewResponse = await res.json();
+        if (!cancelled) setPreview(data);
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, intent, templateId]);
 
   if (!open) return null;
-  if (!fields) {
-    // Sin fields conocidos, brief = intent crudo
-    onConfirm(intent);
-    return null;
-  }
 
   const submit = () => {
-    const lines = fields
-      .filter((f) => values[f.key]?.trim())
-      .map((f) => `${f.label}: ${values[f.key]?.trim()}`);
+    if (!preview) {
+      onConfirm(intent, { borradorMode });
+      return;
+    }
+    const allFields = [...preview.fields_critical, ...preview.fields_optional];
+    const lines = allFields
+      .filter((f) => values[f.field_key]?.trim())
+      .map((f) => `- ${f.label}: ${values[f.field_key]?.trim()}`);
     const brief = lines.join("\n");
-    onConfirm(brief);
+    onConfirm(brief, { borradorMode });
   };
 
-  const filledCount = fields.filter((f) => values[f.key]?.trim()).length;
+  const handleSkip = () => onSkip({ borradorMode });
+
+  const criticalFields = preview?.fields_critical || [];
+  const optionalFields = preview?.fields_optional || [];
+  const allFields = [...criticalFields, ...optionalFields];
+  const filledCount = allFields.filter((f) => values[f.field_key]?.trim()).length;
+  const filledCriticalCount = criticalFields.filter(
+    (f) => values[f.field_key]?.trim()
+  ).length;
+  const missingCriticalCount = criticalFields.length - filledCriticalCount;
+
+  const canSubmit =
+    !loading &&
+    (borradorMode || missingCriticalCount === 0 || criticalFields.length === 0);
 
   return (
     <div
       style={{
-        position: "fixed", inset: 0, zIndex: 9999,
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
         backgroundColor: "rgba(0,0,0,0.4)",
-        display: "flex", alignItems: "center", justifyContent: "center",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
       }}
       onClick={onCancel}
     >
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          backgroundColor: "white", borderRadius: 12, maxWidth: 640, width: "92%",
-          maxHeight: "90vh", overflowY: "auto", padding: 24,
+          backgroundColor: "white",
+          borderRadius: 12,
+          maxWidth: 720,
+          width: "94%",
+          maxHeight: "92vh",
+          overflowY: "auto",
+          padding: 24,
           boxShadow: "0 20px 50px rgba(0,0,0,0.2)",
         }}
       >
@@ -174,7 +167,8 @@ export function BriefModal({ open, intent, templateId, onConfirm, onSkip, onCanc
           <div>
             <h2 className="text-lg font-semibold">Datos del caso</h2>
             <p className="text-xs text-zinc-500 mt-0.5">
-              {templateId} · Completa los datos para que el agente genere el documento real (no placeholders)
+              {templateId || "documento legal"} · El agente analizó tu prompt y
+              detectó qué datos necesita
             </p>
           </div>
           <button
@@ -186,47 +180,253 @@ export function BriefModal({ open, intent, templateId, onConfirm, onSkip, onCanc
           </button>
         </div>
 
-        <p className="text-xs italic text-zinc-600 mb-3 bg-zinc-50 p-2 rounded">
-          Intent: "{intent}"
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {fields.map((f) => (
-            <div key={f.key} className={f.label.length > 30 ? "md:col-span-2" : ""}>
-              <label className="text-xs font-medium text-zinc-700">{f.label}</label>
-              <input
-                type={f.type || "text"}
-                value={values[f.key] || ""}
-                onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
-                placeholder={f.placeholder || ""}
-                className="w-full mt-1 text-sm border border-zinc-300 rounded px-2 py-1.5"
-              />
-            </div>
-          ))}
+        {/* Modo Borrador / Firma */}
+        <div className="mb-3 p-3 border border-zinc-200 rounded-lg bg-zinc-50">
+          <div className="text-[11px] font-medium text-zinc-700 uppercase mb-2">
+            Modo de generación
+          </div>
+          <div className="flex gap-2">
+            <ModeOption
+              active={borradorMode}
+              onClick={() => setBorradorMode(true)}
+              icon="✎"
+              title="Borrador"
+              description="El agente usa placeholders cuando faltan datos. Útil para revisar la estructura antes de tener todo el caso."
+            />
+            <ModeOption
+              active={!borradorMode}
+              onClick={() => setBorradorMode(false)}
+              icon="✒"
+              title="Firma"
+              description="El agente alerta si faltan datos críticos. Útil cuando el documento debe quedar listo para firmar."
+              accent="red"
+            />
+          </div>
         </div>
 
-        <div className="mt-4 flex items-center justify-between">
+        <p className="text-xs italic text-zinc-600 mb-3 bg-zinc-50 p-2 rounded">
+          {intent.length > 220 ? intent.slice(0, 220) + "…" : intent}
+        </p>
+
+        {loading && (
+          <div className="py-8 flex flex-col items-center gap-2 text-zinc-500">
+            <div className="animate-spin w-6 h-6 border-2 border-zinc-300 border-t-zinc-700 rounded-full" />
+            <span className="text-xs">
+              El agente está analizando qué datos necesita…
+            </span>
+            <span className="text-[10px] text-zinc-400">
+              (5-15s · gpt-4o)
+            </span>
+          </div>
+        )}
+
+        {!loading && error && (
+          <div className="space-y-2">
+            <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+              ⚠ No se pudieron predecir los campos automáticamente ({error}).
+              Puedes describir el caso libremente.
+            </div>
+            <textarea
+              value={values._free || ""}
+              onChange={(e) =>
+                setValues((v) => ({ ...v, _free: e.target.value }))
+              }
+              placeholder="Describe los datos del caso (partes, fechas, hechos clave, montos…)"
+              rows={6}
+              className="w-full text-sm border border-zinc-300 rounded px-2 py-1.5 outline-none focus:border-blue-400"
+            />
+          </div>
+        )}
+
+        {!loading && !error && preview && (
+          <div className="space-y-3">
+            {preview.reasoning && (
+              <p className="text-[11px] text-zinc-600 italic">
+                💡 {preview.reasoning}
+              </p>
+            )}
+
+            {criticalFields.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-[10px] font-semibold uppercase text-red-700">
+                    Críticos ({criticalFields.length})
+                  </div>
+                  {!borradorMode && missingCriticalCount > 0 && (
+                    <div className="text-[10px] text-red-600">
+                      Faltan {missingCriticalCount} para firma
+                    </div>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                  {criticalFields.map((f) => (
+                    <FieldRow
+                      key={f.field_key}
+                      field={f}
+                      value={values[f.field_key] || ""}
+                      onChange={(v) =>
+                        setValues((vv) => ({ ...vv, [f.field_key]: v }))
+                      }
+                      critical
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {optionalFields.length > 0 && (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAllOptional((v) => !v)}
+                  className="text-[10px] font-semibold uppercase text-zinc-500 hover:text-zinc-700 flex items-center gap-1"
+                >
+                  <span>{showAllOptional ? "▾" : "▸"}</span>
+                  Opcionales ({optionalFields.length})
+                </button>
+                {showAllOptional && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                    {optionalFields.map((f) => (
+                      <FieldRow
+                        key={f.field_key}
+                        field={f}
+                        value={values[f.field_key] || ""}
+                        onChange={(v) =>
+                          setValues((vv) => ({ ...vv, [f.field_key]: v }))
+                        }
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {criticalFields.length === 0 && optionalFields.length === 0 && (
+              <div className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded p-2">
+                ✓ El agente considera que tu prompt ya tiene los datos
+                necesarios. Puedes generar directamente.
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="mt-4 flex items-center justify-between gap-2 pt-3 border-t border-zinc-200">
           <span className="text-xs text-zinc-500">
-            {filledCount}/{fields.length} campos llenados
-            {filledCount === 0 && " · puedes saltar y usar placeholders"}
+            {preview ? (
+              <>
+                {filledCount}/{allFields.length} campos llenados
+                {borradorMode && filledCount === 0 && (
+                  <span className="text-zinc-400">
+                    {" "}· puedes saltar y usar placeholders
+                  </span>
+                )}
+              </>
+            ) : loading ? (
+              "Analizando…"
+            ) : (
+              "Modo libre"
+            )}
           </span>
           <div className="flex gap-2">
             <button
-              onClick={onSkip}
-              className="text-sm px-3 py-1.5 border border-zinc-300 rounded hover:bg-zinc-50"
+              onClick={handleSkip}
+              disabled={loading}
+              className="text-sm px-3 py-1.5 border border-zinc-300 rounded hover:bg-zinc-50 disabled:opacity-40"
             >
-              Saltar (usar placeholders)
+              {borradorMode
+                ? "Saltar (usar placeholders)"
+                : "Saltar (modo firma alertará)"}
             </button>
             <button
               onClick={submit}
-              disabled={filledCount === 0}
-              className="text-sm px-4 py-1.5 bg-zinc-900 text-white rounded hover:bg-zinc-800 disabled:opacity-40"
+              disabled={!canSubmit}
+              className={`text-sm px-4 py-1.5 rounded text-white ${
+                canSubmit
+                  ? "bg-zinc-900 hover:bg-zinc-800"
+                  : "bg-zinc-400 cursor-not-allowed"
+              }`}
+              title={
+                !canSubmit && !borradorMode
+                  ? `Completa los ${missingCriticalCount} datos críticos para modo firma`
+                  : ""
+              }
             >
-              ⚡ Generar con estos datos
+              {borradorMode ? "⚡ Generar borrador" : "✒ Generar para firma"}
             </button>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ModeOption({
+  active,
+  onClick,
+  icon,
+  title,
+  description,
+  accent,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: string;
+  title: string;
+  description: string;
+  accent?: "red";
+}) {
+  const activeClass = active
+    ? accent === "red"
+      ? "border-red-400 bg-red-50"
+      : "border-amber-400 bg-amber-50"
+    : "border-zinc-200 bg-white hover:border-zinc-300";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex-1 text-left p-2.5 rounded-md border-2 transition ${activeClass}`}
+    >
+      <div className="flex items-center gap-2 text-[12px] font-medium">
+        <span>{icon}</span>
+        <span>{title}</span>
+        {active && <span className="text-[10px] opacity-60">✓ Activo</span>}
+      </div>
+      <div className="text-[10.5px] text-zinc-600 mt-1 leading-snug">
+        {description}
+      </div>
+    </button>
+  );
+}
+
+function FieldRow({
+  field,
+  value,
+  onChange,
+  critical,
+}: {
+  field: DynamicField;
+  value: string;
+  onChange: (v: string) => void;
+  critical?: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <label className="text-[11px] font-medium text-zinc-800">
+        {field.label}
+        {critical && <span className="text-red-600 ml-1">*</span>}
+      </label>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={field.example_value || field.suggested_placeholder || ""}
+        className="text-[12px] px-2 py-1 border border-zinc-300 rounded outline-none focus:border-blue-400"
+      />
+      {field.description && (
+        <span className="text-[10px] text-zinc-500 leading-snug">
+          {field.description}
+        </span>
+      )}
     </div>
   );
 }

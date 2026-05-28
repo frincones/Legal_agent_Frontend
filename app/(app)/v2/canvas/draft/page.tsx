@@ -36,12 +36,15 @@ interface PageProps {
     template?: string;
     brief?: string;
     matter_id?: string;
+    borrador_mode?: string;
   };
 }
 
 export default function CanvasDraftPage({ searchParams }: PageProps) {
   const initialContent = decodeContent(searchParams.content);
   const engine = searchParams.engine === "v2" ? "v2" : "legacy";
+  // M19.23.K — borrador_mode default=true. Solo es false si la URL lo dice.
+  const borradorMode = searchParams.borrador_mode !== "false";
 
   return (
     <AppShell active="inicio">
@@ -52,6 +55,7 @@ export default function CanvasDraftPage({ searchParams }: PageProps) {
         templateId={searchParams.template}
         brief={searchParams.brief}
         matterId={searchParams.matter_id}
+        borradorMode={borradorMode}
       />
     </AppShell>
   );
