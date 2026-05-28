@@ -20,6 +20,8 @@
  */
 
 import * as React from "react";
+import { LegalReasoningCard } from "./LegalReasoningCard";
+import type { LegalClassificationData } from "@/lib/types/blocks";
 
 const LS_BORRADOR_KEY = "lexai-v2-borrador-mode";
 
@@ -64,6 +66,10 @@ export function BriefModal({
   const [error, setError] = React.useState<string | null>(null);
   const [values, setValues] = React.useState<Record<string, string>>({});
   const [showAllOptional, setShowAllOptional] = React.useState(false);
+  // M19.24.B — análisis legal previo (Paso 3 de Claude)
+  const [legalClassification, setLegalClassification] =
+    React.useState<LegalClassificationData | null>(null);
+  const [legalLoading, setLegalLoading] = React.useState(false);
 
   React.useEffect(() => {
     try {
@@ -77,6 +83,33 @@ export function BriefModal({
       localStorage.setItem(LS_BORRADOR_KEY, String(borradorMode));
     } catch {}
   }, [borradorMode]);
+
+  // M19.24.B — al abrir, también dispara legal-classify EN PARALELO con preview-fields
+  React.useEffect(() => {
+    if (!open || !intent) return;
+    let cancelled = false;
+    setLegalClassification(null);
+    setLegalLoading(true);
+    (async () => {
+      try {
+        const res = await fetch("/api/documents/v2/legal-classify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ intent, doc_type: templateId || undefined }),
+        });
+        if (!res.ok) return;
+        const data: LegalClassificationData = await res.json();
+        if (!cancelled && !data.skipped) setLegalClassification(data);
+      } catch {
+        // Silencioso — el legal-classify es opcional. No bloquea la modal.
+      } finally {
+        if (!cancelled) setLegalLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, intent, templateId]);
 
   // Al abrir, dispara preview-required-fields
   React.useEffect(() => {
@@ -207,6 +240,24 @@ export function BriefModal({
         <p className="text-xs italic text-zinc-600 mb-3 bg-zinc-50 p-2 rounded">
           {intent.length > 220 ? intent.slice(0, 220) + "…" : intent}
         </p>
+
+        {/* M19.24.B — Análisis legal previo (Paso 3 de Claude) */}
+        {legalLoading && !legalClassification && (
+          <div className="mb-3 py-2 flex items-center gap-2 text-zinc-500 border border-indigo-200 bg-indigo-50/50 rounded px-3">
+            <div className="animate-spin w-3 h-3 border-2 border-indigo-300 border-t-indigo-700 rounded-full" />
+            <span className="text-[11px]">
+              Analizando régimen aplicable y verificando citas legales…
+            </span>
+          </div>
+        )}
+        {legalClassification && !legalClassification.skipped && (
+          <div className="-mx-3 mb-3">
+            <LegalReasoningCard
+              classification={legalClassification}
+              collapsible
+            />
+          </div>
+        )}
 
         {loading && (
           <div className="py-8 flex flex-col items-center gap-2 text-zinc-500">

@@ -20,15 +20,24 @@
  */
 
 import * as React from "react";
-import type { MissingDataReport, MissingField } from "@/lib/types/blocks";
+import type { MissingDataReport, MissingField, RiskAdvisory } from "@/lib/types/blocks";
 
 interface Props {
   report: MissingDataReport;
   documentId: string | null;
   onDismiss: () => void;
+  /** M19.24.C — Risk advisories matchados por field_key. La trinidad
+   * (falta/consecuencia/recomendación) se renderiza junto a cada field. */
+  riskAdvisories?: RiskAdvisory[];
 }
 
-export function MissingDataPrompt({ report, documentId, onDismiss }: Props) {
+export function MissingDataPrompt({ report, documentId, onDismiss, riskAdvisories = [] }: Props) {
+  // M19.24.C — index de advisories por field_key para lookup O(1)
+  const advisoryByField = React.useMemo(() => {
+    const m = new Map<string, RiskAdvisory>();
+    for (const a of riskAdvisories) m.set(a.field_key, a);
+    return m;
+  }, [riskAdvisories]);
   const [expanded, setExpanded] = React.useState(report.borrador_mode === false);
   const [values, setValues] = React.useState<Record<string, string>>({});
   const [submitting, setSubmitting] = React.useState(false);
@@ -177,6 +186,7 @@ export function MissingDataPrompt({ report, documentId, onDismiss }: Props) {
                   value={values[f.field_key] || ""}
                   onChange={(v) => handleChange(f.field_key, v)}
                   disabled={submitting || submitted}
+                  advisory={advisoryByField.get(f.field_key)}
                 />
               ))}
             </div>
@@ -195,6 +205,7 @@ export function MissingDataPrompt({ report, documentId, onDismiss }: Props) {
                   value={values[f.field_key] || ""}
                   onChange={(v) => handleChange(f.field_key, v)}
                   disabled={submitting || submitted}
+                  advisory={advisoryByField.get(f.field_key)}
                 />
               ))}
             </div>
@@ -247,11 +258,14 @@ function FieldRow({
   value,
   onChange,
   disabled,
+  advisory,
 }: {
   field: MissingField;
   value: string;
   onChange: (v: string) => void;
   disabled: boolean;
+  /** M19.24.C — trinidad: falta / consecuencia / recomendación */
+  advisory?: RiskAdvisory;
 }) {
   return (
     <div className="flex flex-col gap-0.5">
@@ -269,7 +283,26 @@ function FieldRow({
         placeholder={field.example_value || field.suggested_placeholder || ""}
         className="text-[12px] px-2 py-1 border border-zinc-300 rounded outline-none focus:border-blue-400 disabled:opacity-50 disabled:bg-zinc-50"
       />
-      <span className="text-[10px] text-zinc-500">{field.description}</span>
+      {/* M19.24.C — trinidad estilo Claude (si hay advisory en BD) */}
+      {advisory ? (
+        <div className="text-[10px] leading-snug mt-0.5 space-y-0.5">
+          <div className="text-zinc-700">
+            <span className="font-medium text-amber-700">Consecuencia: </span>
+            {advisory.consecuencia}
+          </div>
+          <div className="text-zinc-700">
+            <span className="font-medium text-emerald-700">💡 </span>
+            {advisory.recomendacion}
+          </div>
+          {advisory.fuente_legal && (
+            <div className="text-[9.5px] italic text-zinc-400">
+              {advisory.fuente_legal}
+            </div>
+          )}
+        </div>
+      ) : (
+        <span className="text-[10px] text-zinc-500">{field.description}</span>
+      )}
     </div>
   );
 }

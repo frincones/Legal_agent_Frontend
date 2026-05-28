@@ -5,9 +5,11 @@ import type {
   AgentThought,
   Block,
   GenerationState,
+  LegalClassificationData,
   MetaPayload,
   MissingDataReport,
   QualityReport,
+  RiskAdvisory,
   SectionPlanItem,
   SSEEventName,
   StructureRecipeData,
@@ -39,7 +41,10 @@ type Action =
   // M19.23 — Structure Discovery + Data Completeness
   | { type: "STRUCTURE_DISCOVERED"; payload: StructureRecipeData }
   | { type: "MISSING_DATA"; payload: MissingDataReport }
-  | { type: "MISSING_DATA_RESOLVED" };
+  | { type: "MISSING_DATA_RESOLVED" }
+  // M19.24 — Legal Classifier + Risk Advisory
+  | { type: "LEGAL_CLASSIFICATION"; payload: LegalClassificationData }
+  | { type: "RISK_ADVISORY"; payload: RiskAdvisory };
 
 const initialState: GenerationState = {
   generationId: null,
@@ -61,6 +66,8 @@ const initialState: GenerationState = {
   qualityReport: null,
   structureRecipe: null,
   missingDataReport: null,
+  legalClassification: null,
+  riskAdvisories: [],
 };
 
 function reducer(state: GenerationState, action: Action): GenerationState {
@@ -158,6 +165,12 @@ function reducer(state: GenerationState, action: Action): GenerationState {
 
     case "MISSING_DATA_RESOLVED":
       return { ...state, missingDataReport: null };
+
+    case "LEGAL_CLASSIFICATION":
+      return { ...state, legalClassification: action.payload };
+
+    case "RISK_ADVISORY":
+      return { ...state, riskAdvisories: [...state.riskAdvisories, action.payload] };
 
     default:
       return state;
@@ -476,6 +489,15 @@ function handleEvent(event: SSEEventName, data: any, dispatch: React.Dispatch<Ac
 
     case "missing_data_resolved":
       dispatch({ type: "MISSING_DATA_RESOLVED" });
+      break;
+
+    // M19.24 — Legal Classifier + Risk Advisory
+    case "legal_classification":
+      dispatch({ type: "LEGAL_CLASSIFICATION", payload: data as LegalClassificationData });
+      break;
+
+    case "risk_advisory":
+      dispatch({ type: "RISK_ADVISORY", payload: data as RiskAdvisory });
       break;
 
     case "done":

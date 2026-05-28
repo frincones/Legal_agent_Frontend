@@ -187,7 +187,10 @@ export type SSEEventName =
   // M19.23: Structure Discovery + Data Completeness Gate
   | "structure_discovered"
   | "missing_data"
-  | "missing_data_resolved";
+  | "missing_data_resolved"
+  // M19.24: Legal Classifier + Risk Advisory
+  | "legal_classification"
+  | "risk_advisory";
 
 // M18.d + M19.5 + M19.7: Agent thought (narración en vivo del agente, estilo Claude)
 export type AgentThoughtKind =
@@ -300,10 +303,59 @@ export interface StructureRecipeData {
   juramento_norma_ref?: string | null;
   juez_competente?: string | null;
   cuerpos_normativos_minimos?: string[];
+  // M19.24 — campos universales
+  document_family?: string | null;
+  regimen_aplicable?: string | null;
+  naturaleza_acto?: string | null;
+  encabezado_tipo?: string | null;
+  cierre_tipo?: string | null;
+  numeracion_estilo?: string | null;
+  requires_pretensiones?: boolean | null;
+  requires_hechos?: boolean | null;
+  requires_juramento?: boolean | null;
+  playbooks?: Record<string, string[]>;
   cached: boolean;
   fallback_used: boolean;
   duration_ms: number;
   sections_count?: number;
+}
+
+// M19.24 — Legal Classifier types
+export interface PremisaCorregida {
+  usuario_dijo: string;
+  correcto: string;
+  razon: string;
+  fuente?: string | null;
+}
+
+export interface CitaVerificada {
+  ref: string;
+  exists: boolean;
+  max_in_law?: number | null;
+  suggested_correction?: string | null;
+}
+
+export interface LegalClassificationData {
+  document_family: string;
+  regimen_aplicable?: string | null;
+  naturaleza_acto?: string | null;
+  fundamento_normativo: string[];
+  premisas_corregidas: PremisaCorregida[];
+  advertencias_riesgo: string[];
+  citas_verificadas: CitaVerificada[];
+  reasoning: string;
+  cached: boolean;
+  skipped: boolean;
+  duration_ms: number;
+}
+
+export interface RiskAdvisory {
+  field_key: string;
+  severity: "critical" | "warning" | "info";
+  falta: string;
+  consecuencia: string;
+  recomendacion: string;
+  fuente_legal?: string | null;
 }
 
 // M19.23.C — Missing Data Report
@@ -385,4 +437,7 @@ export interface GenerationState {
   // M19.23 — Structure Discovery + Data Completeness
   structureRecipe: StructureRecipeData | null;
   missingDataReport: MissingDataReport | null;
+  // M19.24 — Legal Classifier + Risk Advisories
+  legalClassification: LegalClassificationData | null;
+  riskAdvisories: RiskAdvisory[];
 }

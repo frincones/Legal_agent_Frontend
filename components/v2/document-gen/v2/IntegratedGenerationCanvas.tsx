@@ -35,7 +35,13 @@ import { useAssistantMessagesFromThoughts } from "@/lib/hooks/useAssistantMessag
 import { useChangeAuditor } from "@/lib/hooks/useChangeAuditor";
 import { ChangeAuditSuggestions } from "./ChangeAuditSuggestions";
 import { MissingDataPrompt } from "./MissingDataPrompt";
-import type { AgentThought, MissingDataReport } from "@/lib/types/blocks";
+import { LegalReasoningCard } from "./LegalReasoningCard";
+import type {
+  AgentThought,
+  LegalClassificationData,
+  MissingDataReport,
+  RiskAdvisory,
+} from "@/lib/types/blocks";
 
 const LS_KEY = "lexai-v2-integrated-split";
 const LS_BORRADOR_KEY = "lexai-v2-borrador-mode";
@@ -474,6 +480,8 @@ export function IntegratedGenerationCanvas({
           }
           missingDataDocumentId={state.documentId}
           onDismissMissingData={() => setMissingDismissed(true)}
+          legalClassification={state.legalClassification}
+          riskAdvisories={state.riskAdvisories}
           auditPanelSlot={
             <ChangeAuditSuggestions
               audits={audits}
@@ -637,6 +645,8 @@ function ChatPanel({
   missingDataReport,
   missingDataDocumentId,
   onDismissMissingData,
+  legalClassification,
+  riskAdvisories,
 }: {
   messages: ChatMsg[];
   chatInput: string;
@@ -653,6 +663,10 @@ function ChatPanel({
   missingDataReport?: MissingDataReport | null;
   missingDataDocumentId?: string | null;
   onDismissMissingData?: () => void;
+  /** M19.24.B — clasificación legal previa (Paso 3 de Claude) */
+  legalClassification?: LegalClassificationData | null;
+  /** M19.24.C — risk advisories matchados por field_key */
+  riskAdvisories?: RiskAdvisory[];
 }) {
   const scrollRef = React.useRef<HTMLDivElement>(null);
   // M19.5: convertir thoughts → assistant messages estilo Claude
@@ -689,6 +703,10 @@ function ChatPanel({
       </div>
       {/* Thread */}
       <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "16px" }}>
+        {/* M19.24.B — Legal Reasoning Card (análisis previo del agente) */}
+        {legalClassification && !legalClassification.skipped && (
+          <LegalReasoningCard classification={legalClassification} collapsible />
+        )}
         {messages.map((m) => (
           <MessageRow key={m.id} msg={m} />
         ))}
@@ -712,6 +730,7 @@ function ChatPanel({
             report={missingDataReport}
             documentId={missingDataDocumentId ?? null}
             onDismiss={onDismissMissingData ?? (() => {})}
+            riskAdvisories={riskAdvisories ?? []}
           />
         </div>
       )}
