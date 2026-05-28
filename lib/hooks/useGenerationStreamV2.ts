@@ -437,6 +437,12 @@ function handleEvent(event: SSEEventName, data: any, dispatch: React.Dispatch<Ac
       // por ahora solo log; el report final viene en "quality_report"
       break;
 
+    // M19.22 — Context Enrichment (pre-research). El narrator emite el reporte
+    // visible en la prosa del agente; aquí solo aceptamos los eventos sin acción.
+    case "context_enrichment_started":
+    case "context_enrichment_done":
+      break;
+
     case "done":
       dispatch({ type: "DONE", payload: data });
       break;

@@ -180,7 +180,10 @@ export type SSEEventName =
   | "completeness_check_done"
   | "coherence_check_done"
   | "quality_report"
-  | "autoloop_iteration";
+  | "autoloop_iteration"
+  // M19.22: Context Enrichment (pre-research)
+  | "context_enrichment_started"
+  | "context_enrichment_done";
 
 // M18.d + M19.5 + M19.7: Agent thought (narración en vivo del agente, estilo Claude)
 export type AgentThoughtKind =
