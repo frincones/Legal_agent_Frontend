@@ -142,8 +142,11 @@ export function IntegratedGenerationCanvas({
   }, [borradorMode]);
 
   // Reset dismiss flag cuando llega un nuevo missing_data report del backend
+  // M20.14 fix: usar optional chaining — el backend lean a veces emite
+  // missing_data sin alguno de los arrays (e.g. solo critical sin optional),
+  // y `.length` directo crashea con "Cannot read properties of undefined".
   const missingReportKey = state.missingDataReport
-    ? `${state.missingDataReport.doc_type}-${state.missingDataReport.missing_critical.length}-${state.missingDataReport.missing_optional.length}`
+    ? `${state.missingDataReport.doc_type}-${state.missingDataReport.missing_critical?.length ?? 0}-${state.missingDataReport.missing_optional?.length ?? 0}`
     : null;
   React.useEffect(() => {
     setMissingDismissed(false);
@@ -190,7 +193,7 @@ export function IntegratedGenerationCanvas({
           {
             id: "complete",
             role: "assistant",
-            content: `✓ Documento generado: ${state.blocks.length} bloques en ${
+            content: `✓ Documento generado: ${state.blocks?.length ?? 0} bloques en ${
               state.finishedAt && state.startedAt
                 ? ((state.finishedAt - state.startedAt) / 1000).toFixed(1)
                 : "?"
@@ -212,7 +215,7 @@ export function IntegratedGenerationCanvas({
         },
       ]);
     }
-  }, [state.status, state.blocks.length, state.startedAt, state.finishedAt, state.error]);
+  }, [state.status, state.blocks?.length ?? 0, state.startedAt, state.finishedAt, state.error]);
 
   const sendChat = async () => {
     if (!chatInput.trim()) return;
@@ -505,8 +508,8 @@ export function IntegratedGenerationCanvas({
             state.missingDataReport &&
             !state.missingDataReport.skipped &&
             !missingDismissed &&
-            (state.missingDataReport.missing_critical.length +
-              state.missingDataReport.missing_optional.length >
+            ((state.missingDataReport.missing_critical?.length ?? 0) +
+              (state.missingDataReport.missing_optional?.length ?? 0) >
               0)
               ? state.missingDataReport
               : null
