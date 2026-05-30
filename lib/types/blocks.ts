@@ -53,8 +53,8 @@ export interface PretensionBlock extends BaseBlock {
   kind?: "declarativa" | "condena" | "general";
 }
 
-// M20.10: 4-tier citation system (alineado con backend lex/tools/verify_citation.py)
-export type CitationTier = "GROUNDED" | "VERIFY_FLAG" | "DEROGADA" | "NOT_FOUND";
+// M20.10/M20.13: 5-tier citation system (alineado con backend lex/tools/verify_citation.py)
+export type CitationTier = "GROUNDED" | "VERIFY_FLAG" | "DEROGADA" | "NOT_FOUND" | "MODULADA";
 
 export interface NormaCitadaBlock extends BaseBlock {
   type: "norma_citada";

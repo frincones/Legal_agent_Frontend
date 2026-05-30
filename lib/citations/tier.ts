@@ -67,6 +67,19 @@ export const TIER_META: Record<CitationTier, TierMeta> = {
       "Esta cita no existe en ninguna fuente verificable. Corrígela siguiendo la sugerencia.",
     severity: "critical",
   },
+  // M20.13: 5° tier - norma vigente pero modulada por jurisprudencia constitucional
+  MODULADA: {
+    tier: "MODULADA",
+    label: "Norma vigente con modulación constitucional",
+    shortLabel: "MODULADA",
+    icon: "⚖",
+    colorClass: "text-orange-700 dark:text-orange-400",
+    bgClass: "bg-orange-50 dark:bg-orange-950/40",
+    borderClass: "border-orange-200 dark:border-orange-800",
+    description:
+      "Esta norma sigue vigente pero su aplicación está modulada por jurisprudencia constitucional (exequibilidad condicionada). Aplícala con las limitaciones indicadas.",
+    severity: "warning",
+  },
 };
 
 /**
@@ -81,7 +94,7 @@ export function extractTier(block: {
   verified?: boolean;
   derogada?: boolean;
 }): CitationTier {
-  if (block.tier && ["GROUNDED", "VERIFY_FLAG", "DEROGADA", "NOT_FOUND"].includes(block.tier)) {
+  if (block.tier && ["GROUNDED", "VERIFY_FLAG", "DEROGADA", "NOT_FOUND", "MODULADA"].includes(block.tier)) {
     return block.tier;
   }
   if (block.derogada === true) return "DEROGADA";

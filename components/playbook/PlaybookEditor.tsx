@@ -11,8 +11,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   Save, Loader2, BookOpen, Shield, ListChecks, Settings, FileText,
-  Plus, X, Sparkles,
+  Plus, X, Sparkles, History,
 } from 'lucide-react';
+import { PlaybookHistory } from './PlaybookHistory';
+import { ColdStartWizard } from './ColdStartWizard';
 import { toast } from 'sonner';
 
 type Playbook = {
@@ -28,7 +30,7 @@ type Playbook = {
   updated_at?: string | null;
 };
 
-type Tab = 'general' | 'forbidden' | 'required' | 'preferred' | 'escalation' | 'raw';
+type Tab = 'general' | 'forbidden' | 'required' | 'preferred' | 'escalation' | 'raw' | 'history';
 
 export function PlaybookEditor() {
   const [pb, setPb] = useState<Playbook | null>(null);
@@ -114,39 +116,11 @@ export function PlaybookEditor() {
     setPb({ ...pb, required_clauses: pb.required_clauses.filter(x => x !== t) });
   }
 
-  // M20.11 · cold-start interview vía LLM
-  const [coldStarting, setColdStarting] = useState(false);
-  async function runColdStart() {
-    if (!confirm(
-      'Vamos a generar un playbook inicial vía IA en ~10s. Sobreescribirá tu playbook actual. ¿Continuar?'
-    )) return;
-    setColdStarting(true);
-    try {
-      const areas = window.prompt(
-        'Áreas de práctica (separadas por coma):',
-        'civil, comercial, laboral'
-      ) || 'general';
-      const tone = pb?.tone || 'formal';
-      const r = await fetch('/api/firm/playbook/cold-start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          practice_areas: areas.split(',').map(s => s.trim()).filter(Boolean),
-          tone,
-        }),
-      });
-      if (r.ok) {
-        toast.success('Playbook generado por IA');
-        await refresh();
-      } else {
-        const txt = await r.text();
-        toast.error(`Cold-start falló: ${txt.slice(0, 120)}`);
-      }
-    } catch (e: any) {
-      toast.error(e?.message || 'Error en cold-start');
-    } finally {
-      setColdStarting(false);
-    }
+  // M20.11+M20.12 · cold-start wizard (multi-step UX)
+  const [showColdStart, setShowColdStart] = useState(false);
+  const coldStarting = false;
+  function runColdStart() {
+    setShowColdStart(true);
   }
 
   if (loading) {
@@ -200,6 +174,7 @@ export function PlaybookEditor() {
           ['required', 'Cláusulas obligatorias', ListChecks],
           ['preferred', 'Cláusulas preferidas', BookOpen],
           ['raw', 'Markdown libre', FileText],
+          ['history', 'Historial', History],
         ] as Array<[Tab, string, any]>).map(([key, label, Icon]) => (
           <button
             key={key}
@@ -357,6 +332,19 @@ export function PlaybookEditor() {
 ## Templates comunes
 - Modelo NDA simple: 30 días, jurisdicción Bogotá, ley colombiana
 `}
+          />
+        </div>
+      )}
+
+      {tab === 'history' && (
+        <PlaybookHistory onRestored={() => void refresh()} />
+      )}
+
+      {showColdStart && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 overflow-y-auto">
+          <ColdStartWizard
+            onComplete={() => { setShowColdStart(false); void refresh(); }}
+            onCancel={() => setShowColdStart(false)}
           />
         </div>
       )}
