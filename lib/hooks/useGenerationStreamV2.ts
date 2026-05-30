@@ -524,12 +524,15 @@ function handleEvent(event: SSEEventName, data: any, dispatch: React.Dispatch<Ac
 
     case "agent_thought":
       // M18.d + M19.5: live narration estilo Claude
+      // M20.14 fix: leer data.content como fallback — el LeanOrchestrator
+      // (anthropic_brain.py) emite agent_thought con `content` para los
+      // final_message del Brain, NO con `message`. Antes se descartaban.
       dispatch({
         type: "THOUGHT",
         payload: {
-          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          id: data.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           kind: data.kind || "info",
-          message: data.message || "",
+          message: data.message || data.content || "",
           tool: data.tool || null,
           ref: data.ref || null,
           url: data.url || null,

@@ -184,25 +184,39 @@ export function IntegratedGenerationCanvas({
   }, [intent, brief, templateId, matterId, generate]);
 
   // Cuando generación completa, agregar mensaje al thread
+  // M20.14 fix: si el Brain terminó sin generar blocks pero envió un
+  // final_message (kind="narration"), mostramos ESE mensaje en vez del
+  // hardcoded "Documento generado: 0 bloques" — antes se ocultaba la
+  // respuesta del agente (e.g. "necesito poderdante, apoderado, ...").
   React.useEffect(() => {
     if (state.status === "completed") {
       setMessages((prev) => {
         if (prev.find((m) => m.id === "complete")) return prev;
+        const blockCount = state.blocks?.length ?? 0;
+        const durationS = state.finishedAt && state.startedAt
+          ? ((state.finishedAt - state.startedAt) / 1000).toFixed(1)
+          : "?";
+        // Buscar el último final_message del Brain (narration).
+        const finalNarration = [...(state.thoughts || [])]
+          .reverse()
+          .find((t) => t.kind === "narration" && (t.message || "").trim().length > 0);
+        const content = blockCount === 0 && finalNarration?.message
+          ? finalNarration.message
+          : `✓ Documento generado: ${blockCount} bloques en ${durationS}s. Puedes pedir cambios o descargar el .docx desde el canvas.`;
         return [
           ...prev,
           {
             id: "complete",
             role: "assistant",
-            content: `✓ Documento generado: ${state.blocks?.length ?? 0} bloques en ${
-              state.finishedAt && state.startedAt
-                ? ((state.finishedAt - state.startedAt) / 1000).toFixed(1)
-                : "?"
-            }s. Puedes pedir cambios o descargar el .docx desde el canvas.`,
+            content,
             ts: Date.now(),
           },
         ];
       });
-      setRightTab("canvas");
+      // Si no hay blocks, dejar el tab abierto en chat — no en canvas vacío.
+      if ((state.blocks?.length ?? 0) > 0) {
+        setRightTab("canvas");
+      }
     }
     if (state.status === "error") {
       setMessages((prev) => [
