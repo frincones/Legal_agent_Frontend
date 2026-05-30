@@ -53,6 +53,9 @@ export interface PretensionBlock extends BaseBlock {
   kind?: "declarativa" | "condena" | "general";
 }
 
+// M20.10: 4-tier citation system (alineado con backend lex/tools/verify_citation.py)
+export type CitationTier = "GROUNDED" | "VERIFY_FLAG" | "DEROGADA" | "NOT_FOUND";
+
 export interface NormaCitadaBlock extends BaseBlock {
   type: "norma_citada";
   norma: string;
@@ -63,8 +66,13 @@ export interface NormaCitadaBlock extends BaseBlock {
   // M19.10.A7: URLs canónicas verificadas (para hyperlinks en canvas y DOCX)
   fuente_url?: string | null;
   fuente_url_vigente?: string | null;
+  fuente_url_oficial?: string | null;
   discovered_by?: string | null;
   titulo_oficial?: string | null;
+  // M20.10: 4-tier markers
+  tier?: CitationTier;
+  derogada_por?: string | null;
+  suggested_correction?: string | null;
 }
 
 export interface JurisprudenciaBlock extends BaseBlock {
@@ -79,7 +87,10 @@ export interface JurisprudenciaBlock extends BaseBlock {
   sim_score?: number | null;
   // M19.10.A3: URL canónica para hyperlink azul/underline en canvas y DOCX
   fuente_url?: string | null;
+  fuente_url_oficial?: string | null;
   discovered_by?: string | null;
+  // M20.10: 4-tier markers
+  tier?: CitationTier;
 }
 
 export interface SilogismoBlock extends BaseBlock {
