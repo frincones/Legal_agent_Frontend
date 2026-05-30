@@ -44,7 +44,9 @@ type Action =
   | { type: "MISSING_DATA_RESOLVED" }
   // M19.24 — Legal Classifier + Risk Advisory
   | { type: "LEGAL_CLASSIFICATION"; payload: LegalClassificationData }
-  | { type: "RISK_ADVISORY"; payload: RiskAdvisory };
+  | { type: "RISK_ADVISORY"; payload: RiskAdvisory }
+  // M20.14 — Identifica qué orchestrator procesó la generación (lean | legacy)
+  | { type: "SET_ORCHESTRATOR_KIND"; payload: string };
 
 const initialState: GenerationState = {
   generationId: null,
@@ -68,6 +70,7 @@ const initialState: GenerationState = {
   missingDataReport: null,
   legalClassification: null,
   riskAdvisories: [],
+  orchestratorKind: null,
 };
 
 function reducer(state: GenerationState, action: Action): GenerationState {
@@ -172,6 +175,9 @@ function reducer(state: GenerationState, action: Action): GenerationState {
     case "RISK_ADVISORY":
       return { ...state, riskAdvisories: [...state.riskAdvisories, action.payload] };
 
+    case "SET_ORCHESTRATOR_KIND":
+      return { ...state, orchestratorKind: action.payload };
+
     default:
       return state;
   }
@@ -275,6 +281,14 @@ export function useGenerationStreamV2(): UseGenerationStreamV2Result {
         if (!res.ok || !res.body) {
           dispatch({ type: "ERROR", payload: `HTTP ${res.status}: ${res.statusText}` });
           return;
+        }
+
+        // M20.14: capturar el header X-Orchestrator (lean | legacy)
+        // El backend lo setea para que el frontend pueda mostrar al usuario
+        // qué arquitectura procesó esta generación.
+        const orchestratorKind = res.headers.get("x-orchestrator");
+        if (orchestratorKind) {
+          dispatch({ type: "SET_ORCHESTRATOR_KIND", payload: orchestratorKind });
         }
 
         const reader = res.body.getReader();

@@ -454,7 +454,40 @@ export function IntegratedGenerationCanvas({
 
   const isRunning = state.status === "running";
 
+  // M20.14: badge visual del orchestrator activo (lean | legacy)
+  const orchestratorBadge = state.orchestratorKind ? (
+    <div
+      title={
+        state.orchestratorKind === "lean"
+          ? "Procesado por LeanOrchestrator (ReAct + 18 tools, Anthropic Sonnet 4.6 + prompt caching)"
+          : "Procesado por Orchestrator legacy (17 stages secuenciales)"
+      }
+      style={{
+        position: "fixed",
+        top: 8,
+        right: 12,
+        zIndex: 100,
+        padding: "4px 10px",
+        borderRadius: 12,
+        fontSize: 11,
+        fontWeight: 600,
+        fontFamily: "monospace",
+        backgroundColor:
+          state.orchestratorKind === "lean" ? "rgb(220, 252, 231)" : "rgb(241, 245, 249)",
+        color:
+          state.orchestratorKind === "lean" ? "rgb(22, 101, 52)" : "rgb(51, 65, 85)",
+        border: `1px solid ${
+          state.orchestratorKind === "lean" ? "rgb(134, 239, 172)" : "rgb(203, 213, 225)"
+        }`,
+      }}
+    >
+      {state.orchestratorKind === "lean" ? "⚡ Lean (ReAct)" : "Legacy"}
+    </div>
+  ) : null;
+
   return (
+    <>
+      {orchestratorBadge}
     <PanelGroup orientation="horizontal" onLayoutChanged={handleLayout} style={{ height: "100%", width: "100%" }}>
       {/* Panel izquierdo: Chat + Composer */}
       <Panel defaultSize={defaultLeft} minSize={MIN_SIZE} id="chat">
@@ -571,6 +604,7 @@ export function IntegratedGenerationCanvas({
         </div>
       </Panel>
     </PanelGroup>
+    </>
   );
 }
 

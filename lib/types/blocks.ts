@@ -451,4 +451,6 @@ export interface GenerationState {
   // M19.24 — Legal Classifier + Risk Advisories
   legalClassification: LegalClassificationData | null;
   riskAdvisories: RiskAdvisory[];
+  // M20.14 — Qué orchestrator procesó esta generación (lean | legacy)
+  orchestratorKind: string | null;
 }

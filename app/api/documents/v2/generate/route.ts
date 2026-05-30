@@ -62,6 +62,9 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // M20.14: forwardea X-Orchestrator del backend al cliente para que el
+    // hook useGenerationStreamV2 sepa qué arquitectura procesó la generación.
+    const orchestratorHeader = upstream.headers.get("x-orchestrator");
     return new Response(upstream.body, {
       status: 200,
       headers: {
@@ -69,6 +72,7 @@ export async function POST(req: NextRequest) {
         "cache-control": "no-cache, no-transform",
         connection: "keep-alive",
         "x-accel-buffering": "no",
+        ...(orchestratorHeader ? { "x-orchestrator": orchestratorHeader } : {}),
       },
     });
   } catch (err) {
