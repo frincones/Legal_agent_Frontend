@@ -182,6 +182,22 @@ function buildMessages(
     }
   }
 
+  // M20.14 Fix A: cuando el stream YA NO está corriendo (status="completed",
+  // "error" o "aborted"), cualquier tool que quedó con status="running" debe
+  // marcarse como "done" — el Brain ya cerró el loop y esos tools no van a
+  // recibir su completion. Sin esto, el ToolGroupChip mostraba para siempre
+  // "Verificando citas... 0/N · pensando..." aunque la generación terminara.
+  if (!isStreaming) {
+    for (const tool of toolById.values()) {
+      if (tool.status === "running") {
+        tool.status = "done";
+        if (tool.durationMs == null && tool.startedAt) {
+          tool.durationMs = Date.now() - tool.startedAt;
+        }
+      }
+    }
+  }
+
   // Flush último buffer + cerrar último mensaje
   if (currentMsg) {
     flushTools();

@@ -291,9 +291,34 @@ export function useGenerationStreamV2(): UseGenerationStreamV2Result {
           dispatch({ type: "SET_ORCHESTRATOR_KIND", payload: orchestratorKind });
         }
 
+        // M20.14 Fix B: track si el server emitió `done` antes de cerrar
+        // el stream. Si no lo hizo (timeout SSE, proxy cortó, server crash
+        // tras emitir todos los blocks), disparamos un DONE sintetico para
+        // que state.status pase a "completed" y la UI deje de mostrar
+        // "generando..." con spinner infinito.
+        let doneReceived = false;
+        let lastGenerationId: string | null = null;
         const reader = res.body.getReader();
         for await (const { event, data } of parseSSE(reader)) {
+          if (event === "done") doneReceived = true;
+          if (event === "meta" && data?.generation_id) {
+            lastGenerationId = data.generation_id;
+          }
           handleEvent(event, data, dispatch);
+        }
+        if (!doneReceived) {
+          // Stream cerró sin DONE. Sintetizamos uno para no dejar la UI
+          // colgada. El docId queda null — el doc real se persiste en
+          // backend con su generation_id y se puede recuperar después.
+          dispatch({
+            type: "DONE",
+            payload: {
+              generation_id: lastGenerationId || "synthetic",
+              matter_document_id: null,
+              cost_usd: 0,
+              duration_seconds: 0,
+            },
+          });
         }
       } catch (e: any) {
         if (e.name !== "AbortError") {
