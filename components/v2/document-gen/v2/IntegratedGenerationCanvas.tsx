@@ -245,6 +245,13 @@ export function IntegratedGenerationCanvas({
     // trajo matter_document_id (Vercel proxy timeout >120s, server crash
     // post-blocks, o stream cerrado prematuramente). Mientras la generacion
     // haya producido bloques, el endpoint REST puede resolver el doc_id.
+    //
+    // HOTFIX-5b: NO llamar refreshBlocks aqui — los blocks ya estan en state
+    // por SSE block_emit events. Llamar refreshBlocks dispatcha REPLACE_BLOCKS
+    // con shape distinta (sin campo .runs en algunos bloques) y crasheaba
+    // algun componente del canvas con "Cannot read properties of undefined
+    // (reading 'length')". Usamos activeDocId solo para esta chat call;
+    // siguientes sends repetiran el fetch (overhead 1 GET por send).
     let activeDocId: string | null = state.documentId;
     if (!activeDocId && state.generationId) {
       try {
@@ -256,10 +263,6 @@ export function IntegratedGenerationCanvas({
           const j = await r.json();
           if (j?.document_id) {
             activeDocId = String(j.document_id);
-            // Persistir en state para futuros sends (evita repeticion del fetch)
-            // Usamos REPLACE_BLOCKS como hack para forzar state.documentId update
-            // via refreshBlocks (que tambien sincroniza bloques).
-            try { refreshBlocks(activeDocId); } catch {}
           }
         }
       } catch (e) {
