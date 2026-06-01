@@ -240,13 +240,42 @@ export function IntegratedGenerationCanvas({
       { id: `u-${Date.now()}`, role: "user", content: input, ts: Date.now() },
     ]);
 
-    if (!state.documentId) {
+    // M21.HOTFIX-5: si state.documentId es null, intentar recuperarlo del
+    // backend ANTES de bloquear el chat. Caso comun: el SSE done event no
+    // trajo matter_document_id (Vercel proxy timeout >120s, server crash
+    // post-blocks, o stream cerrado prematuramente). Mientras la generacion
+    // haya producido bloques, el endpoint REST puede resolver el doc_id.
+    let activeDocId: string | null = state.documentId;
+    if (!activeDocId && state.generationId) {
+      try {
+        const r = await fetch(
+          `/api/documents/v2/generation/${encodeURIComponent(state.generationId)}/document`,
+          { cache: "no-store" }
+        );
+        if (r.ok) {
+          const j = await r.json();
+          if (j?.document_id) {
+            activeDocId = String(j.document_id);
+            // Persistir en state para futuros sends (evita repeticion del fetch)
+            // Usamos REPLACE_BLOCKS como hack para forzar state.documentId update
+            // via refreshBlocks (que tambien sincroniza bloques).
+            try { refreshBlocks(activeDocId); } catch {}
+          }
+        }
+      } catch (e) {
+        // Fallback silencioso: caera al system message abajo
+      }
+    }
+
+    if (!activeDocId) {
       setMessages((prev) => [
         ...prev,
         {
           id: `s-${Date.now()}`,
           role: "system",
-          content: "Espera a que termine la generación inicial para chatear sobre el documento.",
+          content: state.status === "running"
+            ? "Espera a que termine la generación inicial para chatear sobre el documento."
+            : "No pude recuperar el documento. Recarga la página y vuelve a intentarlo.",
           ts: Date.now(),
         },
       ]);
@@ -276,7 +305,7 @@ export function IntegratedGenerationCanvas({
         .find((mm) => mm.role === "assistant" && mm.clarify);
       const pendingContext = lastClarify?.clarify?.pending_context;
       const res = await fetch(
-        `/api/documents/v2/documents/${encodeURIComponent(state.documentId)}/chat`,
+        `/api/documents/v2/documents/${encodeURIComponent(activeDocId)}/chat`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -359,7 +388,7 @@ export function IntegratedGenerationCanvas({
         window.dispatchEvent(
           new CustomEvent("lexai:doc-changed", {
             detail: {
-              documentId: state.documentId,
+              documentId: activeDocId,
               source: "chat",
               edited_block_id: firstChange?.block_id || "unknown",
               user_instruction: input,
