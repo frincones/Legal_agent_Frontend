@@ -307,14 +307,30 @@ export function useGenerationStreamV2(): UseGenerationStreamV2Result {
           handleEvent(event, data, dispatch);
         }
         if (!doneReceived) {
-          // Stream cerró sin DONE. Sintetizamos uno para no dejar la UI
-          // colgada. El docId queda null — el doc real se persiste en
-          // backend con su generation_id y se puede recuperar después.
+          // M21.HOTFIX-3: Stream cerró sin DONE. Intentar recuperar
+          // matter_document_id desde el endpoint GET /generation/{id}/document
+          // antes de sintetizar uno con null. Esto evita que el chat composer
+          // haga early-return con "Espera a que termine la generación".
+          let recoveredDocId: string | null = null;
+          if (lastGenerationId && lastGenerationId !== "synthetic") {
+            try {
+              const r = await fetch(
+                `/api/documents/v2/generation/${encodeURIComponent(lastGenerationId)}/document`,
+                { cache: "no-store" }
+              );
+              if (r.ok) {
+                const j = await r.json();
+                if (j?.document_id) recoveredDocId = String(j.document_id);
+              }
+            } catch {
+              /* fallback: leave null */
+            }
+          }
           dispatch({
             type: "DONE",
             payload: {
               generation_id: lastGenerationId || "synthetic",
-              matter_document_id: null,
+              matter_document_id: recoveredDocId,
               cost_usd: 0,
               duration_seconds: 0,
             },
